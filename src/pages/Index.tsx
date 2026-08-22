@@ -46,8 +46,7 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Implemente primeiro a fase 1 
-Use fonte do google fontes para o sistema
+          Fase 1 concluída: Mapa do codebase gerado, imagens de referência processadas e presets de IA atualizados.
         </div>
         <InstallPWAButton />
 
