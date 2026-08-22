@@ -25,8 +25,8 @@ if (legacyRedirect) {
   window.history.replaceState({}, '', legacyRedirect);
 }
 
-// Limpar SW e caches em rotas públicas, preview ou iframe ANTES de montar React
-const isPublicRoute = /^\/(formulario|checkout|pay|l)\//.test(window.location.pathname);
+// Limpar SW e caches em rotas públicas (galerias, propostas, formulário, checkout), preview ou iframe ANTES de montar React
+const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l)\//.test(window.location.pathname);
 const isPreviewHost = window.location.hostname.includes('id-preview--');
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }

@@ -9,15 +9,17 @@ export function useSeamContrast(
   isDark = false,
   baseColor = '#171513'
 ) {
-  const [titleColor, setTitleColor] = useState('#FFFFFF');
-  const [ctaColor, setCtaColor] = useState('#FFFFFF');
-  const [isLight, setIsLight] = useState(false);
+  const defaultTitle = isDark ? '#FFFFFF' : '#FFFFFF';
+  const defaultCta = isDark ? '#FFFFFF' : '#FFFFFF';
+  const [titleColor, setTitleColor] = useState(defaultTitle);
+  const [ctaColor, setCtaColor] = useState(defaultCta);
+  const [isLight, setIsLight] = useState(!isDark);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!imageUrl || imageUrl.includes('placeholder.svg')) {
-      setTitleColor(isDark ? '#FFFFFF' : '#171513');
-      setCtaColor(isDark ? '#FFFFFF' : '#171513');
+      setTitleColor(isDark ? '#FFFFFF' : '#FFFFFF');
+      setCtaColor(isDark ? '#FFFFFF' : '#FFFFFF');
       return;
     }
     

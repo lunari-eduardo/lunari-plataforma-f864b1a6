@@ -61,7 +61,13 @@ export const JustifiedRowsGrid: React.FC<JustifiedRowsGridProps> = ({
   pairedRowsFeatured,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [internalWidth, setInternalWidth] = useState(0);
+  const [internalWidth, setInternalWidth] = useState<number>(() => {
+    if (externalWidth !== undefined) return externalWidth;
+    if (typeof window !== 'undefined') {
+      return window.innerWidth || document.documentElement.clientWidth || 390;
+    }
+    return 0;
+  });
 
   useEffect(() => {
     if (externalWidth !== undefined) {

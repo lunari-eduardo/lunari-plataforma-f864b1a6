@@ -22,27 +22,47 @@ export default function EditorialCover({
   onEnter,
 }: CoverVariantProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [size, setSize] = useState(() => ({
+    width: typeof window !== 'undefined' ? (window.innerWidth || document.documentElement.clientWidth || 390) : 390,
+    height: typeof window !== 'undefined' ? (window.innerHeight || document.documentElement.clientHeight || 844) : 844,
+  }));
 
   useEffect(() => {
-    if (!containerRef.current) return;
     const update = () => {
       if (containerRef.current) {
-        setSize({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
+        const w = containerRef.current.clientWidth || window.innerWidth || document.documentElement.clientWidth;
+        const h = containerRef.current.clientHeight || window.innerHeight || document.documentElement.clientHeight;
+        if (w > 0 && h > 0) {
+          setSize({ width: w, height: h });
+        }
       }
     };
     update();
-    const observer = new ResizeObserver(update);
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
+
+    let observer: ResizeObserver | null = null;
+    if (containerRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(update);
+      observer.observe(containerRef.current);
+    }
+
+    window.addEventListener('resize', update, { passive: true });
+    window.addEventListener('orientationchange', update, { passive: true });
+
+    return () => {
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
   }, []);
 
   const spec = useMemo(() => resolveEditorialSpec(size.width, size.height), [size]);
   const { line1, line2 } = useMemo(() => splitTitle(applyTitleCase(sessionName, titleCaseMode)), [sessionName, titleCaseMode]);
   
+  const isSingleLine = !line2;
+  const maxFontSizeVw = spec.orientation === 'vertical'
+    ? (isSingleLine ? 18 : 12)
+    : (isSingleLine ? 30 : 22);
+
   const coverUrl = coverPhoto ? getPhotoUrl(coverPhoto, 'preview') : '/placeholder.svg';
   
   const fontSize = useFittedTitle(
@@ -51,8 +71,8 @@ export default function EditorialCover({
     spec.title.width,
     spec.title.height,
     sessionFont || 'serif',
-    spec.orientation === 'vertical' ? 12 : 20,
-    spec.orientation === 'vertical' ? 24 : 42
+    maxFontSizeVw,
+    spec.orientation === 'vertical' ? 24 : 32
   );
 
   const titleIntersection = useMemo(() => {
@@ -87,7 +107,7 @@ export default function EditorialCover({
 
   const baseColor = textColor || (isDark ? '#F5F2EC' : '#171513');
 
-  const { titleColor: overlayColor, ctaColor, isLight: isPhotoLight } = useSeamContrast(
+  const { titleColor: overlayColor, isLight: isPhotoLight } = useSeamContrast(
     coverUrl,
     spec.photo,
     titleIntersection,
@@ -104,7 +124,11 @@ export default function EditorialCover({
 
   const handleScroll = () => {
     const el = document.getElementById('deliver-gallery');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+    }
     onEnter?.();
   };
 
@@ -116,6 +140,7 @@ export default function EditorialCover({
     ? `inset(0 ${size.width - spec.seamPx}px 0 0)`
     : `inset(0 0 ${size.height - spec.seamPx}px 0)`;
 
+  // Posicionamento preciso do título sobre a costura da foto
   const titleBoxStyle: React.CSSProperties = spec.orientation === 'vertical' ? {
     left: `${spec.title.x}px`,
     top: `${spec.title.y}px`,
@@ -126,10 +151,10 @@ export default function EditorialCover({
     alignItems: 'center'
   } : {
     left: `${spec.title.x}px`,
-    top: `${spec.title.y}px`,
+    top: isSingleLine
+      ? `${spec.seamPx - (fontSize * 0.44)}px` // Centraliza o nome de 1 linha no corte
+      : `${spec.seamPx - (fontSize * 0.65)}px`, // Linha 1 cruza a costura e Linha 2 fica na foto
     width: `${spec.title.width}px`,
-    height: `${spec.title.height}px`,
-    transform: 'translateY(-50%)', // Anchor center of text block to the seam
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
@@ -139,13 +164,15 @@ export default function EditorialCover({
   return (
     <section
       ref={containerRef}
-      className={`relative w-full h-[100svh] overflow-hidden antialiased transition-colors duration-700 ${
+      onContextMenu={(e) => e.preventDefault()}
+      className={`relative w-full h-[100svh] overflow-hidden antialiased select-none transition-colors duration-700 ${
         isDark ? 'bg-[#12100E]' : 'bg-[#F7F4EE]'
       }`}
+      style={{ touchAction: 'pan-y' }}
     >
       {/* 1. PHOTO LAYER - REPOSITIONED TO REAL RECTANGLE */}
       <div
-        className="absolute z-10 overflow-hidden"
+        className="absolute z-10 overflow-hidden pointer-events-none"
         style={{ 
           left: `${spec.photo.x}px`,
           top: `${spec.photo.y}px`,
@@ -154,15 +181,22 @@ export default function EditorialCover({
         }}
       >
         <div
-          className={`w-full h-full bg-cover transition-transform duration-[2000ms] ease-out scale-100 ${spec.orientation === 'vertical' ? 'hover:scale-105 bg-center' : 'bg-[center_top_20%]'}`}
+          className={`w-full h-full bg-cover transition-transform duration-[2000ms] ease-out scale-100 ${spec.orientation === 'vertical' ? 'hover:scale-105 bg-center' : 'bg-[center_top_15%]'}`}
           style={{ backgroundImage: `url(${coverUrl})` }}
         />
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
             background: spec.orientation === 'vertical'
-              ? `linear-gradient(to right, ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
-              : `linear-gradient(to bottom, ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
+              ? `linear-gradient(to right, ${isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.12)'}, transparent 20%)`
+              : `linear-gradient(to bottom, ${isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.12)'}, transparent 20%)`
+          }}
+        />
+        {/* Vinheta gradiente de proteção de contraste para a Data e CTA no rodapé */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-44 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 40%, transparent 100%)'
           }}
         />
       </div>
@@ -172,12 +206,31 @@ export default function EditorialCover({
         className="absolute inset-0 z-20 pointer-events-none"
         style={{ clipPath: clipTheme }}
       >
+        {/* Subtítulo no topo no modo mobile */}
+        {spec.orientation === 'horizontal' && formattedSubtitle && (
+          <div
+            className="absolute z-20 flex flex-col gap-1.5"
+            style={{
+              left: `${spec.title.x}px`,
+              top: 'max(20px, env(safe-area-inset-top) + 12px)',
+            }}
+          >
+            <span
+              className="tracking-[0.35em] font-sans opacity-60 uppercase text-[11px] sm:text-xs"
+              style={{ color: baseColor }}
+            >
+              {formattedSubtitle}
+            </span>
+            <div className="w-10 h-px bg-current opacity-40" style={{ color: baseColor }} />
+          </div>
+        )}
+
         <div className="absolute" style={titleBoxStyle}>
           <div className="flex flex-col">
-            {/* Anchored Subtitle */}
-            {formattedSubtitle && (
+            {/* Subtítulo inline no modo desktop */}
+            {spec.orientation === 'vertical' && formattedSubtitle && (
               <div
-                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-start w-full' : ''}`}
+                className="flex flex-col gap-1.5 mb-[0.6em]"
                 style={{ fontSize: `${fontSize * 0.1}px` }}
               >
                 <span 
@@ -207,10 +260,10 @@ export default function EditorialCover({
       >
         <div className="absolute" style={titleBoxStyle}>
            <div className="flex flex-col">
-            {/* Anchor spacing matching theme side */}
-            {formattedSubtitle && (
+            {/* Subtítulo inline no modo desktop */}
+            {spec.orientation === 'vertical' && formattedSubtitle && (
               <div
-                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-start w-full' : ''}`}
+                className="flex flex-col gap-1.5 mb-[0.6em]"
                 style={{ fontSize: `${fontSize * 0.1}px` }}
               >
                 <span 
@@ -234,40 +287,49 @@ export default function EditorialCover({
       </div>
 
       {/* 4. DETAILS LAYER (DATE & CTA) */}
-      <div className="absolute inset-0 z-40 pointer-events-none">
+      <div className="absolute inset-0 z-40 pointer-events-none select-none">
         {/* Date */}
         <div
           className="absolute"
           style={{ 
             left: `${spec.date.x}px`, 
             top: `${spec.date.y}px`,
+            transform: 'translateY(-50%)',
             paddingBottom: 'env(safe-area-inset-bottom)',
             paddingLeft: 'env(safe-area-inset-left)'
           }}
         >
           <span 
-            className="text-[10px] sm:text-xs tracking-[0.25em] font-sans opacity-70"
-            style={{ color: spec.orientation === 'vertical' ? baseColor : (isPhotoLight ? '#171513' : '#FFFFFF') }}
+            className="text-[10px] sm:text-xs tracking-[0.25em] font-sans uppercase font-medium text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
           >
             {formattedDate}
           </span>
         </div>
 
-        {/* CTA */}
+        {/* CTA Button */}
         <div
           className="absolute pointer-events-auto"
           style={{ 
             left: `${spec.cta.x}px`, 
             top: `${spec.cta.y}px`,
-            transform: 'translateX(-100%)',
+            transform: 'translate(-100%, -50%)',
             paddingBottom: 'env(safe-area-inset-bottom)',
             paddingRight: 'env(safe-area-inset-right)'
           }}
         >
           <button
-            onClick={handleScroll}
-            className="group flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.25em] font-sans uppercase border-b border-current pb-1 transition-opacity hover:opacity-60 min-h-[44px] min-w-[44px]"
-            style={{ color: ctaColor }}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleScroll();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleScroll();
+            }}
+            className="group flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-black/45 hover:bg-black/70 active:scale-95 backdrop-blur-md border border-white/25 text-white text-[11px] sm:text-xs tracking-[0.25em] font-sans uppercase transition-all duration-300 shadow-xl cursor-pointer"
           >
             <span>Ver Galeria</span>
             <span className="transition-transform group-hover:translate-x-1">→</span>

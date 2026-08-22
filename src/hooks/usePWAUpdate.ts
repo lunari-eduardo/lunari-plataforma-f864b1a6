@@ -17,8 +17,8 @@ export function usePWAUpdate() {
       return;
     }
 
-    // Não registrar SW em rotas públicas (formulário, checkout)
-    const isPublicRoute = /^\/(formulario|checkout)\//.test(window.location.pathname);
+    // Não registrar SW em rotas públicas (galerias, propostas, formulário, checkout)
+    const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l)\//.test(window.location.pathname);
     if (isPublicRoute) {
       navigator.serviceWorker.getRegistrations().then(regs =>
         regs.forEach(r => r.unregister())

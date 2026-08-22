@@ -1,4 +1,3 @@
-import { lazy } from 'react';
 import type { CoverVariant } from './types';
 import {
   FullscreenThumbnail,
@@ -7,10 +6,10 @@ import {
   EditorialThumbnail,
 } from './thumbnails';
 
-const FullscreenCover = lazy(() => import('./variants/FullscreenCover'));
-const FloatingFrameCover = lazy(() => import('./variants/FloatingFrameCover'));
-const SplitCover = lazy(() => import('./variants/SplitCover'));
-const EditorialCover = lazy(() => import('./variants/EditorialCover'));
+import FullscreenCover from './variants/FullscreenCover';
+import FloatingFrameCover from './variants/FloatingFrameCover';
+import SplitCover from './variants/SplitCover';
+import EditorialCover from './variants/EditorialCover';
 
 export const COVER_REGISTRY: Record<string, CoverVariant> = {
   fullscreen: {
