@@ -314,7 +314,7 @@ export function AsaasCheckout({
   const generatePix = useCallback(async () => {
     setPixLoading(true);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/asaas-gallery-payment`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -325,8 +325,8 @@ export function AsaasCheckout({
           descricao: data.descricao,
           galeriaId: data.galeriaId,
           qtdFotos: data.qtdFotos,
-          galleryToken: data.galleryToken,
-          visitorId: data.visitorId,
+          finalidade: 'fotos_extras',
+          provedor: 'asaas',
           billingType: 'PIX',
         }),
       });
@@ -535,23 +535,21 @@ export function AsaasCheckout({
 
     setCardLoading(true);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/asaas-gallery-payment`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: data.userId,
           clienteId: data.clienteId,
           sessionId: data.sessionId,
-          valor: data.valorTotal,
+          valor: valorComTaxas,
           descricao: data.descricao,
           galeriaId: data.galeriaId,
           qtdFotos: data.qtdFotos,
-          galleryToken: data.galleryToken,
-          visitorId: data.visitorId,
+          finalidade: 'fotos_extras',
+          provedor: 'asaas',
           billingType: 'CREDIT_CARD',
           installmentCount: parseInt(cardInstallments),
-          // Let backend recalculate with real fees - but hint the frontend-calculated total
-          valorComTaxasFrontend: valorComTaxas,
           creditCard: {
             holderName: cardName,
             number: rawCard,

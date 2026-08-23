@@ -100,10 +100,10 @@ Deno.serve(async (req) => {
       galleryToken = gal?.public_token || null;
     }
 
-    // Logotipo de cobrança: prioriza billing_logo_url, depois studio_logo_url, depois profile.logo_url, depois avatar_url
+    // Logotipo de cobrança: prioriza billing_logo_url, depois studio_logo_url, depois profile.logo_url
     const themeOverrides = (gallerySettings?.theme_overrides as Record<string, any>) || {};
-    const billingLogo = themeOverrides.billing_logo_url || themeOverrides.billingLogoUrl || null;
-    const logoUrl = billingLogo || gallerySettings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || null;
+    const rawLogo = themeOverrides.billing_logo_url || themeOverrides.billingLogoUrl || gallerySettings?.studio_logo_url || profile?.logo_url || null;
+    const logoUrl = (typeof rawLogo === 'string' && !rawLogo.startsWith('data:image')) ? rawLogo : null;
 
     // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes via cascata canônica.
     const resolvedHints = await resolvePayerHints({

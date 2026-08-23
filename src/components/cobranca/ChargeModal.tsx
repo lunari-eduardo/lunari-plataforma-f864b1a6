@@ -438,6 +438,11 @@ export function ChargeModal({
         tipoCobranca: 'link',
         provedor: 'asaas',
         finalidade: binding.finalidade,
+        dadosExtras: {
+          repassarTaxasProcessamento: overrideRepassarTaxas,
+          anteciparParcelas: overrideAntecipar,
+          repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
+        },
       });
 
       if (result.success) {

@@ -81,8 +81,9 @@ serve(async (req) => {
         return await handleAsaasInstallmentCheck(supabase, cobranca, asaasConfig);
       }
 
-      if (cobranca.mp_payment_id) {
-        return await handleAsaasSinglePaymentCheck(supabase, cobranca, asaasConfig);
+      const asaasPaymentId = cobranca.asaas_payment_id || cobranca.provider_order_id || cobranca.provider_transaction_id || cobranca.mp_payment_id;
+      if (asaasPaymentId) {
+        return await handleAsaasSinglePaymentCheck(supabase, { ...cobranca, mp_payment_id: asaasPaymentId }, asaasConfig);
       }
     }
 

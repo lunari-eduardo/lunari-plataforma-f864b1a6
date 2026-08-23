@@ -290,6 +290,11 @@ export function CombinedChargeModal({
         tipoCobranca: 'link',
         provedor: 'asaas',
         ...commonBinding,
+        dadosExtras: {
+          repassarTaxasProcessamento: overrideRepassarTaxas,
+          anteciparParcelas: overrideAntecipar,
+          repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
+        },
       });
 
       if (!response?.success) {

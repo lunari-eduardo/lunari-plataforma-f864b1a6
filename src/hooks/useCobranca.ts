@@ -101,6 +101,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
           billingType: 'PIX',
           correlationId,
           idempotencyKey,
+          dadosExtras: request.dadosExtras,
         },
       });
 
@@ -160,6 +161,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         provedor,
         installmentCount: installments,
         idempotencyKey,
+        dadosExtras: request.dadosExtras,
       };
 
       const response = await supabase.functions.invoke('create-cobranca', {

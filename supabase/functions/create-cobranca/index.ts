@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
       creditCard,
       creditCardHolderInfo,
       installmentCount,
+      dadosExtras,
     } = body;
 
     // Validações básicas de entrada
@@ -170,6 +171,7 @@ Deno.serve(async (req) => {
       valor_sessao_componente: binding.valor_sessao_componente,
       valor_extras_componente: binding.valor_extras_componente,
       idempotency_key: idempotencyKey || null,
+      dados_extras: dadosExtras || null,
     };
 
     let cobranca: any;
@@ -340,7 +342,10 @@ Deno.serve(async (req) => {
       checkout_url: finalCheckoutUrl,
       pix_copia_cola: adapterData.pixCopiaCola || null,
       pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,
-      dados_extras: adapterData.dadosExtras || null,
+      dados_extras: {
+        ...(cobranca.dados_extras || {}),
+        ...(adapterData.dadosExtras || {}),
+      },
       updated_at: new Date().toISOString(),
     };
 

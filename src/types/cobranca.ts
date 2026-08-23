@@ -53,6 +53,7 @@ export interface CreateCobrancaRequest {
   /** Breakdown obrigatório quando finalidade='sessao_e_extras'. Soma deve = valor. */
   valorSessaoComponente?: number;
   valorExtrasComponente?: number;
+  dadosExtras?: Record<string, any>;
 }
 
 export interface CobrancaResponse {

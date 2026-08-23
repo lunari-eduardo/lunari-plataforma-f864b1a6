@@ -72,6 +72,7 @@ export interface CreateCobrancaRequest {
   installmentCount?: number;
   correlationId?: string;
   allowAmbiguous?: boolean;
+  dadosExtras?: Record<string, any>;
 }
 
 export interface CreateCobrancaResponse {
