@@ -6,9 +6,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput, ClienteContact } from "../_shared/payment-types.ts";
 import { normalizeAsaasFees, calculateCreditFees } from "../_shared/asaas-helpers.ts";
+import { createAsaasPayment } from "../_shared/adapters/asaas.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PUBLIC_SITE_URL = Deno.env.get("PUBLIC_SITE_URL") || "https://app.lunarihub.com";
 
 interface PayerContact {
   name?: string;
@@ -224,21 +226,14 @@ Deno.serve(async (req) => {
       installmentCount: finalInstallments,
     };
 
-    console.log(`[checkout-process-payment] Delegando ao create-asaas-payment para cobranca=${cobranca.id}, billingType=${billingType}, valorFinal=${finalValue}`);
+    // 4. Invocar o adaptador Asaas diretamente em processo
+    const adapterData: AdapterCreatePaymentOutput = await createAsaasPayment(
+      supabase,
+      adapterPayload,
+      PUBLIC_SITE_URL
+    );
 
-    const adapterRes = await fetch(adapterUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        "x-lunari-internal-caller": "checkout-process-payment",
-      },
-      body: JSON.stringify(adapterPayload),
-    });
-
-    const adapterData: AdapterCreatePaymentOutput = await adapterRes.json();
-
-    if (!adapterRes.ok || !adapterData.success) {
+    if (!adapterData.success) {
       console.error("[checkout-process-payment] Adaptador Asaas retornou erro:", adapterData);
       return jsonResponse({
         success: false,
@@ -281,6 +276,9 @@ Deno.serve(async (req) => {
 
     console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso!`);
 
+    const asaasStatus = adapterData.dadosExtras?.status;
+    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+
     return jsonResponse({
       success: true,
       paymentId: adapterData.providerOrderId,
@@ -289,6 +287,9 @@ Deno.serve(async (req) => {
       pixQrCodeBase64: adapterData.pixQrCodeBase64,
       invoiceUrl: adapterData.checkoutUrl,
       billingType,
+      status: asaasStatus || (billingType === "PIX" ? "PENDING" : "CONFIRMED"),
+      creditCardStatus: asaasStatus || "CONFIRMED",
+      paid: isPaid,
     }, 200);
   } catch (err: any) {
     console.error("[checkout-process-payment] Exceção inesperada:", err);
