@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Toaster as Sonner } from '@/components/ui/sonner';
-import { calcularAntecipacao } from '@/lib/anticipationUtils';
+import { calcularAntecipacao, calculateCreditFees, normalizeAsaasFees, NormalizedAsaasFees } from '@/lib/anticipationUtils';
 import { cn } from '@/lib/utils';
 import CheckoutShell, { CheckoutSkeleton } from './checkout/CheckoutShell';
 import ProviderCheckout, { ProviderBlock, Provedor } from './checkout/ProviderCheckout';
@@ -391,39 +391,16 @@ export default function PublicCheckout() {
     const repassarTaxas = !data.settings?.absorverTaxa;
     const maxParcelas = data.settings?.maxParcelas || 12;
 
+    const normalizedFees = normalizeAsaasFees(data.accountFees);
+
     for (let i = 1; i <= maxParcelas; i++) {
-      let totalComTaxas = valor;
-      let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
+      const calc = calculateCreditFees(valor, i, normalizedFees, repassarTaxas, repassarAntecipacao);
+      const totalComTaxas = calc.totalValue;
+      const installmentValue = calc.installmentValue;
 
-      if (data.accountFees?.creditCard) {
-        const discountTiers = Array.isArray(data.accountFees.discount?.tiers) ? data.accountFees.discount.tiers : [];
-        const isDiscountActive = Boolean(data.accountFees.discount?.active && discountTiers.length > 0);
-        const creditCardTiers = Array.isArray(data.accountFees.creditCard?.tiers) ? data.accountFees.creditCard.tiers : [];
-
-        const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
-        const tier = activeTiers.find(t => i >= t.min && i <= t.max);
-        const processingPercentage = tier?.percentageFee ?? 0;
-        const operationValue = data.accountFees.creditCard?.operationValue ?? 0;
-        const processingFee = repassarTaxas
-          ? (valor * processingPercentage / 100) + operationValue
-          : 0;
-
-        let anticipationFee = 0;
-        if (repassarAntecipacao) {
-          const taxaMensal = i === 1
-            ? (data.accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
-            : (data.accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
-          if (taxaMensal > 0) {
-            const result = calcularAntecipacao(valor, i, taxaMensal);
-            anticipationFee = result.totalTaxa;
-          }
-        }
-
-        totalComTaxas = valor + processingFee + anticipationFee;
-        totalComTaxas = Math.round(totalComTaxas * 100) / 100;
-
-        label = `${i}x de R$ ${(totalComTaxas / i).toFixed(2)}`;
-        if (totalComTaxas > valor) label += ` (total R$ ${totalComTaxas.toFixed(2)})`;
+      let label = `${i}x de R$ ${installmentValue.toFixed(2).replace('.', ',')}`;
+      if (totalComTaxas > valor) {
+        label += ` (total R$ ${totalComTaxas.toFixed(2).replace('.', ',')})`;
       }
 
       installmentOptions.push({ value: String(i), label, totalValue: totalComTaxas });

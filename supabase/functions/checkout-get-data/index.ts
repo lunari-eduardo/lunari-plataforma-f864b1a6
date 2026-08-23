@@ -1,25 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
 import { resolvePayerHints } from '../_shared/payer-hints.ts';
+import { normalizeAsaasFees, NormalizedAsaasFees } from '../_shared/asaas-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
-
-interface AccountFees {
-  creditCard: {
-    operationValue: number;
-    detachedMonthlyFeeValue: number;
-    installmentMonthlyFeeValue: number;
-    tiers: Array<{ min: number; max: number; percentageFee: number }>;
-  };
-  pix: { fixedFeeValue: number };
-  discount?: {
-    active: boolean;
-    expiration?: string;
-    tiers: Array<{ min: number; max: number; percentageFee: number }>;
-  };
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -242,18 +228,21 @@ Deno.serve(async (req) => {
       : false;
 
     // 4. Fetch Asaas account fees
-    let accountFees: AccountFees | null = null;
+    let accountFees: NormalizedAsaasFees | null = null;
     try {
       const feesResponse = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
         headers: { access_token: integracao.access_token },
       });
       if (feesResponse.ok) {
-        accountFees = await feesResponse.json();
+        const rawFees = await feesResponse.json();
+        accountFees = normalizeAsaasFees(rawFees);
       } else {
         console.warn('Could not fetch Asaas fees, status:', feesResponse.status);
+        accountFees = normalizeAsaasFees(null);
       }
     } catch (err) {
       console.warn('Error fetching Asaas fees:', err);
+      accountFees = normalizeAsaasFees(null);
     }
 
     return new Response(

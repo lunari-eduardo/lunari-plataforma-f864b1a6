@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput, ClienteContact } from "../_shared/payment-types.ts";
+import { normalizeAsaasFees, calculateCreditFees } from "../_shared/asaas-helpers.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -171,13 +172,14 @@ Deno.serve(async (req) => {
 
       // Calcular taxas de cartão se repasse estiver ativo
       if ((repassarTaxas || repassarAntecipacao) && integracao?.access_token) {
-        let accountFees: any = null;
+        let normalizedFees = normalizeAsaasFees(null);
         try {
           const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
             headers: { access_token: integracao.access_token },
           });
           if (feesResp.ok) {
-            accountFees = await feesResp.json();
+            const rawFees = await feesResp.json();
+            normalizedFees = normalizeAsaasFees(rawFees);
           } else {
             console.warn(`[checkout-process-payment] Failed to fetch Asaas fees, status: ${feesResp.status}`);
           }
@@ -185,42 +187,19 @@ Deno.serve(async (req) => {
           console.warn(`[checkout-process-payment] Error fetching Asaas fees:`, feeErr);
         }
 
-        if (accountFees?.creditCard) {
-          const discountTiers = Array.isArray(accountFees.discount?.tiers) ? accountFees.discount.tiers : [];
-          const isDiscountActive = Boolean(accountFees.discount?.active && discountTiers.length > 0);
-          const creditCardTiers = Array.isArray(accountFees.creditCard?.tiers) ? accountFees.creditCard.tiers : [];
-          const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
+        const calc = calculateCreditFees(
+          baseValue,
+          finalInstallments,
+          normalizedFees,
+          repassarTaxas,
+          repassarAntecipacao
+        );
 
-          const tier = activeTiers.find((t: any) => finalInstallments >= t.min && finalInstallments <= t.max);
+        finalValue = calc.totalValue;
+        taxaProcessamento = calc.processingFee;
+        taxaAntecipacao = calc.anticipationFee;
 
-          // 1. Taxa de processamento no crédito
-          if (repassarTaxas) {
-            const percentageFee = tier?.percentageFee ?? 0;
-            const operationValue = accountFees.creditCard?.operationValue ?? 0;
-            taxaProcessamento = (baseValue * percentageFee / 100) + operationValue;
-          }
-
-          // 2. Taxa de antecipação no crédito (proporcional a cada parcela)
-          if (repassarAntecipacao) {
-            const taxaMensal = finalInstallments === 1
-              ? (accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
-              : (accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
-
-            if (taxaMensal > 0) {
-              const valorParcela = baseValue / finalInstallments;
-              let valorLiquidoAcumulado = 0;
-              for (let j = 1; j <= finalInstallments; j++) {
-                const taxaTotalParcela = taxaMensal * j;
-                const liquidoParcela = valorParcela * (1 - taxaTotalParcela / 100);
-                valorLiquidoAcumulado += liquidoParcela;
-              }
-              taxaAntecipacao = Math.max(0, baseValue - valorLiquidoAcumulado);
-            }
-          }
-
-          finalValue = Math.round((baseValue + taxaProcessamento + taxaAntecipacao) * 100) / 100;
-          console.log(`[checkout-process-payment] Cartão ${finalInstallments}x: base=${baseValue}, proc=${taxaProcessamento.toFixed(2)}, antec=${taxaAntecipacao.toFixed(2)}, total=${finalValue}`);
-        }
+        console.log(`[checkout-process-payment] Cartão ${finalInstallments}x: base=${baseValue}, proc=${taxaProcessamento}, antec=${taxaAntecipacao}, total=${finalValue}`);
       }
     } else {
       // REGRA EXPLICITA: PIX NUNCA repassa taxas ao cliente final

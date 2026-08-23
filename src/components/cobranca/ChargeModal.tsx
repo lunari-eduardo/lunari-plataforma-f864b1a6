@@ -698,25 +698,30 @@ export function ChargeModal({
 
                     {/* Per-charge Asaas overrides */}
                     {showAsaasSection && asaasSettings && asaasMode === 'options' && (
-                      <div className="space-y-2">
-                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                          <Settings2 className="h-3 w-3" />
-                          Opções desta cobrança
-                        </Label>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                            <Settings2 className="h-3.5 w-3.5 text-primary" />
+                            Regras no Cartão de Crédito
+                          </Label>
+                          <span className="text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">
+                            Personalizado
+                          </span>
+                        </div>
 
-                        <div className="rounded-md border border-border/60 divide-y divide-border/40">
-                          <div className="flex items-center justify-between px-3 h-11">
-                            <div className="min-w-0">
-                              <Label htmlFor="override-taxas" className="text-sm">Repassar taxas de processamento</Label>
-                              <p className="text-[11px] text-muted-foreground truncate">Cliente paga as taxas de cartão</p>
+                        <div className="rounded-xl border border-border/80 bg-card/40 backdrop-blur-sm divide-y divide-border/40 overflow-hidden shadow-xs">
+                          <div className="flex items-center justify-between p-3 transition-colors hover:bg-muted/30">
+                            <div className="min-w-0 pr-2">
+                              <Label htmlFor="override-taxas" className="text-xs sm:text-sm font-medium cursor-pointer">Repassar taxas de processamento</Label>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Cliente paga as taxas de cartão</p>
                             </div>
                             <Switch id="override-taxas" checked={overrideRepassarTaxas} onCheckedChange={setOverrideRepassarTaxas} />
                           </div>
 
-                          <div className="flex items-center justify-between px-3 h-11">
-                            <div className="min-w-0">
-                              <Label htmlFor="override-antecipar" className="text-sm">Antecipar parcelas</Label>
-                              <p className="text-[11px] text-muted-foreground truncate">Solicitar antecipação no Asaas</p>
+                          <div className="flex items-center justify-between p-3 transition-colors hover:bg-muted/30">
+                            <div className="min-w-0 pr-2">
+                              <Label htmlFor="override-antecipar" className="text-xs sm:text-sm font-medium cursor-pointer">Antecipar parcelas</Label>
+                              <p className="text-[11px] text-muted-foreground leading-tight">Solicitar antecipação automática</p>
                             </div>
                             <Switch id="override-antecipar" checked={overrideAntecipar} onCheckedChange={(v) => {
                               setOverrideAntecipar(v);
@@ -725,14 +730,26 @@ export function ChargeModal({
                           </div>
 
                           {overrideAntecipar && (
-                            <div className="flex items-center justify-between px-3 h-11 bg-primary/5">
-                              <div className="min-w-0 pl-3 border-l-2 border-primary/40">
-                                <Label htmlFor="override-repassar-antecipacao" className="text-sm">Repassar antecipação</Label>
-                                <p className="text-[11px] text-muted-foreground truncate">Inclui taxa no valor do cliente</p>
+                            <div className="flex items-center justify-between p-3 bg-primary/5 border-l-2 border-primary transition-colors">
+                              <div className="min-w-0 pr-2">
+                                <Label htmlFor="override-repassar-antecipacao" className="text-xs sm:text-sm font-medium cursor-pointer">Repassar custo da antecipação</Label>
+                                <p className="text-[11px] text-muted-foreground leading-tight">Inclui taxa mensal no valor cobrado do cliente</p>
                               </div>
                               <Switch id="override-repassar-antecipacao" checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
                             </div>
                           )}
+                        </div>
+
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs space-y-0.5">
+                          <div className="flex items-center justify-between font-medium text-foreground">
+                            <span>Recebimento líquido estimado:</span>
+                            <span className="text-primary font-bold">R$ {valor.toFixed(2).replace('.', ',')}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {overrideRepassarTaxas
+                              ? '✓ Cliente arca com taxas no cartão. PIX sempre sem taxas.'
+                              : '⚠ Você absorve as taxas no cartão.'}
+                          </p>
                         </div>
                       </div>
                     )}
