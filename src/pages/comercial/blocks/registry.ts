@@ -204,9 +204,15 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         itemFactory: packageItem,
       },
     ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
+    layoutFields: [
+      ALIGN_FIELD, 
+      backgroundField(),
+      { key: 'hide_cta', label: 'Ocultar botão "Selecionar"', kind: 'boolean' },
+      { key: 'hide_images', label: 'Ocultar fotos dos pacotes', kind: 'boolean' }
+    ],
     variants: [
       { value: 'cards-classic', label: 'Cards', description: 'Cards lado a lado (padrão)' },
+      { value: 'cards-minimal', label: 'Cards Minimalistas', description: 'Design limpo sem bordas e foto arredondada' },
       { value: 'numbered-editorial', label: 'Editorial Numerado', description: 'Lista numerada com fotos e hairlines' },
     ],
     defaultVariant: 'cards-classic',

@@ -54,13 +54,14 @@ const alignClass = (align?: string, fallback = 'left') => ALIGN_CLASS[align ?? '
 function sectionBg(bg: string | undefined, fallback: string): string {
   switch (bg ?? fallback) {
     case 'cream':
-      return 'bg-[var(--pa-cream,#F3F0EA)] text-[var(--pa-ink,#1A1714)]';
+      return 'bg-[var(--pa-cream,#F3F0EA)] text-neutral-900';
     case 'linen':
-      return 'bg-[var(--pa-linen,#E8DCCB)] text-[var(--pa-ink,#1A1714)]';
+      return 'bg-[var(--pa-linen,#E8DCCB)] text-neutral-900';
     case 'dark':
-      return 'bg-[var(--pa-ink,#1A1714)] text-white';
+      return 'bg-[var(--pa-stone,#C9BFB2)] text-white';
+    case 'white':
     default:
-      return 'bg-white text-[var(--pa-ink,#1A1714)]';
+      return 'bg-[var(--pa-white,#FDFBF7)] text-neutral-900';
   }
 }
 
@@ -477,9 +478,9 @@ function PricingClassic({ content, data, props, onCtaClick }: { content?: any; d
           className="text-4xl @md:text-5xl mb-12" style={fd()} />
         <div className={cn('grid gap-8 text-left', colsClass)}>
           {packages.map((pkg: any, idx: number) => (
-            <div key={pkg.id || idx} className="border border-current/10 p-8 rounded-sm bg-[var(--pa-white,#FDFBF7)] flex flex-col relative overflow-hidden">
+            <div key={pkg.id || idx} className="border border-black/5 shadow-sm p-8 rounded-2xl bg-[var(--pa-white,#FDFBF7)] text-neutral-900 flex flex-col relative overflow-hidden">
               {pkg.badge && (
-                <div className="absolute top-0 right-0 bg-[var(--pa-cream,#F3F0EA)] text-[10px] font-medium tracking-[0.28em] uppercase text-[var(--pa-taupe,#8C7B6E)] px-3 py-1 border-b border-l border-current/10">
+                <div className="absolute top-0 right-0 bg-[var(--pa-cream,#F3F0EA)] text-[10px] font-medium tracking-[0.28em] uppercase text-[var(--pa-taupe,#8C7B6E)] px-3 py-1 border-b border-l border-black/5 rounded-bl-xl">
                   <EditableText {...et(`packages.${idx}.badge`, pkg.badge)} />
                 </div>
               )}
@@ -490,33 +491,126 @@ function PricingClassic({ content, data, props, onCtaClick }: { content?: any; d
                 <span className="text-sm opacity-50 font-light">/<EditableText {...et(`packages.${idx}.price_unit`, pkg.price_unit)} placeholder="un." /></span>
               </p>
 
-              {/* Imagem do pacote (duplo clique troca) */}
-              {(pkg.image_ref || editable) && (
-                <div className="h-36 w-full mb-6 rounded-sm overflow-hidden relative bg-black/5">
+              {/* Imagem do pacote */}
+              {!props?.hide_images && (pkg.image_ref || editable) && (
+                <div className="h-36 w-full mb-6 rounded-xl overflow-hidden relative bg-black/5">
                   <EditableImage
                     editable={editable}
                     value={pkg.image_ref || null}
                     label="Foto do pacote"
                     alt={pkg.name || 'Pacote'}
                     onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
+                    publicEmptyClassName="hidden"
                   />
                 </div>
               )}
 
               <ul className="space-y-3 flex-1 mb-8">
                 {(pkg.features || []).map((feat: string, i: number) => (
-                  <li key={i} className="text-sm font-light opacity-70 border-b border-current/10 pb-2 last:border-0">
+                  <li key={i} className="text-sm font-light opacity-70 border-b border-black/5 pb-2 last:border-0">
                     <EditableText {...et(`packages.${idx}.features.${i}`, feat)} placeholder="Item incluso" />
                   </li>
                 ))}
               </ul>
-              <Button
-                variant="outline"
-                className="w-full border-current rounded-none hover:bg-current/90 transition-colors"
-                onClick={() => onCtaClick?.({ blockType: 'PricingTable', label: pkg.name })}
-              >
-                Selecionar
-              </Button>
+
+              {!props?.hide_cta && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-[#2C2825] border-transparent text-white hover:bg-[#2C2825]/80 hover:text-white rounded-xl transition-colors"
+                  onClick={() => onCtaClick?.({ blockType: 'PricingTable', label: pkg.name })}
+                >
+                  Selecionar
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingCardsMinimal({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+  const c = content || data || {};
+  const packages: any[] = c.packages || [];
+  const align = alignClass(props?.align, 'center');
+
+  const colsClass = packages.length === 1
+    ? 'grid-cols-1 max-w-sm mx-auto'
+    : packages.length === 2
+      ? 'grid-cols-1 @md:grid-cols-2 max-w-[700px] mx-auto'
+      : 'grid-cols-1 @md:grid-cols-3';
+
+  return (
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'white'), align)}>
+      <div className="max-w-[1000px] mx-auto">
+        <EditableText as="p" {...et('eyebrow', c.eyebrow)}
+          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4 text-center" />
+        <EditableText as="h2" {...et('title', c.title)}
+          className="text-4xl @md:text-5xl mb-16 text-center" style={fd()} />
+        
+        <div className={cn('grid gap-10 @md:gap-14 text-center', colsClass)}>
+          {packages.map((pkg: any, idx: number) => (
+            <div key={pkg.id || idx} className="flex flex-col relative text-neutral-900">
+              
+              {!props?.hide_images && (pkg.image_ref || editable) && (
+                <div className="aspect-[4/5] w-full mb-8 rounded-3xl overflow-hidden relative bg-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] group/card">
+                  <EditableImage
+                    editable={editable}
+                    value={pkg.image_ref || null}
+                    label="Foto do pacote"
+                    alt={pkg.name || 'Pacote'}
+                    onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
+                    className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover/card:scale-105"
+                    imgClassName="object-cover w-full h-full"
+                    publicEmptyClassName="hidden"
+                  />
+                  {pkg.badge && (
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-[9px] font-medium tracking-[0.2em] uppercase text-neutral-900 px-3 py-1.5 rounded-full shadow-sm">
+                      <EditableText {...et(`packages.${idx}.badge`, pkg.badge)} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(!pkg.image_ref && !editable) && pkg.badge && (
+                <div className="inline-block mx-auto bg-black/5 text-[9px] font-medium tracking-[0.2em] uppercase text-neutral-900 px-3 py-1 mb-4 rounded-full">
+                  <EditableText {...et(`packages.${idx}.badge`, pkg.badge)} />
+                </div>
+              )}
+
+              <EditableText as="h3" {...et(`packages.${idx}.name`, pkg.name)}
+                className="text-2xl @md:text-3xl mb-3" style={fd()} />
+              
+              <p className="text-xl text-[var(--pa-accent,#7A5C42)] mb-8 font-light">
+                <EditableText {...et(`packages.${idx}.price`, pkg.price)} placeholder="R$" />
+                <span className="text-sm opacity-50">/<EditableText {...et(`packages.${idx}.price_unit`, pkg.price_unit)} placeholder="un." /></span>
+              </p>
+
+              <ul className="space-y-4 flex-1 mb-10 text-sm font-light opacity-75">
+                {(pkg.features || []).map((feat: string, i: number) => (
+                  <li key={i}>
+                    <EditableText {...et(`packages.${idx}.features.${i}`, feat)} placeholder="Item incluso" />
+                  </li>
+                ))}
+              </ul>
+
+              {!props?.hide_cta && (
+                <Button
+                  variant="outline"
+                  className="w-[80%] mx-auto bg-transparent border-black/20 text-neutral-900 hover:bg-neutral-900 hover:text-white rounded-full transition-all"
+                  onClick={() => onCtaClick?.({ blockType: 'PricingTable', label: pkg.name })}
+                >
+                  Selecionar
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -560,7 +654,8 @@ function PricingNumberedEditorial({ content, data, props }: { content?: any; dat
                 )}
               >
                 <div className={cn(
-                  'grid grid-cols-1 @md:grid-cols-[1fr_1fr] gap-8 @md:gap-12 items-start',
+                  'grid gap-8 @md:gap-12 items-start',
+                  (!props?.hide_images && (pkg.image_ref || editable)) ? 'grid-cols-1 @md:grid-cols-[1fr_1fr]' : 'grid-cols-1',
                   isEven && '@md:direction-rtl'
                 )}>
                   {/* Lado do conteúdo */}
@@ -598,17 +693,20 @@ function PricingNumberedEditorial({ content, data, props }: { content?: any; dat
                   </div>
 
                   {/* Lado da foto */}
-                  <div className={cn('aspect-[4/5] @md:aspect-[3/4] overflow-hidden', isEven && '@md:order-1')}>
-                    <EditableImage
-                      editable={editable}
-                      value={pkg.image_ref || null}
-                      label={`Foto ${pkg.name || 'Pacote'}`}
-                      alt={pkg.name || 'Pacote'}
-                      onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
-                      className="relative w-full h-full"
-                      imgClassName="object-cover w-full h-full"
-                    />
-                  </div>
+                  {!props?.hide_images && (pkg.image_ref || editable) && (
+                    <div className={cn('aspect-[4/5] @md:aspect-[3/4] overflow-hidden', isEven && '@md:order-1')}>
+                      <EditableImage
+                        editable={editable}
+                        value={pkg.image_ref || null}
+                        label={`Foto ${pkg.name || 'Pacote'}`}
+                        alt={pkg.name || 'Pacote'}
+                        onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
+                        className="relative w-full h-full"
+                        imgClassName="object-cover w-full h-full"
+                        publicEmptyClassName="hidden"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -620,10 +718,12 @@ function PricingNumberedEditorial({ content, data, props }: { content?: any; dat
 }
 
 function PricingTableRenderer({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
-  const variant = props?.variant || 'classic';
+  const variant = props?.variant || 'cards-classic';
   switch (variant) {
     case 'numbered-editorial':
       return <PricingNumberedEditorial content={content} data={data} props={props} />;
+    case 'cards-minimal':
+      return <PricingCardsMinimal content={content} data={data} props={props} onCtaClick={onCtaClick} />;
     default:
       return <PricingClassic content={content} data={data} props={props} onCtaClick={onCtaClick} />;
   }
