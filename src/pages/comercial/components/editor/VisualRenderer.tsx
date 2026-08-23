@@ -429,7 +429,7 @@ function EditorialSplitPortrait({ data, content, props }: { data?: any; content?
               label="Foto"
               alt="Foto editorial"
               onCommit={(url) => inline?.set('props.photo_a.image_ref', url)}
-              className="w-full h-full"
+              className="relative w-full h-full"
               imgClassName="object-cover w-full h-full"
             />
           </div>
@@ -605,7 +605,7 @@ function PricingNumberedEditorial({ content, data, props }: { content?: any; dat
                       label={`Foto ${pkg.name || 'Pacote'}`}
                       alt={pkg.name || 'Pacote'}
                       onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
-                      className="w-full h-full"
+                      className="relative w-full h-full"
                       imgClassName="object-cover w-full h-full"
                     />
                   </div>
