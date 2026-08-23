@@ -333,7 +333,8 @@ function EditorialOverlapBlend({ data, content, props }: { data?: any; content?:
               position: 'absolute', bottom: 0, right: 0,
               width: `${p.photo_b?.width_pct || 62}%`,
               height: `${p.photo_b?.height_pct || 66}%`,
-              mixBlendMode: blend ? 'screen' : undefined,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              border: '4px solid var(--pa-white, #fff)'
             })}
             {c.vertical_label && (
               <p
@@ -440,11 +441,59 @@ function EditorialSplitPortrait({ data, content, props }: { data?: any; content?
   );
 }
 
+function EditorialTextOnly({ data, content, props }: { data?: any; content?: any; props?: any }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+
+  const c = content || data || {};
+  const p = props || {};
+  const isDark = (p.background ?? 'cream') === 'dark';
+  const borderColor = isDark ? 'border-white/10' : 'border-[var(--pa-ink,#1A1714)]/10';
+  const align = alignClass(p.align, 'center');
+
+  return (
+    <section className={cn('py-20 @md:py-32 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'))}>
+      <div className={cn("max-w-[800px] mx-auto flex flex-col", align)}>
+        <EditableText as="span" {...et('eyebrow', c.eyebrow)}
+          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-6 block" />
+
+        <h2 className="text-4xl @md:text-6xl font-light leading-[1.1] tracking-[0.02em] mb-12" style={fd()}>
+          <EditableText {...et('title', c.title)} placeholder="Título" />{' '}
+          <em className="italic opacity-60"><EditableText {...et('title_italic', c.title_italic)} placeholder="em itálico" /></em>
+        </h2>
+
+        <EditableText as="p" {...et('body', c.body)} multiline
+          className="italic text-lg @md:text-xl font-light leading-[1.8] opacity-70 mb-16 max-w-[650px] mx-auto" style={fd()} />
+
+        {c.details && c.details.length > 0 && (
+          <div className="flex flex-col gap-0 max-w-[500px] w-full mx-auto">
+            {c.details.map((detail: any, idx: number) => (
+              <div key={detail.id || idx} className={cn('flex justify-between items-baseline gap-6 py-4 border-b', borderColor, idx === 0 && 'border-t')}>
+                <EditableText as="span" {...et(`details.${idx}.label`, detail.label)}
+                  className="text-[10px] font-medium tracking-[0.24em] uppercase opacity-50 whitespace-nowrap" />
+                <EditableText as="span" {...et(`details.${idx}.value`, detail.value)}
+                  className="text-base font-light text-right opacity-80" style={fd()} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function EditorialRenderer({ data, content, props }: { data?: any; content?: any; props?: any }) {
   const variant = props?.variant || 'overlap-blend';
   switch (variant) {
     case 'split-portrait':
       return <EditorialSplitPortrait data={data} content={content} props={props} />;
+    case 'text-only':
+      return <EditorialTextOnly data={data} content={content} props={props} />;
     default:
       return <EditorialOverlapBlend data={data} content={content} props={props} />;
   }
