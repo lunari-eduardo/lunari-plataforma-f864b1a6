@@ -31,25 +31,22 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // 1. Resolver autenticação do chamador (JWT de fotógrafo ou Service Role de funções públicas de galeria)
-  const authResult = await resolveCallerAuth(req, supabase);
-  if (authResult.errorResponse) {
-    return authResult.errorResponse;
-  }
-
   try {
     const body: CreateCobrancaRequest & { userId?: string } = await req.json();
 
-    // Determinar o userId do fotógrafo responsável
+    // 1. Resolver autenticação do chamador
+    // - Se tiver JWT de usuário: usa o userId criptografado no token
+    // - Se for Service Role ou cliente anônimo em checkout público/galeria: usa body.userId
+    const authResult = await resolveCallerAuth(req, supabase);
     let userId: string;
-    if (authResult.authType === "user") {
+    if (authResult.authType === "user" && authResult.userId) {
       userId = authResult.userId;
-    } else {
-      // Chamada interna via Service Role (ex: confirm-selection)
-      if (!body.userId) {
-        return errorResponse("userId é obrigatório para chamadas de serviço", 400, "MISSING_USER_ID");
-      }
+    } else if (body.userId) {
       userId = body.userId;
+    } else if (authResult.errorResponse) {
+      return authResult.errorResponse;
+    } else {
+      return errorResponse("userId é obrigatório", 400, "MISSING_USER_ID");
     }
 
     const {

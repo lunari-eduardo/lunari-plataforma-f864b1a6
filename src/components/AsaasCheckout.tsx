@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { calcularAntecipacao } from '@/lib/anticipationUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = 'https://tlnjspsywycbudhewsfv.supabase.co';
 const POLL_INTERVAL = 15_000;
@@ -314,9 +315,15 @@ export function AsaasCheckout({
   const generatePix = useCallback(async () => {
     setPixLoading(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionData?.session?.access_token) {
+        headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+      }
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           userId: data.userId,
           clienteId: data.clienteId,
@@ -535,9 +542,15 @@ export function AsaasCheckout({
 
     setCardLoading(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionData?.session?.access_token) {
+        headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+      }
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           userId: data.userId,
           clienteId: data.clienteId,
@@ -896,12 +909,10 @@ export function AsaasCheckout({
 
           {/* ——— CARD TAB ——— */}
           {data.enabledMethods.creditCard && (
-            <TabsContent value="card" className="space-y-6 mt-6">
+            <TabsContent value="card" className="space-y-3.5 mt-4">
               {/* Seção 1: Dados do titular */}
-              <section className="space-y-4">
-                <SectionTitle icon={User}>Dados do titular</SectionTitle>
-
-                <div className="space-y-1.5">
+              <div className="space-y-2.5">
+                <div className="space-y-1">
                   <Label htmlFor="cc-name" className="text-xs font-medium text-muted-foreground">Nome no cartão</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -916,7 +927,7 @@ export function AsaasCheckout({
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="cc-cpf" className="text-xs font-medium text-muted-foreground">CPF / CNPJ</Label>
                   <div className="relative">
                     <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -945,7 +956,7 @@ export function AsaasCheckout({
                   <FieldError name="cpf" />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="cc-email" className="text-xs font-medium text-muted-foreground">Email do titular</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -970,13 +981,14 @@ export function AsaasCheckout({
                   </div>
                   <FieldError name="email" />
                 </div>
-              </section>
+              </div>
+
+              {/* Linha divisora sutil */}
+              <div className="border-t border-border/40 my-2" />
 
               {/* Seção 2: Dados do cartão */}
-              <section className="space-y-4">
-                <SectionTitle icon={CreditCard}>Dados do cartão</SectionTitle>
-
-                <div className="space-y-1.5">
+              <div className="space-y-2.5">
+                <div className="space-y-1">
                   <Label htmlFor="cc-number" className="text-xs font-medium text-muted-foreground">Número do cartão</Label>
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -1008,7 +1020,7 @@ export function AsaasCheckout({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="cc-exp" className="text-xs font-medium text-muted-foreground">Validade</Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -1042,7 +1054,7 @@ export function AsaasCheckout({
                     </div>
                     <FieldError name="expiry" />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="cc-cvv" className="text-xs font-medium text-muted-foreground">CVV</Label>
                       <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1" title="3 dígitos no verso">
@@ -1069,14 +1081,15 @@ export function AsaasCheckout({
                     </div>
                   </div>
                 </div>
-              </section>
+              </div>
+
+              {/* Linha divisora sutil */}
+              <div className="border-t border-border/40 my-2" />
 
               {/* Seção 3: Contato */}
-              <section className="space-y-4">
-                <SectionTitle icon={Phone}>Contato</SectionTitle>
-
+              <div className="space-y-2.5">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="cc-phone" className="text-xs font-medium text-muted-foreground">
                       Telefone <span className="text-muted-foreground/60">(opcional)</span>
                     </Label>
@@ -1098,7 +1111,7 @@ export function AsaasCheckout({
                       />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="cc-cep" className="text-xs font-medium text-muted-foreground">CEP</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
@@ -1118,7 +1131,7 @@ export function AsaasCheckout({
 
                 {/* Installments */}
                 {data.maxParcelas > 1 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label className="text-xs font-medium text-muted-foreground">Parcelas</Label>
                     {feesLoading && !data.absorverTaxa ? (
                       <div className="space-y-2">
@@ -1137,7 +1150,7 @@ export function AsaasCheckout({
                     )}
                   </div>
                 )}
-              </section>
+              </div>
 
               {cardError && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
