@@ -629,126 +629,6 @@ function PricingTableRenderer({ content, data, props, onCtaClick }: { content?: 
   }
 }
 
-function TestimonialRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
-  const inline = useInlineEdit();
-  const et = (path: string, value: string | undefined) => ({
-    editable: inline?.editable ?? false,
-    value: value ?? '',
-    onCommit: (v: string) => inline?.set(path, v),
-  });
-  const c = content || data || {};
-  const align = alignClass(props?.align, 'center');
-  return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'cream'), align)}>
-      <div className="max-w-[900px] mx-auto">
-        <EditableText as="p" {...et('eyebrow', c.eyebrow)}
-          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4" />
-        <EditableText as="h2" {...et('title', c.title)}
-          className="text-4xl @md:text-5xl mb-12" style={fd()} />
-        <div className="flex flex-nowrap overflow-x-auto gap-8 pb-8 snap-x text-left">
-          {(c.items || []).map((item: any, idx: number) => (
-            <div key={item.id || idx} className="min-w-[80%] @md:min-w-[400px] snap-center bg-white/80 p-8 rounded-sm flex flex-col shadow-sm">
-              <span className="text-4xl text-[var(--pa-stone,#C9BFB2)] leading-none mb-4" style={fd()}>"</span>
-              <EditableText as="p" {...et(`items.${idx}.quote`, item.quote)} multiline
-                className="italic text-lg leading-relaxed mb-6 flex-1 opacity-80" style={fd()} />
-              <div>
-                <EditableText as="p" {...et(`items.${idx}.author`, item.author)}
-                  className="font-bold text-sm uppercase tracking-wider" />
-                <EditableText as="p" {...et(`items.${idx}.service`, item.service)}
-                  className="text-xs opacity-50 uppercase tracking-widest mt-1" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FAQRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
-  const inline = useInlineEdit();
-  const et = (path: string, value: string | undefined) => ({
-    editable: inline?.editable ?? false,
-    value: value ?? '',
-    onCommit: (v: string) => inline?.set(path, v),
-  });
-  const c = content || data || {};
-  const isDark = (props?.background ?? 'cream') === 'dark';
-  const cardClass = isDark
-    ? 'border-white/10 bg-white/5'
-    : 'border-[var(--pa-ink,#1A1714)]/10 bg-white/70';
-  return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'cream'), alignClass(props?.align, 'center'))}>
-      <div className="max-w-[800px] mx-auto">
-        <EditableText as="p" {...et('eyebrow', c.eyebrow)}
-          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4" />
-        <EditableText as="h2" {...et('title', c.title)}
-          className="text-4xl @md:text-5xl mb-12" style={fd()} />
-
-        <div className="mt-4 space-y-3 text-left">
-          {(c.items || []).map((item: any, idx: number) => (
-            <details key={item.id || idx} className={cn('group border rounded-sm', cardClass)}>
-              <summary className="flex cursor-pointer list-none [&::-webkit-details-marker]:hidden items-center justify-between gap-4 px-6 py-4 text-sm font-medium">
-                <EditableText as="span" {...et(`items.${idx}.question`, item.question)} className="flex-1" placeholder="Pergunta" />
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" />
-              </summary>
-              <EditableText as="p" {...et(`items.${idx}.answer`, item.answer)} multiline
-                className="block px-6 pb-5 text-sm font-light opacity-70 whitespace-pre-line" />
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CTABlockRenderer({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
-  const inline = useInlineEdit();
-  const editable = inline?.editable ?? false;
-  const et = (path: string, value: string | undefined) => ({
-    editable,
-    value: value ?? '',
-    onCommit: (v: string) => inline?.set(path, v),
-  });
-  const c = content || data || {};
-  const buttonLabel = c.button_label || 'Entrar em contato';
-  const align = alignClass(props?.align, 'center');
-  return (
-    <section className={cn('py-24 @md:py-32 px-6 @md:px-14 flex flex-col items-center', sectionBg(props?.background, 'white'), align)}>
-      <EditableText as="h2" {...et('cta_text', c.cta_text)} multiline
-        className="text-4xl @md:text-6xl mb-12 max-w-2xl whitespace-pre-line leading-tight" style={fd()} />
-
-      {editable ? (
-        <div
-          className="bg-[var(--pa-ink,#1A1714)] text-[var(--pa-white,#FDFBF7)] rounded-none px-12 py-6 text-sm font-bold tracking-widest uppercase mb-12 cursor-text"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <EditableText {...et('button_label', c.button_label)} placeholder="Texto do botão" />
-        </div>
-      ) : (
-        <Button
-          className="bg-[var(--pa-ink,#1A1714)] hover:bg-[var(--pa-ink,#1A1714)]/90 text-white rounded-none px-12 py-6 text-sm font-bold tracking-widest uppercase mb-12"
-          onClick={() => onCtaClick?.({ blockType: 'CTABlock', label: buttonLabel })}
-        >
-          {buttonLabel}
-        </Button>
-      )}
-
-      <div className="flex flex-wrap justify-center gap-6">
-        {(c.links || []).map((link: any, idx: number) => (
-          <a
-            key={link.id || idx}
-            href={link.href}
-            onClick={(e) => { if (editable) { e.preventDefault(); } }}
-            className="text-xs font-medium tracking-widest uppercase opacity-60 hover:opacity-100 transition-opacity"
-          >
-            <EditableText {...et(`links.${idx}.label`, link.label)} placeholder="Rótulo do link" />
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 function GalleryRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
   const inline = useInlineEdit();
@@ -853,20 +733,6 @@ function GalleryRenderer({ content, data, props }: { content?: any; data?: any; 
   );
 }
 
-function FooterTermsRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
-  const inline = useInlineEdit();
-  const c = content || data || {};
-  return (
-    <footer className={cn('py-8 px-6 text-[10px] font-medium tracking-widest uppercase border-t border-current/10', sectionBg(props?.background, 'cream'), alignClass(props?.align, 'center'))}>
-      <EditableText
-        editable={inline?.editable ?? false}
-        value={c.copyright || ''}
-        onCommit={(v) => inline?.set('copyright', v)}
-        placeholder="© Seu estúdio — Todos os direitos reservados"
-      />
-    </footer>
-  );
-}
 
 function DividerRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
   const inline = useInlineEdit();
@@ -1012,11 +878,7 @@ export function VisualRenderer({
                 {block.type === 'EditorialBlock' && <EditorialRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'PricingTable' && <PricingTableRenderer content={block.content} data={block.data} props={block.props} onCtaClick={onCtaClick} />}
                 {block.type === 'EditorialComposition' && <EditorialComposition content={block.content} props={block.props} />}
-                {block.type === 'TestimonialBlock' && <TestimonialRenderer content={block.content} data={block.data} props={block.props} />}
-                {block.type === 'FAQBlock' && <FAQRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'Gallery' && <GalleryRenderer content={block.content} data={block.data} props={block.props} />}
-                {block.type === 'CTABlock' && <CTABlockRenderer content={block.content} data={block.data} props={block.props} onCtaClick={onCtaClick} />}
-                {block.type === 'FooterTerms' && <FooterTermsRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'DividerBlock' && <DividerRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'text' && <DefaultRenderer block={block} />}
               </BlockObserver>

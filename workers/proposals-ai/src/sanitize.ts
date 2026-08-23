@@ -4,28 +4,34 @@
 export const BLOCK_TYPES = [
   'CoverBlock',
   'EditorialBlock',
+  'EditorialComposition',
   'PricingTable',
   'Gallery',
-  'TestimonialBlock',
-  'FAQBlock',
-  'CTABlock',
-  'FooterTerms',
+  'DividerBlock',
   'text',
 ] as const;
 
 const STRING_FIELDS: Record<string, string[]> = {
   CoverBlock: ['eyebrow', 'title', 'title_italic', 'subtitle', 'photographer_name', 'btnText', 'btnLink', 'image_url'],
   EditorialBlock: ['eyebrow', 'title', 'title_italic', 'body', 'vertical_label'],
+  EditorialComposition: ['eyebrow', 'title', 'title_italic', 'body', 'side_label', 'image_url'],
   PricingTable: ['eyebrow', 'title'],
   Gallery: ['eyebrow', 'title', 'caption'],
-  TestimonialBlock: ['eyebrow', 'title'],
-  FAQBlock: ['eyebrow', 'title'],
-  CTABlock: ['cta_text', 'button_label'],
-  FooterTerms: ['copyright'],
+  DividerBlock: ['label'],
   text: ['title', 'body'],
 };
 
 const GALLERY_RATIOS = ['auto', '1/1', '4/5', '4/3', '16/9'];
+
+const VALID_VARIANTS: Record<string, string[]> = {
+  CoverBlock: ['split', 'full', 'centered'],
+  EditorialBlock: ['text-only', 'with-details'],
+  EditorialComposition: ['split-left', 'split-right', 'floating', 'masonry'],
+  PricingTable: ['grid', 'cards', 'minimal'],
+  Gallery: ['grid', 'masonry'],
+  DividerBlock: ['line', 'icon'],
+  text: ['default']
+};
 
 export type Block = {
   id?: string;
@@ -61,41 +67,12 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
         id: typeof p.id === 'string' ? p.id : `pkg-${index}-${i}`,
         name: String(p.name ?? `Pacote ${i + 1}`),
         price: String(p.price ?? ''),
+        price_cash: String(p.price_cash ?? ''),
+        price_installments: String(p.price_installments ?? ''),
         price_unit: String(p.price_unit ?? 'sessão'),
         badge: String(p.badge ?? ''),
         image_ref: typeof p.image_ref === 'string' ? p.image_ref : '',
         features: Array.isArray(p.features) ? p.features.map((f: any) => String(f)).slice(0, 12) : [],
-      }));
-  }
-
-  if (type === 'TestimonialBlock' && Array.isArray(raw.content?.items)) {
-    content.items = raw.content.items
-      .filter((t: any) => t && typeof t === 'object')
-      .map((t: any, i: number) => ({
-        id: typeof t.id === 'string' ? t.id : `t-${index}-${i}`,
-        quote: String(t.quote ?? ''),
-        author: String(t.author ?? ''),
-        service: String(t.service ?? ''),
-      }));
-  }
-
-  if (type === 'FAQBlock' && Array.isArray(raw.content?.items)) {
-    content.items = raw.content.items
-      .filter((q: any) => q && typeof q === 'object')
-      .map((q: any, i: number) => ({
-        id: typeof q.id === 'string' ? q.id : `faq-${index}-${i}`,
-        question: String(q.question ?? ''),
-        answer: String(q.answer ?? ''),
-      }));
-  }
-
-  if (type === 'CTABlock' && Array.isArray(raw.content?.links)) {
-    content.links = raw.content.links
-      .filter((l: any) => l && typeof l === 'object' && typeof l.href === 'string')
-      .map((l: any, i: number) => ({
-        id: typeof l.id === 'string' ? l.id : `l-${index}-${i}`,
-        label: String(l.label ?? ''),
-        href: String(l.href ?? ''),
       }));
   }
 
@@ -110,7 +87,18 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
 
   const block: Block = { type, content };
   if (typeof raw.id === 'string' && raw.id) block.id = raw.id;
-  if (raw.props && typeof raw.props === 'object') block.props = raw.props;
+  
+  if (raw.props && typeof raw.props === 'object') {
+    block.props = { ...raw.props };
+  } else {
+    block.props = {};
+  }
+  
+  const allowedVariants = VALID_VARIANTS[type] || ['default'];
+  if (!allowedVariants.includes(block.props.variant)) {
+    block.props.variant = allowedVariants[0];
+  }
+  
   return block;
 }
 

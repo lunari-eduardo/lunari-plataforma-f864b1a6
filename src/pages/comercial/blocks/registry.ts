@@ -266,102 +266,6 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     }),
   },
 
-  TestimonialBlock: {
-    type: 'TestimonialBlock',
-    name: 'Depoimentos',
-    description: 'O que dizem sobre você',
-    icon: Quote,
-    fields: [
-      { key: 'eyebrow', label: 'Rótulo Superior (Eyebrow)', kind: 'text', placeholder: 'Depoimentos' },
-      { key: 'title', label: 'Título', kind: 'text', placeholder: 'Depoimentos' },
-      {
-        key: 'items',
-        label: 'Depoimentos',
-        kind: 'list',
-        itemLabel: 'Depoimento',
-        itemFields: [
-          { key: 'quote', label: 'Texto', kind: 'textarea', placeholder: 'Foi uma experiência incrível...' },
-          { key: 'author', label: 'Autor', kind: 'text', placeholder: 'Maria S.' },
-          { key: 'service', label: 'Serviço', kind: 'text', placeholder: 'Newborn' },
-        ],
-        itemFactory: testimonialItem,
-      },
-    ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
-    factory: () => ({
-      content: { eyebrow: '', title: 'Depoimentos', items: [] },
-      props: { align: 'center', background: 'cream' },
-    }),
-  },
-
-  CTABlock: {
-    type: 'CTABlock',
-    name: 'Chamada para ação',
-    description: 'Botão de contato e links',
-    icon: MessageSquare,
-    fields: [
-      { key: 'cta_text', label: 'Título da Chamada', kind: 'textarea', placeholder: 'Vamos conversar?' },
-      { key: 'button_label', label: 'Texto do Botão', kind: 'text', placeholder: 'Entrar em contato' },
-      {
-        key: 'links',
-        label: 'Links',
-        kind: 'list',
-        itemLabel: 'Link',
-        itemFields: [
-          { key: 'label', label: 'Rótulo', kind: 'text', placeholder: 'Instagram' },
-          { key: 'href', label: 'Endereço', kind: 'url', placeholder: 'https://instagram.com/seuperfil' },
-        ],
-        itemFactory: linkItem,
-      },
-    ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
-    factory: () => ({
-      content: { cta_text: 'Vamos conversar?', button_label: 'Entrar em contato', links: [] },
-      props: { align: 'center', background: 'white' },
-    }),
-  },
-
-  FAQBlock: {
-    type: 'FAQBlock',
-    name: 'Perguntas Frequentes',
-    description: 'Dúvidas comuns em formato sanfona',
-    icon: HelpCircle,
-    fields: [
-      { key: 'eyebrow', label: 'Rótulo Superior (Eyebrow)', kind: 'text', placeholder: 'Dúvidas' },
-      { key: 'title', label: 'Título', kind: 'text', placeholder: 'Perguntas Frequentes' },
-      {
-        key: 'items',
-        label: 'Perguntas',
-        kind: 'list',
-        itemLabel: 'Pergunta',
-        itemFields: [
-          { key: 'question', label: 'Pergunta', kind: 'text', placeholder: 'Como funciona a entrega?' },
-          { key: 'answer', label: 'Resposta', kind: 'textarea', placeholder: 'Em até 15 dias você recebe...' },
-        ],
-        itemFactory: faqItem,
-      },
-    ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
-    factory: () => ({
-      content: { eyebrow: '', title: 'Perguntas Frequentes', items: [] },
-      props: { align: 'center', background: 'cream' },
-    }),
-  },
-
-  FooterTerms: {
-    type: 'FooterTerms',
-    name: 'Rodapé',
-    description: 'Direitos autorais e termos',
-    icon: Scale,
-    fields: [
-      { key: 'copyright', label: 'Texto de Direitos', kind: 'text', placeholder: '© 2026 Seu Estúdio — Todos os direitos reservados' },
-    ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
-    factory: () => ({
-      content: { copyright: '© Todos os direitos reservados' },
-      props: { align: 'center', background: 'cream' },
-    }),
-  },
 
   text: {
     type: 'text',
@@ -442,8 +346,6 @@ const V1_COVER = 'cover';
 const V1_ABOUT = 'about';
 const V1_PACKAGE = 'package';
 const V1_PORTFOLIO = 'portfolio';
-const V1_FAQ = 'faq';
-const V1_CTA = 'cta';
 
 export function getBlockDef(type: string): BlockDefinition | undefined {
   return BLOCK_REGISTRY[type];
@@ -453,7 +355,7 @@ export function getBlockName(type: string): string {
   return BLOCK_REGISTRY[type]?.name ?? 'Seção';
 }
 
-export const ADDABLE_BLOCK_TYPES = Object.keys(BLOCK_REGISTRY);
+export const ADDABLE_BLOCK_TYPES = Object.keys(BLOCK_REGISTRY).filter(t => t !== 'text');
 
 export function createBlock(type: string): BlockData {
   const def = BLOCK_REGISTRY[type];
@@ -580,38 +482,6 @@ function normalizeBlock(raw: any): BlockData | null {
             : [],
         },
         props: { align: 'center', background: 'dark', layout: 'masonry' },
-      });
-
-    case V1_FAQ:
-      return withId({
-        type: 'FAQBlock',
-        content: {
-          eyebrow: '',
-          title: 'Perguntas Frequentes',
-          items: Array.isArray(d.items)
-            ? d.items.map((i: any) => ({
-                id: crypto.randomUUID(),
-                question: i?.question || '',
-                answer: i?.answer || '',
-              }))
-            : [],
-        },
-        props: { align: 'center', background: 'cream' },
-      });
-
-    case V1_CTA:
-      return withId({
-        type: 'CTABlock',
-        content: {
-          cta_text: d.title || d.text || 'Vamos conversar?',
-          button_label: 'Entrar em contato',
-          links: [
-            ...(d.whatsapp ? [{ id: crypto.randomUUID(), label: 'WhatsApp', href: d.whatsapp.startsWith('http') ? d.whatsapp : `https://wa.me/${d.whatsapp}` }] : []),
-            ...(d.instagram ? [{ id: crypto.randomUUID(), label: 'Instagram', href: d.instagram.startsWith('http') ? d.instagram : `https://instagram.com/${d.instagram}` }] : []),
-            ...(d.email ? [{ id: crypto.randomUUID(), label: 'E-mail', href: `mailto:${d.email}` }] : []),
-          ],
-        },
-        props: { align: 'center', background: 'white' },
       });
 
     case 'text':

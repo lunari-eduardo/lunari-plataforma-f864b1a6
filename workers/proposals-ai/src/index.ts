@@ -198,28 +198,32 @@ Pacotes:
 ${pkgSummary}
 
 ${referenceSection}Gere uma proposta completa com os blocos V2 do Lunari.
+CATÁLOGO DE VARIANTES DISPONÍVEIS (SEMPRE especifique no "props": { "variant": "..." } de cada bloco):
+- CoverBlock: "split", "full", "centered"
+- EditorialBlock: "text-only", "with-details"
+- EditorialComposition: "split-left", "split-right", "floating", "masonry"
+- PricingTable: "grid", "cards", "minimal"
+- Gallery: "grid", "masonry"
+- DividerBlock: "line", "icon"
+
 Formato JSON exato:
 {
   "blocks": [
-    { "type": "CoverBlock", "content": { "eyebrow", "title", "title_italic", "subtitle", "photographer_name", "btnText", "image_url": "" } },
-    { "type": "EditorialBlock", "content": { "eyebrow", "title", "title_italic", "body", "vertical_label", "details": [{ "label", "value" }] } },
-    { "type": "Gallery", "content": { "eyebrow", "title", "caption", "images": [ { "span": "normal|tall_2rows|wide_2cols", "ratio": "auto" } ] } },
-    { "type": "PricingTable", "content": { "eyebrow", "title", "packages": [{ "name", "price", "price_unit", "badge", "features": [] }] } },
-    { "type": "TestimonialBlock", "content": { "eyebrow", "title", "items": [{ "quote", "author", "service" }] } },
-    { "type": "FAQBlock", "content": { "eyebrow", "title", "items": [{ "question", "answer" }] } },
-    { "type": "CTABlock", "content": { "cta_text", "button_label", "links": [] } },
-    { "type": "FooterTerms", "content": { "copyright" } }
+    { "type": "CoverBlock", "props": { "variant": "split" }, "content": { "eyebrow", "title", "title_italic", "subtitle", "photographer_name", "btnText", "image_url": "" } },
+    { "type": "EditorialBlock", "props": { "variant": "with-details" }, "content": { "eyebrow", "title", "title_italic", "body", "vertical_label", "details": [{ "label", "value" }] } },
+    { "type": "EditorialComposition", "props": { "variant": "masonry" }, "content": { "eyebrow", "title", "title_italic", "body", "side_label", "image_url": "" } },
+    { "type": "Gallery", "props": { "variant": "grid" }, "content": { "eyebrow", "title", "caption", "images": [ { "span": "normal|tall_2rows|wide_2cols", "ratio": "auto" } ] } },
+    { "type": "PricingTable", "props": { "variant": "cards" }, "content": { "eyebrow", "title", "packages": [{ "name", "price", "price_unit", "badge", "features": [] }] } },
+    { "type": "DividerBlock", "props": { "variant": "icon" }, "content": { "label": "opcional" } }
   ],
   "design_tokens": { "colors": { "cream", "linen", "stone", "taupe", "accent", "ink" }, "typography": { "display": "Cormorant Garamond", "body": "Jost" } }
 }
 
 Regras:
-- Sempre inclua CoverBlock, EditorialBlock, PricingTable e CTABlock; Gallery/TestimonialBlock/FAQBlock/FooterTerms opcionais mas recomendados.
+- Sempre inclua CoverBlock, EditorialBlock, EditorialComposition e PricingTable.
+- Gallery e DividerBlock opcionais mas recomendados (use DividerBlock para transições elegantes entre blocos com muito texto).
 - Exatamente UM bloco PricingTable com TODOS os pacotes juntos (nunca uma seção de investimento por pacote).
 - Gallery: 6 a 8 imagens com "span" variado (image_ref vazio — o fotógrafo envia depois).
-- TestimonialBlock: 3 a 4 depoimentos plausíveis e genéricos (o fotógrafo substitui pelos reais).
-- FAQBlock (opcional): 3 a 5 perguntas objetivas que clientes reais fazem para este tipo de sessão.
-- CTABlock.links: array vazio (preenchido pelo fotógrafo).
 - Textos: específicos ao tipo de sessão, sem placeholders tipo "lorem ipsum".
 - design_tokens: paleta coerente com o tom${attachments.length > 0 ? ' e com as referências anexas' : ''} (hex válidos).`;
 
