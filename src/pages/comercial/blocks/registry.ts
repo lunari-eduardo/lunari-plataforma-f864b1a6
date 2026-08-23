@@ -11,6 +11,7 @@ import {
    Scale,
    Quote,
    Layout,
+   Minus,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -62,6 +63,10 @@ export interface BlockDefinition {
   layoutFields?: BlockField[];
   /** Slots de imagem em props (ex.: EditorialBlock photo_a/photo_b) */
   propImageSlots?: PropImageSlot[];
+  /** Variantes de composição visual (ex.: poster-split, minimal-center) */
+  variants?: { value: string; label: string; description: string }[];
+  /** Variante padrão para blocos existentes sem variant definida */
+  defaultVariant?: string;
   factory: () => { content: Record<string, any>; props?: Record<string, any> };
 }
 
@@ -92,7 +97,7 @@ const IMAGE_RATIO_OPTIONS = [
 ];
 
 const detailItem = () => ({ id: crypto.randomUUID(), label: '', value: '' });
-const packageItem = () => ({ id: crypto.randomUUID(), name: 'Novo Pacote', price: '', price_unit: 'sessão', badge: '', features: [] });
+const packageItem = () => ({ id: crypto.randomUUID(), name: 'Novo Pacote', price: '', price_unit: 'sessão', price_cash: '', price_installments: '', badge: '', features: [] });
 const testimonialItem = () => ({ id: crypto.randomUUID(), quote: '', author: '', service: '' });
 const linkItem = () => ({ id: crypto.randomUUID(), label: '', href: '' });
 const galleryItem = () => ({ id: crypto.randomUUID(), image_ref: '', span: 'normal', ratio: 'auto' });
@@ -115,6 +120,13 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       { key: 'image_url', label: 'Imagem de Capa', kind: 'image' },
     ],
     layoutFields: [ALIGN_FIELD],
+    variants: [
+      { value: 'minimal-center', label: 'Minimal', description: 'Layout clássico lado a lado (padrão)' },
+      { value: 'poster-split', label: 'Poster', description: 'Título gigante + foto full-bleed com gradiente' },
+      { value: 'seam-side', label: 'Split Lateral', description: 'Divisão vertical 50/50 foto e texto' },
+      { value: 'hero-full', label: 'Hero Fotográfico', description: 'Foto como fundo com overlay escuro' },
+    ],
+    defaultVariant: 'minimal-center',
     factory: () => ({
       content: { eyebrow: '', title: '', title_italic: '', subtitle: '', photographer_name: '', btnText: '', btnLink: '', image_url: '' },
       props: { align: 'left' },
@@ -145,6 +157,12 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       },
     ],
     layoutFields: [ALIGN_FIELD, backgroundField()],
+    variants: [
+      { value: 'overlap-blend', label: 'Fotos Sobrepostas', description: 'Duas fotos com blend mode (padrão)' },
+      { value: 'split-portrait', label: 'Split Retrato', description: 'Texto à esquerda + foto retrato à direita' },
+      { value: 'text-only', label: 'Só Texto', description: 'Texto estilizado sem fotos' },
+    ],
+    defaultVariant: 'overlap-blend',
     propImageSlots: [
       { key: 'photo_a', label: 'Foto Principal (Plano de fundo)' },
       { key: 'photo_b', label: 'Foto Sobreposta (Blend)' },
@@ -177,6 +195,8 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
           { key: 'name', label: 'Nome', kind: 'text', placeholder: 'Essencial' },
           { key: 'price', label: 'Preço (texto livre)', kind: 'text', placeholder: 'R$ 1.200' },
           { key: 'price_unit', label: 'Unidade', kind: 'text', placeholder: 'sessão' },
+          { key: 'price_cash', label: 'Preço à Vista', kind: 'text', placeholder: 'R$ 250,00' },
+          { key: 'price_installments', label: 'Parcelamento', kind: 'text', placeholder: '3x de R$ 89,62' },
           { key: 'badge', label: 'Selo (ex: Mais escolhido)', kind: 'text', placeholder: 'Mais escolhido' },
           { key: 'image_ref', label: 'Imagem do pacote', kind: 'image' },
           { key: 'features', label: 'Itens inclusos (1 por linha)', kind: 'stringlist', placeholder: '1h de ensaio\n10 fotos digitais' },
@@ -185,6 +205,11 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       },
     ],
     layoutFields: [ALIGN_FIELD, backgroundField()],
+    variants: [
+      { value: 'cards-classic', label: 'Cards', description: 'Cards lado a lado (padrão)' },
+      { value: 'numbered-editorial', label: 'Editorial Numerado', description: 'Lista numerada com fotos e hairlines' },
+    ],
+    defaultVariant: 'cards-classic',
     factory: () => ({
       content: { eyebrow: '', title: 'Pacotes', packages: [] },
       props: { align: 'center', background: 'white' },
@@ -231,6 +256,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         options: [
           { value: 'masonry', label: 'Masonry (proporção real)' },
           { value: 'grid', label: 'Grade (proporção fixa)' },
+          { value: 'editorial-rows', label: 'Linhas Justificadas (editorial)' },
         ],
       },
     ],
@@ -352,6 +378,32 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       props: { align: 'center', background: 'white' },
     }),
   },
+
+  DividerBlock: {
+    type: 'DividerBlock',
+    name: 'Divisor',
+    description: 'Separador visual com rótulo opcional',
+    icon: Minus,
+    fields: [
+      { key: 'label', label: 'Rótulo', kind: 'text', placeholder: 'PACOTE — ESTÚDIO' },
+    ],
+    layoutFields: [
+      {
+        key: 'style', label: 'Estilo', kind: 'select',
+        options: [
+          { value: 'hairline', label: 'Linha fina' },
+          { value: 'spaced', label: 'Espaçado' },
+          { value: 'ornament', label: 'Ornamento' },
+        ],
+      },
+      backgroundField(),
+    ],
+    factory: () => ({
+      content: { label: '' },
+      props: { style: 'hairline', background: 'cream' },
+    }),
+  },
+
   EditorialComposition: {
     type: 'EditorialComposition',
     name: 'Composição Editorial',
@@ -435,10 +487,16 @@ function normalizeBlock(raw: any): BlockData | null {
 
   // V2 nativo: garante id e content
   if (BLOCK_REGISTRY[type]) {
-    return withId({
+    const def = BLOCK_REGISTRY[type];
+    const normalized = withId({
       ...raw,
-      content: raw.content ?? raw.data ?? {} // Fallback para data se content estiver vazio
+      content: raw.content ?? raw.data ?? {}
     });
+    // Garantir variant default para blocos sem variant definida
+    if (def.defaultVariant && !normalized.props?.variant) {
+      normalized.props = { ...normalized.props, variant: def.defaultVariant };
+    }
+    return normalized;
   }
 
   // Prevenção de erro em documentos corrompidos ou V1 incompleto

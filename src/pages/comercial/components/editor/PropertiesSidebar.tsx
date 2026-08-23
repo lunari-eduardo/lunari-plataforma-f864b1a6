@@ -96,6 +96,8 @@ export function PropertiesSidebar({
   const hasFields = (def?.fields?.length ?? 0) > 0;
   const hasLayoutFields = (def?.layoutFields?.length ?? 0) > 0;
   const hasSlots = (def?.propImageSlots?.length ?? 0) > 0;
+  const hasVariants = (def?.variants?.length ?? 0) > 0;
+  const currentVariant = props.variant ?? def?.defaultVariant;
 
   return (
     <>
@@ -108,6 +110,31 @@ export function PropertiesSidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar">
+
+          {/* Seletor de Variante — aparece quando o bloco tem variantes de composição */}
+          {hasVariants && (
+            <div className="space-y-2 pb-4 border-b border-border">
+              <Label className="text-xs font-bold uppercase tracking-widest text-primary">
+                Composição
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {def!.variants!.map((v) => (
+                  <button
+                    key={v.value}
+                    onClick={() => setProps({ variant: v.value })}
+                    className={`flex flex-col items-start gap-0.5 p-3 rounded-md border text-left transition-colors ${
+                      currentVariant === v.value
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40 hover:bg-primary/5'
+                    }`}
+                  >
+                    <span className="text-xs font-medium leading-tight">{v.label}</span>
+                    <span className="text-[10px] leading-tight opacity-70">{v.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Ação específica: importar pacotes cadastrados (apenas Tabela de Preços) */}
           {block.type === 'PricingTable' && (

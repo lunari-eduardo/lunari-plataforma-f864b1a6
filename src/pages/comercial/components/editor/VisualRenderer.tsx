@@ -64,7 +64,7 @@ function sectionBg(bg: string | undefined, fallback: string): string {
   }
 }
 
-function CoverRenderer({ data, props, onCtaClick }: { data?: any; props?: any; onCtaClick?: CtaHandler }) {
+function CoverMinimalCenter({ data, props, onCtaClick }: { data?: any; props?: any; onCtaClick?: CtaHandler }) {
   const inline = useInlineEdit();
   const editable = inline?.editable ?? false;
   const et = (path: string, value: string | undefined) => ({
@@ -143,6 +143,89 @@ function CoverRenderer({ data, props, onCtaClick }: { data?: any; props?: any; o
   );
 }
 
+function CoverPosterSplit({ data, props }: { data?: any; props?: any }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+
+  const eyebrow = data?.eyebrow;
+  const title = data?.title;
+  const titleItalic = data?.title_italic;
+  const subtitle = data?.subtitle;
+  const photographerName = data?.photographer_name;
+
+  return (
+    <section className="relative min-h-[700px] @md:min-h-[900px] flex flex-col overflow-hidden">
+      {/* Foto full-bleed como fundo */}
+      <EditableImage
+        editable={editable}
+        value={data?.image_url || null}
+        label="Capa"
+        alt="Capa"
+        onCommit={(url) => inline?.set('image_url', url)}
+        className="absolute inset-0 w-full h-full"
+        imgClassName="object-cover w-full h-full"
+        publicEmptyClassName="w-full h-full"
+      />
+
+      {/* Gradiente cream → transparente no topo */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(to bottom, var(--pa-cream, #F3F0EA) 0%, var(--pa-cream, #F3F0EA) 15%, transparent 55%)`,
+        }}
+      />
+
+      {/* Conteúdo sobre o gradiente */}
+      <div className="relative z-10 flex flex-col items-center text-center flex-1 px-6 @md:px-16 pt-12 @md:pt-20">
+        {/* Ornamento vertical */}
+        <div className="w-[1px] h-8 bg-[var(--pa-accent,#7A5C42)] mb-6" />
+
+        {/* Eyebrow */}
+        <EditableText as="p" {...et('eyebrow', eyebrow)}
+          className="text-[9px] @md:text-[10px] font-medium tracking-[0.35em] uppercase text-[var(--pa-taupe,#8C7B6E)] mb-6 @md:mb-10" />
+
+        {/* Título gigante */}
+        <h1
+          className="text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.12em] leading-[1.05] text-[var(--pa-ink,#2C2825)] mb-4 @md:mb-6 max-w-[12ch]"
+          style={fd()}
+        >
+          <EditableText {...et('title', title)} placeholder="TÍTULO" />
+          {titleItalic && (
+            <em className="italic text-[var(--pa-ink,#2C2825)]/70 block text-[0.6em] tracking-[0.06em] mt-1">
+              <EditableText {...et('title_italic', titleItalic)} />
+            </em>
+          )}
+        </h1>
+
+        {/* Subtítulo */}
+        <EditableText as="p" {...et('subtitle', subtitle)} multiline
+          className="text-[10px] @md:text-xs tracking-[0.25em] uppercase text-[var(--pa-taupe,#8C7B6E)] max-w-[40ch] leading-relaxed" style={fb()} />
+      </div>
+
+      {/* Assinatura do fotógrafo no rodapé */}
+      <div className="relative z-10 pb-8 @md:pb-12 text-center mt-auto">
+        <EditableText as="p" {...et('photographer_name', photographerName)}
+          className="text-[9px] @md:text-[10px] tracking-[0.3em] uppercase text-white/80" style={fb()} />
+      </div>
+    </section>
+  );
+}
+
+function CoverRenderer({ data, props, onCtaClick }: { data?: any; props?: any; onCtaClick?: CtaHandler }) {
+  const variant = props?.variant || 'minimal-center';
+  switch (variant) {
+    case 'poster-split':
+      return <CoverPosterSplit data={data} props={props} />;
+    default:
+      return <CoverMinimalCenter data={data} props={props} onCtaClick={onCtaClick} />;
+  }
+}
+
 function PackageRenderer({ data, onCtaClick }: { data: any; onCtaClick?: CtaHandler }) {
   return (
     <section className="py-16 px-8 bg-white flex flex-col items-center">
@@ -201,7 +284,7 @@ function DefaultRenderer({ block }: { block: BlockData }) {
   );
 }
 
-function EditorialRenderer({ data, content, props }: { data?: any; content?: any; props?: any }) {
+function EditorialOverlapBlend({ data, content, props }: { data?: any; content?: any; props?: any }) {
   const inline = useInlineEdit();
   const editable = inline?.editable ?? false;
   const et = (path: string, value: string | undefined) => ({
@@ -294,7 +377,79 @@ function EditorialRenderer({ data, content, props }: { data?: any; content?: any
   );
 }
 
-function PricingTableRenderer({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
+function EditorialSplitPortrait({ data, content, props }: { data?: any; content?: any; props?: any }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+
+  const c = content || data || {};
+  const p = props || {};
+  const isDark = (p.background ?? 'cream') === 'dark';
+  const borderColor = isDark ? 'border-white/10' : 'border-[var(--pa-ink,#1A1714)]/10';
+
+  // Use photo_a image_ref if available, or a standalone image field
+  const photoRef = p.photo_a?.image_ref || null;
+
+  return (
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'))}>
+      <div className="max-w-[900px] mx-auto">
+        <div className="grid grid-cols-1 @md:grid-cols-[1fr_minmax(0,42%)] gap-10 @md:gap-16 items-start">
+          {/* Coluna de texto */}
+          <div className="flex flex-col">
+            <EditableText as="h2" {...et('title', c.title)}
+              className="text-2xl @md:text-3xl tracking-[0.15em] uppercase mb-8 @md:mb-12" style={fd()} />
+
+            <EditableText as="div" {...et('body', c.body)} multiline
+              className="text-sm @md:text-base font-light leading-[2] tracking-[0.02em] text-justify whitespace-pre-line opacity-80 mb-8" style={fb()} />
+
+            {/* Detalhes key-value */}
+            {c.details && c.details.length > 0 && (
+              <div className="flex flex-col gap-0 mt-4">
+                {c.details.map((detail: any, idx: number) => (
+                  <div key={detail.id || idx} className={cn('flex justify-between items-baseline gap-6 py-3 border-b', borderColor, idx === 0 && 'border-t')}>
+                    <EditableText as="span" {...et(`details.${idx}.label`, detail.label)}
+                      className="text-[10px] font-medium tracking-[0.24em] uppercase opacity-50 whitespace-nowrap" />
+                    <EditableText as="span" {...et(`details.${idx}.value`, detail.value)}
+                      className="text-base font-light text-right opacity-75" style={fd()} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Coluna da foto */}
+          <div className="aspect-[4/5] overflow-hidden">
+            <EditableImage
+              editable={editable}
+              value={photoRef}
+              label="Foto"
+              alt="Foto editorial"
+              onCommit={(url) => inline?.set('props.photo_a.image_ref', url)}
+              className="w-full h-full"
+              imgClassName="object-cover w-full h-full"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EditorialRenderer({ data, content, props }: { data?: any; content?: any; props?: any }) {
+  const variant = props?.variant || 'overlap-blend';
+  switch (variant) {
+    case 'split-portrait':
+      return <EditorialSplitPortrait data={data} content={content} props={props} />;
+    default:
+      return <EditorialOverlapBlend data={data} content={content} props={props} />;
+  }
+}
+
+function PricingClassic({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
   const inline = useInlineEdit();
   const editable = inline?.editable ?? false;
   const et = (path: string, value: string | undefined) => ({
@@ -368,6 +523,110 @@ function PricingTableRenderer({ content, data, props, onCtaClick }: { content?: 
       </div>
     </section>
   );
+}
+
+function PricingNumberedEditorial({ content, data, props }: { content?: any; data?: any; props?: any }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+  const c = content || data || {};
+  const packages: any[] = c.packages || [];
+
+  return (
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'cream'))}>
+      <div className="max-w-[900px] mx-auto text-center">
+        {/* Header */}
+        <EditableText as="p" {...et('eyebrow', c.eyebrow)}
+          className="text-[9px] @md:text-[10px] font-medium tracking-[0.35em] uppercase text-[var(--pa-taupe,#8C7B6E)] mb-4" />
+        <EditableText as="h2" {...et('title', c.title)}
+          className="text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.1em] leading-[1.05] mb-6" style={fd()} />
+
+        {/* Pacotes */}
+        <div className="mt-12 @md:mt-16 space-y-0 text-left">
+          {packages.map((pkg: any, idx: number) => {
+            const num = String(idx + 1).padStart(2, '0');
+            const isEven = idx % 2 === 1;
+
+            return (
+              <div
+                key={pkg.id || idx}
+                className={cn(
+                  'border-t border-[var(--pa-stone,#C9BFB2)]/30 py-10 @md:py-14',
+                  idx === packages.length - 1 && 'border-b'
+                )}
+              >
+                <div className={cn(
+                  'grid grid-cols-1 @md:grid-cols-[1fr_1fr] gap-8 @md:gap-12 items-start',
+                  isEven && '@md:direction-rtl'
+                )}>
+                  {/* Lado do conteúdo */}
+                  <div className={cn(isEven && '@md:order-2')}>
+                    <div className="flex items-baseline gap-4 mb-4">
+                      <span className="text-5xl @md:text-6xl opacity-15 leading-none" style={fd()}>{num}</span>
+                      <div>
+                        <EditableText as="h3" {...et(`packages.${idx}.name`, pkg.name)}
+                          className="text-sm @md:text-base tracking-[0.2em] uppercase font-medium" style={fb()} />
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="space-y-2 mb-8 ml-0">
+                      {(pkg.features || []).map((feat: string, i: number) => (
+                        <li key={i} className="flex items-start gap-3 text-sm font-light opacity-70">
+                          <span className="text-[var(--pa-accent,#7A5C42)] mt-0.5 text-xs">•</span>
+                          <EditableText {...et(`packages.${idx}.features.${i}`, feat)} placeholder="Item incluso" />
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Preço */}
+                    <div className="mt-auto">
+                      <p className="text-[9px] tracking-[0.3em] uppercase text-[var(--pa-taupe,#8C7B6E)] mb-1">À VISTA</p>
+                      <p className="text-2xl @md:text-3xl tracking-[0.05em]" style={fd()}>
+                        <EditableText {...et(`packages.${idx}.price_cash`, pkg.price_cash || pkg.price)} placeholder="R$ 250,00" />
+                      </p>
+                      {(pkg.price_installments || editable) && (
+                        <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--pa-taupe,#8C7B6E)] mt-1">
+                          OU <EditableText {...et(`packages.${idx}.price_installments`, pkg.price_installments)} placeholder="3x de R$ 89,62" />
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lado da foto */}
+                  <div className={cn('aspect-[4/5] @md:aspect-[3/4] overflow-hidden', isEven && '@md:order-1')}>
+                    <EditableImage
+                      editable={editable}
+                      value={pkg.image_ref || null}
+                      label={`Foto ${pkg.name || 'Pacote'}`}
+                      alt={pkg.name || 'Pacote'}
+                      onCommit={(url) => inline?.set(`packages.${idx}.image_ref`, url)}
+                      className="w-full h-full"
+                      imgClassName="object-cover w-full h-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingTableRenderer({ content, data, props, onCtaClick }: { content?: any; data?: any; props?: any; onCtaClick?: CtaHandler }) {
+  const variant = props?.variant || 'classic';
+  switch (variant) {
+    case 'numbered-editorial':
+      return <PricingNumberedEditorial content={content} data={data} props={props} />;
+    default:
+      return <PricingClassic content={content} data={data} props={props} onCtaClick={onCtaClick} />;
+  }
 }
 
 function TestimonialRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
@@ -609,6 +868,57 @@ function FooterTermsRenderer({ content, data, props }: { content?: any; data?: a
   );
 }
 
+function DividerRenderer({ content, data, props }: { content?: any; data?: any; props?: any }) {
+  const inline = useInlineEdit();
+  const editable = inline?.editable ?? false;
+  const et = (path: string, value: string | undefined) => ({
+    editable,
+    value: value ?? '',
+    onCommit: (v: string) => inline?.set(path, v),
+  });
+  const c = content || data || {};
+  const style = props?.style || 'hairline';
+
+  if (style === 'spaced') {
+    return (
+      <section className={cn('py-12 @md:py-20', sectionBg(props?.background, 'cream'))} />
+    );
+  }
+
+  if (style === 'ornament') {
+    return (
+      <section className={cn('py-10 @md:py-16 flex flex-col items-center gap-4', sectionBg(props?.background, 'cream'))}>
+        <div className="flex items-center gap-4 w-full max-w-[200px]">
+          <div className="flex-1 h-[0.5px] bg-current opacity-20" />
+          <div className="w-2 h-2 rotate-45 border border-current opacity-20" />
+          <div className="flex-1 h-[0.5px] bg-current opacity-20" />
+        </div>
+        {c.label && (
+          <EditableText as="p" {...et('label', c.label)}
+            className="text-[9px] tracking-[0.35em] uppercase opacity-40 mt-2" style={fb()} />
+        )}
+      </section>
+    );
+  }
+
+  // hairline (default)
+  return (
+    <section className={cn('py-6 @md:py-10 px-6 @md:px-14', sectionBg(props?.background, 'cream'))}>
+      <div className="max-w-[900px] mx-auto">
+        <div className="flex items-center gap-6">
+          <div className="flex-1 h-[0.5px] bg-current opacity-15" />
+          {(c.label || editable) && (
+            <EditableText as="span" {...et('label', c.label)}
+              className="text-[9px] tracking-[0.35em] uppercase opacity-40 shrink-0" style={fb()}
+              placeholder="Rótulo" />
+          )}
+          <div className="flex-1 h-[0.5px] bg-current opacity-15" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 // ---------------------------------------------------------
 // Observer de Blocos para Rastreio
@@ -707,6 +1017,7 @@ export function VisualRenderer({
                 {block.type === 'Gallery' && <GalleryRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'CTABlock' && <CTABlockRenderer content={block.content} data={block.data} props={block.props} onCtaClick={onCtaClick} />}
                 {block.type === 'FooterTerms' && <FooterTermsRenderer content={block.content} data={block.data} props={block.props} />}
+                {block.type === 'DividerBlock' && <DividerRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'text' && <DefaultRenderer block={block} />}
               </BlockObserver>
             </InlineEditContext.Provider>
