@@ -3,6 +3,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
+import { ensureAsaasWebhookSubscription } from "../asaas-helpers.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -156,6 +157,12 @@ export async function createAsaasPayment(
   const baseUrl = settings.environment === "production"
     ? "https://api.asaas.com"
     : "https://api-sandbox.asaas.com";
+
+  // Auto-provisionar ou reativar o webhook do Asaas silenciosamente
+  const webhookUrl = "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/asaas-webhook";
+  ensureAsaasWebhookSubscription(baseUrl, apiKey, webhookUrl).catch((e) => {
+    console.warn("[asaas-adapter] Falha não impeditiva ao auto-provisionar webhook:", e);
+  });
 
   const { customerId, error: custErr } = await ensureAsaasCustomer(baseUrl, apiKey, cliente);
   if (custErr || !customerId) {

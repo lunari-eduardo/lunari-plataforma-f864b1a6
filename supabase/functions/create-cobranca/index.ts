@@ -364,9 +364,19 @@ Deno.serve(async (req) => {
       if (adapterData.pixCopiaCola) updateData.mp_pix_copia_cola = adapterData.pixCopiaCola;
     }
 
+    const asaasStatus = adapterData.dadosExtras?.status;
+    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+    if (isPaid) {
+      updateData.status = "pago";
+      updateData.data_pagamento = new Date().toISOString();
+      if (adapterData.dadosExtras?.netValue != null) {
+        updateData.valor_liquido = adapterData.dadosExtras.netValue;
+      }
+    }
+
     await supabase.from("cobrancas").update(updateData).eq("id", cobrancaId);
 
-    console.log(`[create-cobranca] Cobrança ${cobrancaId} finalizada com sucesso! Checkout: ${finalCheckoutUrl}`);
+    console.log(`[create-cobranca] Cobrança ${cobrancaId} finalizada com sucesso (status=${updateData.status || 'pendente'})! Checkout: ${finalCheckoutUrl}`);
 
     const response: CreateCobrancaResponse = {
       success: true,

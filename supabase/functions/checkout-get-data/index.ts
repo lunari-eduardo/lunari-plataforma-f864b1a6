@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
 import { resolvePayerHints } from '../_shared/payer-hints.ts';
-import { normalizeAsaasFees, NormalizedAsaasFees } from '../_shared/asaas-helpers.ts';
+import { normalizeAsaasFees, NormalizedAsaasFees, ensureAsaasWebhookSubscription } from '../_shared/asaas-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -206,6 +206,12 @@ Deno.serve(async (req) => {
     const asaasBaseUrl = settings.environment === 'production'
       ? 'https://api.asaas.com'
       : 'https://api-sandbox.asaas.com';
+
+    // Auto-garantir que o webhook Asaas está ativo no gateway
+    const webhookEndpoint = `${supabaseUrl}/functions/v1/asaas-webhook`;
+    ensureAsaasWebhookSubscription(asaasBaseUrl, integracao.access_token, webhookEndpoint).catch((e) => {
+      console.warn('[checkout-get-data] Webhook auto-sync error (non-fatal):', e);
+    });
 
     // Resolve fee settings: per-charge overrides (dados_extras) > global settings
     const chargeOverrides = (cobranca.dados_extras || {}) as {

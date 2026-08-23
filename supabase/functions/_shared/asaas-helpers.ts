@@ -273,3 +273,93 @@ export function calculateCreditFees(
   };
 }
 
+export const ASAAS_WEBHOOK_EVENTS = [
+  "PAYMENT_CREATED",
+  "PAYMENT_CONFIRMED",
+  "PAYMENT_RECEIVED",
+  "PAYMENT_ANTICIPATED",
+  "PAYMENT_OVERDUE",
+  "PAYMENT_DELETED",
+  "PAYMENT_REFUNDED",
+  "PAYMENT_PARTIALLY_REFUNDED",
+  "PAYMENT_CHARGEBACK_REQUESTED",
+  "PAYMENT_CHARGEBACK_DISPUTE",
+  "PAYMENT_REPROVED_BY_RISK_ANALYSIS",
+];
+
+export async function ensureAsaasWebhookSubscription(
+  baseUrl: string,
+  apiKey: string,
+  webhookUrl: string,
+  email?: string
+): Promise<{ ok: boolean; webhookId?: string; error?: string }> {
+  try {
+    const listRes = await fetch(`${baseUrl}/v3/webhooks`, {
+      headers: { access_token: apiKey },
+    });
+
+    if (!listRes.ok) {
+      console.warn(`[asaas-webhook-sync] Falha ao listar webhooks: status ${listRes.status}`);
+      return { ok: false, error: `HTTP ${listRes.status}` };
+    }
+
+    const listData = await listRes.json();
+    const existing = Array.isArray(listData.data)
+      ? listData.data.find((w: any) => w.url === webhookUrl || w.name === "Lunari Studio Webhook" || w.name === "Lunari Gallery")
+      : null;
+
+    const payload = {
+      name: "Lunari Studio Webhook",
+      url: webhookUrl,
+      email: email || "contato@lunarihub.com",
+      enabled: true,
+      interrupted: false,
+      apiVersion: 3,
+      sendType: "SEQUENTIALLY",
+      events: ASAAS_WEBHOOK_EVENTS,
+    };
+
+    if (existing) {
+      if (!existing.enabled || existing.interrupted || existing.url !== webhookUrl) {
+        console.log(`[asaas-webhook-sync] Atualizando/Reativando webhook ${existing.id}...`);
+        const putRes = await fetch(`${baseUrl}/v3/webhooks/${existing.id}`, {
+          method: "PUT",
+          headers: {
+            access_token: apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!putRes.ok) {
+          console.warn(`[asaas-webhook-sync] Erro ao atualizar webhook: status ${putRes.status}`);
+          return { ok: false, webhookId: existing.id, error: `HTTP ${putRes.status}` };
+        }
+      }
+      return { ok: true, webhookId: existing.id };
+    }
+
+    // Criar novo webhook se não existir
+    console.log(`[asaas-webhook-sync] Criando novo webhook Asaas para ${webhookUrl}...`);
+    const postRes = await fetch(`${baseUrl}/v3/webhooks`, {
+      method: "POST",
+      headers: {
+        access_token: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const postData = await postRes.json();
+    if (!postRes.ok || !postData.id) {
+      console.warn(`[asaas-webhook-sync] Erro ao criar webhook:`, postData);
+      return { ok: false, error: postData.errors?.[0]?.description || "Falha ao criar webhook" };
+    }
+
+    return { ok: true, webhookId: postData.id };
+  } catch (err: any) {
+    console.error("[asaas-webhook-sync] Exceção inesperada:", err);
+    return { ok: false, error: err.message };
+  }
+}
+
+

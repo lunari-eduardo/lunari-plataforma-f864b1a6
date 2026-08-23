@@ -265,6 +265,9 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
+    const asaasStatus = adapterData.dadosExtras?.status;
+    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+
     if (billingType === "PIX") {
       updatePayload.tipo_cobranca = "pix";
     } else if (billingType === "CREDIT_CARD") {
@@ -272,12 +275,17 @@ Deno.serve(async (req) => {
       if (finalInstallments) updatePayload.total_parcelas = finalInstallments;
     }
 
+    if (isPaid) {
+      updatePayload.status = "pago";
+      updatePayload.data_pagamento = new Date().toISOString();
+      if (adapterData.dadosExtras?.netValue != null) {
+        updatePayload.valor_liquido = adapterData.dadosExtras.netValue;
+      }
+    }
+
     await supabase.from("cobrancas").update(updatePayload).eq("id", cobranca.id);
 
-    console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso!`);
-
-    const asaasStatus = adapterData.dadosExtras?.status;
-    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+    console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso (status=${updatePayload.status || 'pendente'})!`);
 
     return jsonResponse({
       success: true,
