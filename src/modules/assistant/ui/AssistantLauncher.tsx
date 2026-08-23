@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { useState, lazy, Suspense } from "react";
+import { Sparkles, X, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-import { AssistantChat } from "./AssistantChat";
 import { useAssistantAccess } from "../runtime/useAssistantAccess";
+
+const AssistantChat = lazy(() =>
+  import("./AssistantChat").then((m) => ({ default: m.AssistantChat }))
+);
 
 /**
  * Onda E.3 — Launcher flutuante da Lunari.
@@ -58,7 +61,17 @@ export function AssistantLauncher() {
           </SheetHeader>
 
           <div className="flex min-h-0 flex-1 flex-col">
-            <AssistantChat />
+            {open && (
+              <Suspense
+                fallback={
+                  <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                }
+              >
+                <AssistantChat />
+              </Suspense>
+            )}
           </div>
         </SheetContent>
       </Sheet>
