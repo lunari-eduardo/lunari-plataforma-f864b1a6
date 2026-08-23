@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { BlockField } from './registry';
 import { uploadProposalImage } from './uploadImage';
 import { useAiFieldRewrite } from '@/hooks/useProposalAI';
@@ -168,6 +169,41 @@ export function FieldEditor(props: FieldEditorProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+      );
+
+    case 'boolean':
+      return (
+        <div className="flex items-center justify-between py-1.5 gap-2">
+          <Label className="text-xs text-muted-foreground cursor-pointer select-none" htmlFor={field.key}>
+            {field.label}
+          </Label>
+          <Switch
+            id={field.key}
+            checked={Boolean(value)}
+            onCheckedChange={(checked) => onChange(checked)}
+          />
+        </div>
+      );
+
+    case 'color':
+      return (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">{field.label}</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={value || '#000000'}
+              onChange={(e) => onChange(e.target.value)}
+              className="h-8 w-12 cursor-pointer rounded border border-input p-0.5 bg-background"
+            />
+            <Input
+              value={value ?? ''}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="#000000"
+              className="h-8 font-mono text-xs"
+            />
+          </div>
         </div>
       );
 

@@ -31,6 +31,8 @@ export type FieldKind =
   | 'list'            // lista de objetos com itemFields
   | 'image'           // upload de imagem
   | 'select'
+  | 'boolean'
+  | 'color'
   | 'align';          // controle segmentado esquerda/centro/direita/justificado
 
 export interface BlockField {
@@ -88,6 +90,22 @@ const backgroundField = (): BlockField => ({
   options: BACKGROUND_OPTIONS,
 });
 
+const TEXT_COLOR_OPTIONS = [
+  { value: 'default', label: 'Padrão (Automático)' },
+  { value: 'dark', label: 'Grafite Escuro' },
+  { value: 'black', label: 'Preto Puro' },
+  { value: 'light', label: 'Branco / Claro' },
+  { value: 'warm', label: 'Tons Quentes (Marrom)' },
+  { value: 'accent', label: 'Dourado / Acento' },
+];
+
+const textColorField = (): BlockField => ({
+  key: 'text_color',
+  label: 'Cor do Texto',
+  kind: 'select',
+  options: TEXT_COLOR_OPTIONS,
+});
+
 const IMAGE_RATIO_OPTIONS = [
   { value: 'auto', label: 'Proporção original' },
   { value: '1/1', label: 'Quadrada (1:1)' },
@@ -119,7 +137,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       { key: 'btnLink', label: 'Link do Botão', kind: 'url', placeholder: 'https://wa.me/5511999999999' },
       { key: 'image_url', label: 'Imagem de Capa', kind: 'image' },
     ],
-    layoutFields: [ALIGN_FIELD],
+    layoutFields: [ALIGN_FIELD, backgroundField(), textColorField()],
     variants: [
       { value: 'minimal-center', label: 'Minimal', description: 'Layout clássico lado a lado (padrão)' },
       { value: 'poster-split', label: 'Poster', description: 'Título gigante + foto full-bleed com gradiente' },
@@ -129,7 +147,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     defaultVariant: 'minimal-center',
     factory: () => ({
       content: { eyebrow: '', title: '', title_italic: '', subtitle: '', photographer_name: '', btnText: '', btnLink: '', image_url: '' },
-      props: { align: 'left' },
+      props: { align: 'left', background: 'white', text_color: 'default' },
     }),
   },
 
@@ -156,7 +174,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         itemFactory: detailItem,
       },
     ],
-    layoutFields: [ALIGN_FIELD, backgroundField()],
+    layoutFields: [ALIGN_FIELD, backgroundField(), textColorField()],
     variants: [
       { value: 'overlap-blend', label: 'Fotos Sobrepostas', description: 'Duas fotos com blend mode (padrão)' },
       { value: 'split-portrait', label: 'Split Retrato', description: 'Texto à esquerda + foto retrato à direita' },
@@ -172,6 +190,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       props: {
         align: 'left',
         background: 'dark',
+        text_color: 'default',
         photo_a: { width_pct: 72, height_pct: 80, image_ref: null },
         photo_b: { width_pct: 62, height_pct: 66, image_ref: null },
       },
@@ -207,6 +226,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     layoutFields: [
       ALIGN_FIELD, 
       backgroundField(),
+      textColorField(),
       { key: 'hide_cta', label: 'Ocultar botão "Selecionar"', kind: 'boolean' },
       { key: 'hide_images', label: 'Ocultar fotos dos pacotes', kind: 'boolean' }
     ],

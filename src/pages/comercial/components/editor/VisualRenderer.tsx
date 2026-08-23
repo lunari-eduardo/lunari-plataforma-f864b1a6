@@ -54,15 +54,27 @@ const alignClass = (align?: string, fallback = 'left') => ALIGN_CLASS[align ?? '
 function sectionBg(bg: string | undefined, fallback: string): string {
   switch (bg ?? fallback) {
     case 'cream':
-      return 'bg-[var(--pa-cream,#F3F0EA)] text-neutral-900';
+      return 'bg-[var(--pa-cream,#F3F0EA)]';
     case 'linen':
-      return 'bg-[var(--pa-linen,#E8DCCB)] text-neutral-900';
+      return 'bg-[var(--pa-linen,#E8DCCB)]';
     case 'dark':
-      return 'bg-[var(--pa-stone,#C9BFB2)] text-white';
+      return 'bg-[var(--pa-stone,#2C2825)]';
     case 'white':
     default:
-      return 'bg-[var(--pa-white,#FDFBF7)] text-neutral-900';
+      return 'bg-[var(--pa-white,#FDFBF7)]';
   }
+}
+
+function textColorClass(textColor: string | undefined, bg: string | undefined, fallbackBg: string): string {
+  if (textColor === 'dark') return 'text-neutral-900';
+  if (textColor === 'black') return 'text-black';
+  if (textColor === 'light') return 'text-white';
+  if (textColor === 'warm') return 'text-[var(--pa-taupe,#8C7B6E)]';
+  if (textColor === 'accent') return 'text-[var(--pa-accent,#7A5C42)]';
+
+  // default / automatic:
+  const resolvedBg = bg ?? fallbackBg;
+  return resolvedBg === 'dark' ? 'text-white' : 'text-neutral-900';
 }
 
 function CoverMinimalCenter({ data, props, onCtaClick }: { data?: any; props?: any; onCtaClick?: CtaHandler }) {
@@ -90,16 +102,20 @@ function CoverMinimalCenter({ data, props, onCtaClick }: { data?: any; props?: a
       : 'items-start';
 
   return (
-    <section className="relative flex flex-col @md:flex-row items-center min-h-[500px] bg-[var(--pa-white,#FDFBF7)] p-8 @md:p-16 gap-12 overflow-hidden">
+    <section className={cn(
+      "relative flex flex-col @md:flex-row items-center min-h-[500px] p-8 @md:p-16 gap-12 overflow-hidden",
+      sectionBg(props?.background, 'white'),
+      textColorClass(props?.text_color, props?.background, 'white')
+    )}>
       {/* Texto */}
       <div className={cn('flex-1 flex flex-col z-10', colAlign, align)}>
         <EditableText as="p" {...et('eyebrow', eyebrow)} multiline
-          className="text-[10px] font-medium tracking-[0.28em] uppercase text-[var(--pa-taupe,#8C7B6E)] mb-4" />
-        <h1 className="text-4xl @md:text-5xl @lg:text-6xl text-[var(--pa-ink,#2C2825)] leading-[1.1] tracking-tight max-w-[15ch] mb-6" style={fd()}>
+          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-60 mb-4" />
+        <h1 className="text-4xl @md:text-5xl @lg:text-6xl text-current leading-[1.1] tracking-tight max-w-[15ch] mb-6" style={fd()}>
           {hasTitle || editable ? (
             <>
               <EditableText {...et('title', title)} placeholder="Título da capa" />
-              <em className="italic text-[var(--pa-ink,#2C2825)]/60">
+              <em className="italic opacity-60">
                 <EditableText {...et('title_italic', titleItalic)} placeholder="continuação em itálico" />
               </em>
             </>
@@ -192,12 +208,15 @@ function CoverPosterSplit({ data, props }: { data?: any; props?: any }) {
 
         {/* Título gigante */}
         <h1
-          className="text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.12em] leading-[1.05] text-[var(--pa-ink,#2C2825)] mb-4 @md:mb-6 max-w-[12ch]"
+          className={cn(
+            "text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.12em] leading-[1.05] mb-4 @md:mb-6 max-w-[12ch]",
+            textColorClass(props?.text_color, props?.background, 'white')
+          )}
           style={fd()}
         >
           <EditableText {...et('title', title)} placeholder="TÍTULO" />
           {titleItalic && (
-            <em className="italic text-[var(--pa-ink,#2C2825)]/70 block text-[0.6em] tracking-[0.06em] mt-1">
+            <em className="italic opacity-70 block text-[0.6em] tracking-[0.06em] mt-1">
               <EditableText {...et('title_italic', titleItalic)} />
             </em>
           )}
@@ -273,8 +292,9 @@ function DefaultRenderer({ block }: { block: BlockData }) {
   const v = block.content ?? block.data ?? {};
   const align = alignClass(block.props?.align, 'center');
   const bg = sectionBg(block.props?.background, 'white');
+  const textColor = textColorClass(block.props?.text_color, block.props?.background, 'white');
   return (
-    <section className={cn('py-16 px-8', bg, align)}>
+    <section className={cn('py-16 px-8', bg, textColor, align)}>
       <div className="max-w-2xl mx-auto">
         <EditableText as="h2" {...et('title', v.title)} multiline
           className="text-3xl text-current mb-4" style={fd()} />
@@ -318,7 +338,7 @@ function EditorialOverlapBlend({ data, content, props }: { data?: any; content?:
   );
 
   return (
-    <section className={cn('py-16 @md:py-28 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'dark'))}>
+    <section className={cn('py-16 @md:py-28 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'dark'), textColorClass(p.text_color, p.background, 'dark'))}>
       <div className="max-w-[900px] mx-auto">
         <div className="grid grid-cols-1 @md:grid-cols-2 gap-10 @md:gap-24 items-center">
 
@@ -351,7 +371,7 @@ function EditorialOverlapBlend({ data, content, props }: { data?: any; content?:
             <EditableText as="span" {...et('eyebrow', c.eyebrow)}
               className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4 block" />
 
-            <h2 className="text-4xl @md:text-5xl @lg:text-[4rem] font-light leading-[1.02] tracking-[0.03em] mb-10" style={fd()}>
+            <h2 className="text-4xl @md:text-5xl @lg:text-[4rem] font-light leading-[1.02] tracking-[0.03em] mb-10 text-current" style={fd()}>
               <EditableText {...et('title', c.title)} placeholder="Título" />
               <em className="italic opacity-60"><EditableText {...et('title_italic', c.title_italic)} placeholder="em itálico" /></em>
             </h2>
@@ -370,7 +390,7 @@ function EditorialOverlapBlend({ data, content, props }: { data?: any; content?:
             )}
 
             <EditableText as="p" {...et('body', c.body)} multiline
-              className="italic text-base @md:text-[1.1rem] font-light leading-[1.7] opacity-60" style={fd()} />
+              className="italic text-base @md:text-[1.1rem] font-light leading-[1.7] opacity-80" style={fd()} />
           </div>
 
         </div>
@@ -392,21 +412,22 @@ function EditorialSplitPortrait({ data, content, props }: { data?: any; content?
   const p = props || {};
   const isDark = (p.background ?? 'cream') === 'dark';
   const borderColor = isDark ? 'border-white/10' : 'border-[var(--pa-ink,#1A1714)]/10';
+  const align = alignClass(p.align, 'left');
 
   // Use photo_a image_ref if available, or a standalone image field
   const photoRef = p.photo_a?.image_ref || null;
 
   return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'))}>
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'), textColorClass(p.text_color, p.background, 'cream'))}>
       <div className="max-w-[900px] mx-auto">
         <div className="grid grid-cols-1 @md:grid-cols-[1fr_minmax(0,42%)] gap-10 @md:gap-16 items-start">
           {/* Coluna de texto */}
-          <div className="flex flex-col">
+          <div className={cn("flex flex-col", align)}>
             <EditableText as="h2" {...et('title', c.title)}
-              className="text-2xl @md:text-3xl tracking-[0.15em] uppercase mb-8 @md:mb-12" style={fd()} />
+              className="text-2xl @md:text-3xl tracking-[0.15em] uppercase mb-8 @md:mb-12 text-current" style={fd()} />
 
             <EditableText as="div" {...et('body', c.body)} multiline
-              className="text-sm @md:text-base font-light leading-[2] tracking-[0.02em] text-justify whitespace-pre-line opacity-80 mb-8" style={fb()} />
+              className="text-sm @md:text-base font-light leading-[2] tracking-[0.02em] whitespace-pre-line opacity-80 mb-8" style={fb()} />
 
             {/* Detalhes key-value */}
             {c.details && c.details.length > 0 && (
@@ -457,7 +478,7 @@ function EditorialTextOnly({ data, content, props }: { data?: any; content?: any
   const align = alignClass(p.align, 'center');
 
   return (
-    <section className={cn('py-20 @md:py-32 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'))}>
+    <section className={cn('py-20 @md:py-32 px-6 @md:px-14 overflow-hidden', sectionBg(p.background, 'cream'), textColorClass(p.text_color, p.background, 'cream'))}>
       <div className={cn("max-w-[800px] mx-auto flex flex-col", align)}>
         <EditableText as="span" {...et('eyebrow', c.eyebrow)}
           className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-6 block" />
@@ -519,15 +540,15 @@ function PricingClassic({ content, data, props, onCtaClick }: { content?: any; d
       : 'grid-cols-1 @md:grid-cols-3';
 
   return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'white'), align)}>
-      <div className="max-w-[900px] mx-auto">
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'white'), textColorClass(props?.text_color, props?.background, 'white'))}>
+      <div className={cn("max-w-[900px] mx-auto", align)}>
         <EditableText as="p" {...et('eyebrow', c.eyebrow)}
           className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4" />
         <EditableText as="h2" {...et('title', c.title)}
           className="text-4xl @md:text-5xl mb-12" style={fd()} />
-        <div className={cn('grid gap-8 text-left', colsClass)}>
+        <div className={cn('grid gap-8', align, colsClass)}>
           {packages.map((pkg: any, idx: number) => (
-            <div key={pkg.id || idx} className="border border-black/5 shadow-sm p-8 rounded-2xl bg-[var(--pa-white,#FDFBF7)] text-neutral-900 flex flex-col relative overflow-hidden">
+            <div key={pkg.id || idx} className={cn("border border-black/5 shadow-sm p-8 rounded-2xl bg-[var(--pa-white,#FDFBF7)] text-current flex flex-col relative overflow-hidden", align)}>
               {pkg.badge && (
                 <div className="absolute top-0 right-0 bg-[var(--pa-cream,#F3F0EA)] text-[10px] font-medium tracking-[0.28em] uppercase text-[var(--pa-taupe,#8C7B6E)] px-3 py-1 border-b border-l border-black/5 rounded-bl-xl">
                   <EditableText {...et(`packages.${idx}.badge`, pkg.badge)} />
@@ -554,7 +575,7 @@ function PricingClassic({ content, data, props, onCtaClick }: { content?: any; d
                 </div>
               )}
 
-              <ul className="space-y-3 flex-1 mb-8">
+              <ul className={cn("space-y-3 flex-1 mb-8", align)}>
                 {(pkg.features || []).map((feat: string, i: number) => (
                   <li key={i} className="text-sm font-light opacity-70 border-b border-black/5 pb-2 last:border-0">
                     <EditableText {...et(`packages.${idx}.features.${i}`, feat)} placeholder="Item incluso" />
@@ -598,16 +619,16 @@ function PricingCardsMinimal({ content, data, props, onCtaClick }: { content?: a
       : 'grid-cols-1 @md:grid-cols-3';
 
   return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'white'), align)}>
-      <div className="max-w-[1000px] mx-auto">
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'white'), textColorClass(props?.text_color, props?.background, 'white'))}>
+      <div className={cn("max-w-[1000px] mx-auto", align)}>
         <EditableText as="p" {...et('eyebrow', c.eyebrow)}
-          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4 text-center" />
+          className="text-[10px] font-medium tracking-[0.28em] uppercase opacity-50 mb-4" />
         <EditableText as="h2" {...et('title', c.title)}
-          className="text-4xl @md:text-5xl mb-16 text-center" style={fd()} />
+          className="text-4xl @md:text-5xl mb-16" style={fd()} />
         
-        <div className={cn('grid gap-10 @md:gap-14 text-center', colsClass)}>
+        <div className={cn('grid gap-10 @md:gap-14', align, colsClass)}>
           {packages.map((pkg: any, idx: number) => (
-            <div key={pkg.id || idx} className="flex flex-col relative text-neutral-900">
+            <div key={pkg.id || idx} className={cn("flex flex-col relative text-current", align)}>
               
               {!props?.hide_images && (pkg.image_ref || editable) && (
                 <div className="aspect-[4/5] w-full mb-8 rounded-3xl overflow-hidden relative bg-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] group/card">
@@ -643,7 +664,7 @@ function PricingCardsMinimal({ content, data, props, onCtaClick }: { content?: a
                 <span className="text-sm opacity-50">/<EditableText {...et(`packages.${idx}.price_unit`, pkg.price_unit)} placeholder="un." /></span>
               </p>
 
-              <ul className="space-y-4 flex-1 mb-10 text-sm font-light opacity-75">
+              <ul className={cn("space-y-4 flex-1 mb-10 text-sm font-light opacity-75", align)}>
                 {(pkg.features || []).map((feat: string, i: number) => (
                   <li key={i}>
                     <EditableText {...et(`packages.${idx}.features.${i}`, feat)} placeholder="Item incluso" />
@@ -654,7 +675,7 @@ function PricingCardsMinimal({ content, data, props, onCtaClick }: { content?: a
               {!props?.hide_cta && (
                 <Button
                   variant="outline"
-                  className="w-[80%] mx-auto bg-transparent border-black/20 text-neutral-900 hover:bg-neutral-900 hover:text-white rounded-full transition-all"
+                  className={cn("w-[80%] bg-transparent border-current/20 text-current hover:bg-current hover:text-white rounded-full transition-all", align === 'text-center' ? 'mx-auto' : align === 'text-right' ? 'ml-auto' : 'mr-auto')}
                   onClick={() => onCtaClick?.({ blockType: 'PricingTable', label: pkg.name })}
                 >
                   Selecionar
@@ -678,15 +699,16 @@ function PricingNumberedEditorial({ content, data, props }: { content?: any; dat
   });
   const c = content || data || {};
   const packages: any[] = c.packages || [];
+  const align = alignClass(props?.align, 'center');
 
   return (
-    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'cream'))}>
-      <div className="max-w-[900px] mx-auto text-center">
+    <section className={cn('py-16 @md:py-24 px-6 @md:px-14', sectionBg(props?.background, 'cream'), textColorClass(props?.text_color, props?.background, 'cream'))}>
+      <div className={cn("max-w-[900px] mx-auto", align)}>
         {/* Header */}
         <EditableText as="p" {...et('eyebrow', c.eyebrow)}
-          className="text-[9px] @md:text-[10px] font-medium tracking-[0.35em] uppercase text-[var(--pa-taupe,#8C7B6E)] mb-4" />
+          className="text-[9px] @md:text-[10px] font-medium tracking-[0.35em] uppercase opacity-60 mb-4" />
         <EditableText as="h2" {...et('title', c.title)}
-          className="text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.1em] leading-[1.05] mb-6" style={fd()} />
+          className="text-5xl @md:text-7xl @lg:text-8xl uppercase tracking-[0.1em] leading-[1.05] mb-6 text-current" style={fd()} />
 
         {/* Pacotes */}
         <div className="mt-12 @md:mt-16 space-y-0 text-left">
