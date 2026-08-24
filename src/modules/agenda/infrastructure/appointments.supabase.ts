@@ -352,6 +352,18 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
 
     if (error) throw error;
 
+    if (patch.description !== undefined) {
+      try {
+        await supabase
+          .from("clientes_sessoes")
+          .update({ descricao: patch.description || "" })
+          .eq("appointment_id", id)
+          .eq("user_id", session.user.id);
+      } catch (err) {
+        console.warn("⚠️ [agenda.repo] Falha ao sincronizar descrição para o workflow:", err);
+      }
+    }
+
     if (patch.status === "confirmado") {
       void handleConfirmedSideEffects(id, session.user.id);
     } else if (

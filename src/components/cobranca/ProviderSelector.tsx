@@ -165,30 +165,54 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
 
   return (
     <Select value={selectedProvider || undefined} onValueChange={(v) => onSelect(v as SelectedProvider)}>
-      <SelectTrigger className="h-10 text-sm">
+      <SelectTrigger className="h-14 w-full bg-card/50 border-border/60 hover:bg-muted/20 transition-colors px-3 rounded-xl focus:ring-1 focus:ring-primary/30">
         <SelectValue placeholder="Selecione o meio de cobrança">
           {selectedProvider && (() => {
             const p = providers.find(pr => pr.id === selectedProvider);
             if (!p) return null;
             return (
-              <div className="flex items-center gap-2">
-                <img src={p.logo} alt={p.name} className="w-5 h-5 object-contain" />
-                <span className="font-medium">{p.name}</span>
-                <span className="text-muted-foreground text-xs">— {p.description}</span>
-                {p.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+              <div className="flex items-center gap-3 w-full text-left">
+                <div className="h-8 w-8 rounded-full bg-background border border-border/50 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                  <img src={p.logo} alt={p.name} className="w-5 h-5 object-contain" />
+                </div>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-foreground">{p.name}</span>
+                    {p.isDefault && (
+                      <span className="bg-accent-gold/15 text-accent-gold border border-accent-gold/30 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0">
+                        Padrão
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-muted-foreground truncate leading-tight">
+                    {p.description}
+                  </span>
+                </div>
               </div>
             );
           })()}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="rounded-xl border-border/60">
         {providers.map(provider => (
-          <SelectItem key={provider.id} value={provider.id}>
-            <div className="flex items-center gap-2">
-              <img src={provider.logo} alt={provider.name} className="w-5 h-5 object-contain" />
-              <span className="font-medium">{provider.name}</span>
-              <span className="text-muted-foreground text-xs">— {provider.description}</span>
-              {provider.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+          <SelectItem key={provider.id} value={provider.id} className="py-2.5 px-3 rounded-lg my-0.5 cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-background border border-border/50 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                <img src={provider.logo} alt={provider.name} className="w-5 h-5 object-contain" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-foreground">{provider.name}</span>
+                  {provider.isDefault && (
+                    <span className="bg-accent-gold/15 text-accent-gold border border-accent-gold/30 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+                      Padrão
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] text-muted-foreground leading-tight">
+                  {provider.description}
+                </span>
+              </div>
             </div>
           </SelectItem>
         ))}

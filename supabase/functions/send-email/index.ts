@@ -250,28 +250,296 @@ function uint8ToBase64(u8Arr: Uint8Array): string {
   return btoa(result);
 }
 
-async function generateSummaryPdf(gallery: any): Promise<string> {
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage();
-  const { width, height } = page.getSize();
-  
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  
-  page.drawText('Resumo da Seleção de Fotos', {
-    x: 50,
-    y: height - 50,
-    size: 20,
-    font: boldFont,
-    color: rgb(0, 0, 0),
+async function fetchAndEmbedImage(pdfDoc: any, url: string): Promise<any | null> {
+  if (!url) return null;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    try {
+      return await pdfDoc.embedJpg(bytes);
+    } catch {
+      try {
+        return await pdfDoc.embedPng(bytes);
+      } catch {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAndEmbedBatch(pdfDoc: any, photos: any[], batchSize = 5): Promise<(any | null)[]> {
+  const results: (any | null)[] = [];
+  for (let i = 0; i < photos.length; i += batchSize) {
+    const batch = photos.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((photo) => {
+        const thumbKey = photo.thumb_path || photo.preview_path || photo.storage_key;
+        if (!thumbKey) return Promise.resolve(null);
+        const url = thumbKey.startsWith('http') ? thumbKey : `https://media.lunarihub.com/${thumbKey}`;
+        return fetchAndEmbedImage(pdfDoc, url);
+      })
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+function drawPlaceholderBox(page: any, x: number, y: number, size: number, font: any) {
+  page.drawRectangle({
+    x,
+    y,
+    width: size,
+    height: size,
+    color: rgb(0.96, 0.95, 0.94),
+    borderColor: rgb(0.88, 0.86, 0.83),
+    borderWidth: 1,
+  });
+  page.drawText('Foto', {
+    x: x + size / 2 - 8,
+    y: y + size / 2 - 3,
+    size: 7,
+    font,
+    color: rgb(0.55, 0.55, 0.55),
+  });
+}
+
+function drawPhotoListItem(
+  page: any,
+  photo: any,
+  img: any,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  thumbSize: number,
+  index: number,
+  font: any,
+  boldFont: any
+) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: rgb(1, 1, 1),
+    borderColor: rgb(0.92, 0.90, 0.87),
+    borderWidth: 1,
   });
 
-  page.drawText(`Galeria: ${gallery.nome_sessao || 'Sem nome'}`, { x: 50, y: height - 80, size: 12, font });
-  page.drawText(`Cliente: ${gallery.cliente_nome || 'Não informado'}`, { x: 50, y: height - 100, size: 12, font });
-  page.drawText(`Total de Fotos: ${gallery.total_fotos || 0}`, { x: 50, y: height - 120, size: 12, font });
-  page.drawText(`Selecionadas: ${gallery.fotos_selecionadas || 0}`, { x: 50, y: height - 140, size: 12, font });
-  page.drawText(`Fotos Extras: ${gallery.total_fotos_extras_vendidas || 0}`, { x: 50, y: height - 160, size: 12, font });
-  page.drawText(`Valor das Extras: R$ ${gallery.valor_extras || 0}`, { x: 50, y: height - 180, size: 12, font });
+  const thumbX = x + 4;
+  const thumbY = y + (height - thumbSize) / 2;
+
+  if (img) {
+    try {
+      const scale = Math.min(thumbSize / img.width, thumbSize / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      const offX = (thumbSize - drawW) / 2;
+      const offY = (thumbSize - drawH) / 2;
+      page.drawImage(img, {
+        x: thumbX + offX,
+        y: thumbY + offY,
+        width: drawW,
+        height: drawH,
+      });
+    } catch {
+      drawPlaceholderBox(page, thumbX, thumbY, thumbSize, font);
+    }
+  } else {
+    drawPlaceholderBox(page, thumbX, thumbY, thumbSize, font);
+  }
+
+  const textX = thumbX + thumbSize + 10;
+  const filename = photo.original_filename || photo.filename || `Foto ${index}`;
+  const truncatedFilename = filename.length > 26 ? filename.slice(0, 24) + '...' : filename;
+
+  page.drawText(`#${index}`, {
+    x: textX,
+    y: y + height - 16,
+    size: 8,
+    font: boldFont,
+    color: rgb(0.77, 0.64, 0.41),
+  });
+
+  page.drawText(truncatedFilename, {
+    x: textX,
+    y: y + height - 32,
+    size: 9,
+    font: boldFont,
+    color: rgb(0.15, 0.14, 0.13),
+  });
+}
+
+async function generateSummaryPdf(
+  supabase: any,
+  gallery: any,
+  selectedPhotos: any[],
+  studioName: string,
+  studioLogoUrl?: string | null
+): Promise<string> {
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage([595.28, 841.89]);
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 40;
+  const contentWidth = pageWidth - margin * 2;
+
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let currentY = pageHeight - margin;
+
+  // 1. Header (Estúdio & Título)
+  page.drawText(studioName, {
+    x: margin,
+    y: currentY - 14,
+    size: 11,
+    font: boldFont,
+    color: rgb(0.77, 0.64, 0.41),
+  });
+
+  const dateStr = formatDate(gallery.finalized_at || new Date());
+  page.drawText(`Confirmação em: ${dateStr}`, {
+    x: pageWidth - margin - 170,
+    y: currentY - 14,
+    size: 9,
+    font,
+    color: rgb(0.45, 0.43, 0.40),
+  });
+
+  currentY -= 30;
+
+  page.drawText('Resumo da Seleção de Fotos', {
+    x: margin,
+    y: currentY - 18,
+    size: 20,
+    font: boldFont,
+    color: rgb(0.11, 0.10, 0.09),
+  });
+
+  currentY -= 32;
+
+  page.drawLine({
+    start: { x: margin, y: currentY },
+    end: { x: pageWidth - margin, y: currentY },
+    thickness: 1,
+    color: rgb(0.90, 0.88, 0.85),
+  });
+
+  currentY -= 15;
+
+  // 2. Quadro de Métricas da Seleção (Sem status de pagamento)
+  const cardHeight = 78;
+  page.drawRectangle({
+    x: margin,
+    y: currentY - cardHeight,
+    width: contentWidth,
+    height: cardHeight,
+    color: rgb(0.97, 0.97, 0.96),
+    borderColor: rgb(0.91, 0.89, 0.86),
+    borderWidth: 1,
+  });
+
+  const cardY = currentY - 18;
+  page.drawText('Galeria:', { x: margin + 14, y: cardY, size: 9, font: boldFont, color: rgb(0.45, 0.43, 0.40) });
+  page.drawText(gallery.nome_sessao || 'Sem nome', { x: margin + 60, y: cardY, size: 9, font: boldFont, color: rgb(0.11, 0.10, 0.09) });
+
+  page.drawText('Cliente:', { x: margin + 14, y: cardY - 16, size: 9, font: boldFont, color: rgb(0.45, 0.43, 0.40) });
+  const clientInfoStr = `${gallery.cliente_nome || 'Não informado'}${gallery.cliente_email ? ` (${gallery.cliente_email})` : ''}`;
+  page.drawText(clientInfoStr.length > 45 ? clientInfoStr.slice(0, 45) + '...' : clientInfoStr, { x: margin + 60, y: cardY - 16, size: 9, font, color: rgb(0.11, 0.10, 0.09) });
+
+  const metricsY = cardY - 44;
+  const colW = contentWidth / 4;
+
+  const metrics = [
+    { label: 'FOTOS INCLUÍDAS', val: String(gallery.fotos_incluidas || 0) },
+    { label: 'SELECIONADAS', val: String(gallery.fotos_selecionadas || 0) },
+    { label: 'FOTOS EXTRAS', val: String(gallery.total_fotos_extras_vendidas || 0) },
+    { label: 'VALOR EXTRA', val: formatCurrency(gallery.valor_extras || 0) },
+  ];
+
+  metrics.forEach((m, idx) => {
+    const mx = margin + idx * colW + 14;
+    page.drawText(m.label, { x: mx, y: metricsY + 12, size: 7.5, font: boldFont, color: rgb(0.55, 0.52, 0.48) });
+    page.drawText(m.val, { x: mx, y: metricsY, size: 11, font: boldFont, color: rgb(0.11, 0.10, 0.09) });
+  });
+
+  currentY -= (cardHeight + 20);
+
+  // 3. Lista de Fotos Selecionadas com Previews
+  page.drawText(`Fotos Selecionadas (${selectedPhotos.length})`, {
+    x: margin,
+    y: currentY - 14,
+    size: 13,
+    font: boldFont,
+    color: rgb(0.11, 0.10, 0.09),
+  });
+
+  currentY -= 26;
+
+  const colWidth = (contentWidth - 16) / 2;
+  const itemHeight = 56;
+  const thumbSize = 48;
+
+  const embeddedImages = await fetchAndEmbedBatch(pdfDoc, selectedPhotos, 5);
+
+  for (let i = 0; i < selectedPhotos.length; i += 2) {
+    if (currentY - itemHeight < 50) {
+      page = pdfDoc.addPage([595.28, 841.89]);
+      currentY = pageHeight - margin - 20;
+
+      page.drawText(`Resumo da Seleção - ${gallery.nome_sessao || ''} (Continuação)`, {
+        x: margin,
+        y: currentY,
+        size: 9,
+        font: boldFont,
+        color: rgb(0.55, 0.52, 0.48),
+      });
+      page.drawLine({
+        start: { x: margin, y: currentY - 8 },
+        end: { x: pageWidth - margin, y: currentY - 8 },
+        thickness: 0.5,
+        color: rgb(0.90, 0.88, 0.85),
+      });
+      currentY -= 28;
+    }
+
+    const itemY = currentY - itemHeight;
+
+    const photo1 = selectedPhotos[i];
+    const img1 = embeddedImages[i];
+    drawPhotoListItem(page, photo1, img1, margin, itemY, colWidth, itemHeight, thumbSize, i + 1, font, boldFont);
+
+    if (i + 1 < selectedPhotos.length) {
+      const photo2 = selectedPhotos[i + 1];
+      const img2 = embeddedImages[i + 1];
+      drawPhotoListItem(page, photo2, img2, margin + colWidth + 16, itemY, colWidth, itemHeight, thumbSize, i + 2, font, boldFont);
+    }
+
+    currentY -= (itemHeight + 10);
+  }
+
+  // 4. Rodapé e numeração de páginas
+  const totalPages = pdfDoc.getPageCount();
+  const pages = pdfDoc.getPages();
+  for (let i = 0; i < totalPages; i++) {
+    const p = pages[i];
+    p.drawText(`Página ${i + 1} de ${totalPages}  •  Lunari Studio`, {
+      x: pageWidth / 2 - 50,
+      y: 20,
+      size: 8,
+      font,
+      color: rgb(0.6, 0.6, 0.6),
+    });
+  }
 
   const pdfBytes = await pdfDoc.save();
   return uint8ToBase64(pdfBytes);
@@ -712,7 +980,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: gallery, error: galleryError } = await supabase
         .from('galerias')
-        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, public_token, prazo_selecao, total_fotos, fotos_selecionadas, total_fotos_extras_vendidas, valor_extras, finalized_at')
+        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, public_token, prazo_selecao, total_fotos, fotos_incluidas, fotos_selecionadas, total_fotos_extras_vendidas, valor_foto_extra, valor_extras, finalized_at')
         .eq('id', body.galleryId)
         .maybeSingle();
 
@@ -850,13 +1118,65 @@ Deno.serve(async (req: Request) => {
             const photogIdempotencyKey = `summary_sent:${gallery.id}:${finalKey}`;
             const sentSummary = await alreadySent(supabase, photogIdempotencyKey);
             if (!sentSummary) {
-              const pdfBase64 = await generateSummaryPdf(gallery);
-              const attachments = [{ filename: `resumo_selecao_${gallery.nome_sessao || 'galeria'}.pdf`, content: pdfBase64 }];
+              let selectedPhotos: any[] = [];
+              if (body.visitorId) {
+                const { data: visitorSelections } = await supabase
+                  .from('visitante_selecoes')
+                  .select('foto_id')
+                  .eq('visitante_id', body.visitorId);
+
+                const photoIds = (visitorSelections || []).map((s: any) => s.foto_id).filter(Boolean);
+                if (photoIds.length > 0) {
+                  const { data: photos } = await supabase
+                    .from('galeria_fotos')
+                    .select('id, filename, original_filename, thumb_path, preview_path, storage_key, order_index')
+                    .in('id', photoIds)
+                    .order('order_index', { ascending: true });
+                  selectedPhotos = photos || [];
+                }
+              } else {
+                const { data: photos } = await supabase
+                  .from('galeria_fotos')
+                  .select('id, filename, original_filename, thumb_path, preview_path, storage_key, order_index')
+                  .eq('galeria_id', gallery.id)
+                  .eq('is_selected', true)
+                  .order('order_index', { ascending: true });
+                selectedPhotos = photos || [];
+              }
+
+              const pdfBase64 = await generateSummaryPdf(supabase, gallery, selectedPhotos, studioName, studioLogoUrl);
+              const safeSessionName = (gallery.nome_sessao || 'galeria').replace(/[^a-zA-Z0-9_-]/g, '_');
+              const attachments = [{ filename: `resumo_selecao_${safeSessionName}.pdf`, content: pdfBase64 }];
               const photogSubject = `Resumo de Seleção Confirmada - ${gallery.nome_sessao}`;
-              const photogHtml = `<p>Olá ${nameCandidate || 'Fotógrafo'},</p><p>O cliente <b>${escapeHtml(clienteNome)}</b> acabou de confirmar a seleção da galeria <b>${escapeHtml(gallery.nome_sessao)}</b>.</p><p>Em anexo, você encontra o resumo em PDF da seleção concluída.</p>`;
-              
-              const resendMessageId = await sendResendEmail(photogEmail, photogSubject, photogHtml, { fromName: 'Lunari', attachments });
-              
+
+              const photogDetailsList: DetailItem[] = [
+                { label: 'Sessão', value: gallery.nome_sessao || 'Galeria', isBold: true },
+                { label: 'Cliente', value: `${clienteNome}${clienteEmail ? ` (${clienteEmail})` : ''}` },
+                { label: 'Data da Confirmação', value: formatDate(gallery.finalized_at || new Date()) },
+                { label: 'Fotos incluídas no pacote', value: `${gallery.fotos_incluidas || 0} fotos` },
+                { label: 'Fotos selecionadas pelo cliente', value: `${gallery.fotos_selecionadas || 0} fotos`, isBold: true },
+                { label: 'Fotos extras', value: `${gallery.total_fotos_extras_vendidas || 0} fotos` },
+                { label: 'Valor extra total', value: formatCurrency(gallery.valor_extras || 0), isBold: true },
+              ];
+
+              const photogBodyParagraphs = `<p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">Olá <strong>${escapeHtml(nameCandidate || 'Fotógrafo')}</strong>,</p>
+<p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">O cliente <strong>${escapeHtml(clienteNome)}</strong> concluiu e confirmou a seleção de fotos da galeria <strong>${escapeHtml(gallery.nome_sessao)}</strong>.</p>
+<p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">As informações principais da seleção estão resumidas abaixo. Em anexo a este e-mail, você encontra o <strong>relatório em PDF completo</strong> contendo a lista e as miniaturas (previews) de todas as fotos selecionadas.</p>`;
+
+              const photogHtml = buildLayout({
+                studioName,
+                studioLogoUrl,
+                title: photogSubject,
+                preview: `Seleção concluída por ${clienteNome} - ${gallery.nome_sessao}`,
+                badgeText: 'SELEÇÃO CONCLUÍDA',
+                details: photogDetailsList,
+                buttonUrl: galleryUrl,
+                buttonText: 'Acessar Galeria',
+                children: photogBodyParagraphs,
+              });
+
+              const resendMessageId = await sendResendEmail(photogEmail, photogSubject, photogHtml, { fromName: studioName, attachments });
+
               await upsertLog(supabase, { 
                 ...baseLog, 
                 event_type: 'summary_sent', 
@@ -864,7 +1184,7 @@ Deno.serve(async (req: Request) => {
                 status: 'enviado', 
                 subject: photogSubject, 
                 resend_message_id: resendMessageId, 
-                friendly_message: 'Resumo em PDF enviado ao fotógrafo',
+                friendly_message: 'Resumo com PDF e previews enviado ao fotógrafo',
                 metadata: { ...baseLog.metadata, target: photogEmail }
               });
             }
