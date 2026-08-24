@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
     if (billingType === "PIX") {
       updatePayload.tipo_cobranca = "pix";
     } else if (billingType === "CREDIT_CARD") {
-      updatePayload.tipo_cobranca = "cartao";
+      updatePayload.tipo_cobranca = "card";
       if (finalInstallments) updatePayload.total_parcelas = finalInstallments;
     }
 
@@ -282,7 +282,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    await supabase.from("cobrancas").update(updatePayload).eq("id", cobranca.id);
+    const { error: updateError } = await supabase.from("cobrancas").update(updatePayload).eq("id", cobranca.id);
+    
+    if (updateError) {
+      console.error(`[checkout-process-payment] Erro crítico ao atualizar a cobrança ${cobranca.id} no banco de dados:`, updateError);
+      return errorResponse("Erro interno ao consolidar pagamento", 500, "UPDATE_COBRANCA_FAILED", updateError);
+    }
 
     console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso (status=${updatePayload.status || 'pendente'})!`);
 

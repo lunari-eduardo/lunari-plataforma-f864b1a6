@@ -63,13 +63,14 @@ export class WorkflowSupabaseService {
 
       if (!isStub) return session;
 
-      const { data: appointment } = await supabase
+      const { data: appointments } = await supabase
         .from('appointments')
         .select('package_id, description, date, time, paid_amount')
         .eq('id', appointmentId)
         .eq('user_id', userId)
-        .maybeSingle();
+        .limit(1);
 
+      const appointment = appointments?.[0] || null;
       if (!appointment?.package_id) return session;
 
       const { data: pkg } = await supabase
@@ -167,13 +168,16 @@ export class WorkflowSupabaseService {
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) throw new Error('User not authenticated');
 
-      // Check if session already exists for this appointment
-      const { data: existingSession } = await supabase
+      // Check if session already exists for this appointment (ordena por mais recente caso haja duplicata)
+      const { data: existingSessions } = await supabase
         .from('clientes_sessoes')
         .select('*')
         .eq('user_id', user.user.id)
         .eq('appointment_id', appointmentId)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const existingSession = existingSessions?.[0] || null;
 
       if (existingSession) {
         // A sessão pode ser um "stub" criado apenas para viabilizar a cobrança de
@@ -182,20 +186,21 @@ export class WorkflowSupabaseService {
         // fazia o card do Workflow nascer vazio ao confirmar o agendamento.
         const hydrated = await this.hydrateStubSession(existingSession, appointmentId, user.user.id);
 
-        const { data: freshAppt } = await supabase
+        const { data: freshAppts } = await supabase
           .from('appointments')
           .select('description')
           .eq('id', appointmentId)
           .eq('user_id', user.user.id)
-          .maybeSingle();
+          .limit(1);
 
-        if (freshAppt?.description && hydrated?.descricao !== freshAppt.description) {
+        const apptDesc = freshAppts?.[0]?.description;
+        if (apptDesc && hydrated?.descricao !== apptDesc) {
           await supabase
             .from('clientes_sessoes')
-            .update({ descricao: freshAppt.description, updated_by: user.user.id })
+            .update({ descricao: apptDesc, updated_by: user.user.id })
             .eq('id', hydrated.id)
             .eq('user_id', user.user.id);
-          hydrated.descricao = freshAppt.description;
+          hydrated.descricao = apptDesc;
         }
 
         console.log('✅ Session already exists for appointment:', appointmentId);

@@ -1,4 +1,4 @@
-export type TipoCobranca = 'pix' | 'link';
+export type TipoCobranca = 'pix' | 'link' | 'card' | 'cartao';
 export type StatusCobranca = 'pendente' | 'parcialmente_pago' | 'pago' | 'cancelado' | 'expirado';
 export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 

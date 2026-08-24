@@ -387,14 +387,27 @@ export default function SessionPanel({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { data: existing } = await supabase
+      // 1. Verificar primeiro por appointment_id se disponível (evita duplicar sessão criada pelo WorkflowSupabaseService)
+      if (appointmentId) {
+        const { data: existingByAppt } = await supabase
+          .from('clientes_sessoes')
+          .select('id')
+          .eq('appointment_id', appointmentId)
+          .eq('user_id', user.id)
+          .limit(1);
+
+        if (existingByAppt && existingByAppt.length > 0) return true;
+      }
+
+      // 2. Verificar por session_id
+      const { data: existingBySession } = await supabase
         .from('clientes_sessoes')
         .select('id')
         .eq('session_id', sessionId)
         .eq('user_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
-      if (existing) return true;
+      if (existingBySession && existingBySession.length > 0) return true;
 
       const { error: insertErr } = await supabase.from('clientes_sessoes').insert({
         user_id: user.id,
@@ -405,6 +418,7 @@ export default function SessionPanel({
         hora_sessao: time,
         categoria: packageCategoryName || 'Sessão',
         pacote: (selectedPackage as any)?.nome || null,
+        descricao: form.description || '',
         // Mesmo status usado na criação oficial da sessão (WorkflowSupabaseService)
         status: '',
         valor_total: valorPacote || form.paidAmount || 0,

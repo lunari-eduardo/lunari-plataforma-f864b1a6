@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       galeria_id: binding.galeria_id,
       valor: Math.round(Number(valor) * 100) / 100,
       descricao: descricao || "Serviço fotográfico",
-      tipo_cobranca: billingType === "PIX" ? "pix" : billingType === "CREDIT_CARD" ? "cartao" : "link",
+      tipo_cobranca: billingType === "PIX" ? "pix" : billingType === "CREDIT_CARD" ? "card" : "link",
       total_parcelas: installmentCount && installmentCount > 1 ? installmentCount : 1,
       provedor,
       status: "pendente",
