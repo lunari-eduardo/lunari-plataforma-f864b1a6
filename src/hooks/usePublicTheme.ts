@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { invokeEdgeWorker } from '@/integrations/edge-client';
 
 export function usePublicTheme(userId: string | undefined) {
   return useQuery({
@@ -7,7 +7,7 @@ export function usePublicTheme(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) return null;
       
-      const { data, error } = await supabase.functions.invoke('get-public-theme', {
+      const { data, error } = await invokeEdgeWorker('previews', 'get-public-theme', {
         body: { userId },
       });
       

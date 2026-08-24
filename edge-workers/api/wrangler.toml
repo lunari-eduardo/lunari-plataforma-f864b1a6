@@ -1,0 +1,30 @@
+name = "lunari-edge-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-05"
+
+[vars]
+VITE_SITE_URL = "https://app.lunarihub.com"
+R2_CDN_BASE = "https://media.lunarihub.com"
+R2_COMMERCIAL_CDN_BASE = "https://documents.lunarihub.com"
+ANALYTICS_SALT = "lunari-salt"
+
+# R2 Buckets nativamente conectados ao Worker (sem custo de tráfego / sem SigV4)
+[[r2_buckets]]
+binding = "LUNARI_PREVIEWS"
+bucket_name = "lunari-previews"
+
+[[r2_buckets]]
+binding = "LUNARI_PRIVATE"
+bucket_name = "lunari-private"
+
+[[r2_buckets]]
+binding = "LUNARI_COMMERCIAL_DOCUMENTS"
+bucket_name = "lunari-commercial-documents"
+
+[[r2_buckets]]
+binding = "LUNARI_MEDIA"
+bucket_name = "lunari-media"
+
+[[r2_buckets]]
+binding = "LUNARI_GALLERY"
+bucket_name = "lunari-gallery"

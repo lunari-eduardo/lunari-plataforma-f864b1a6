@@ -14,6 +14,8 @@ import { SupportHostProvider } from "@/modules/support";
 import type { SupportHost, SupportHostStorage } from "@/modules/support";
 import { gestaoR2Upload } from "@/lib/gestaoR2Upload";
 
+import { resolveR2SignedUrl, deleteR2Object } from "@/hooks/useR2SignedUrl";
+
 const R2_CDN_BASE = "https://media.lunarihub.com";
 
 const storage: SupportHostStorage = {
@@ -25,20 +27,16 @@ const storage: SupportHostStorage = {
     });
     return { r2Key: result.storagePath, url: result.url || undefined };
   },
-  async getSignedUrl(r2Key, expiresIn = 300) {
+  async getSignedUrl(r2Key, _expiresIn = 300) {
     // Anexos de FAQ são públicos
     if (r2Key.startsWith("gestao/support/faq/")) return `${R2_CDN_BASE}/${r2Key}`;
-    const { data, error } = await supabase.functions.invoke("gestao-r2-signed-url", {
-      body: { storagePath: r2Key, expiresIn },
-    });
-    if (error || !data?.url) return null;
-    return data.url as string;
+    return resolveR2SignedUrl(r2Key);
   },
   publicUrl(r2Key) {
     return `${R2_CDN_BASE}/${r2Key}`;
   },
   async deleteFile(r2Key) {
-    await supabase.functions.invoke("gestao-r2-delete", { body: { storagePath: r2Key } });
+    await deleteR2Object(r2Key);
   },
 };
 

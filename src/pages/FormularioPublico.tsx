@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 
 import { useParams } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useFormularioPublico, useSubmitFormularioResposta, useFormularioRespostaPublica } from '@/hooks/useFormularios';
 import { FormularioCampo } from '@/types/formulario';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeEdgeWorker } from '@/integrations/edge-client';
 import { useDropzone } from 'react-dropzone';
 import { ptBR } from 'date-fns/locale';
 import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
@@ -53,7 +54,7 @@ export default function FormularioPublico() {
         formData.append('token', token || '');
         formData.append('campoId', campoId);
 
-        const { data, error } = await supabase.functions.invoke('gestao-r2-public-upload', { body: formData });
+        const { data, error } = await invokeEdgeWorker('api', 'gestao-r2-public-upload', { body: formData });
         if (error) throw error;
         if (!data?.success || !data?.url) throw new Error(data?.error || 'Falha no upload');
         uploadedUrls.push(data.url as string);

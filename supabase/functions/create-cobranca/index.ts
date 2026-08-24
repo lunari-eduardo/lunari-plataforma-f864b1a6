@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
       galeria_id: binding.galeria_id,
       valor: Math.round(Number(valor) * 100) / 100,
       descricao: descricao || "Serviço fotográfico",
-      tipo_cobranca: billingType === "PIX" ? "pix" : "link",
+      tipo_cobranca: billingType === "PIX" ? "pix" : billingType === "CREDIT_CARD" ? "cartao" : "link",
+      total_parcelas: installmentCount && installmentCount > 1 ? installmentCount : 1,
       provedor,
       status: "pendente",
       finalidade: binding.finalidade,
@@ -290,6 +291,8 @@ Deno.serve(async (req) => {
       valor: Number(valor),
       descricao: descricao || "Serviço fotográfico",
       cliente: mergedCliente,
+      clientIp: req.headers.get("x-forwarded-for") || undefined,
+      requestDadosExtras: dadosExtras,
       integrationData: {},
       billingType,
       creditCard,
@@ -384,7 +387,11 @@ Deno.serve(async (req) => {
       pixCopiaCola: adapterData.pixCopiaCola,
       pixQrCodeBase64: adapterData.pixQrCodeBase64,
       provedor,
-      status: "pendente",
+      status: isPaid ? "pago" : "pendente",
+      paid: isPaid,
+      creditCardStatus: asaasStatus || undefined,
+      requiresPolling: !isPaid && billingType === "CREDIT_CARD",
+      paymentId: adapterData.providerOrderId,
     };
 
     return jsonResponse(response, 200);

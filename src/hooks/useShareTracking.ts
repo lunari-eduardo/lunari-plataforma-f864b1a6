@@ -1,5 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeEdgeWorker } from '@/integrations/edge-client';
+
+const API_BASE = import.meta.env.VITE_EDGE_API_URL || 'https://lunari-edge-api.eduardo22diehl.workers.dev';
 
 interface TrackShareEventParams {
   token?: string;
@@ -19,7 +22,7 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
     if (!token && !slug) return;
     
     try {
-      await supabase.functions.invoke('track-share-event', {
+      await invokeEdgeWorker('api', 'track-share-event', {
         body: {
           token,
           share_link_slug: slug,
@@ -44,10 +47,7 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
     }
 
     const handleBeforeUnload = () => {
-      // Usa sendBeacon ou fetch keepalive para garantir envio ao fechar
-      // Como estamos no Supabase, a function invoke normal pode ser cancelada pelo browser.
-      // Vamos usar beacon se possível, mas como exige formato específico, faremos fetch com keepalive.
-      const url = `${(supabase as any).supabaseUrl}/functions/v1/track-share-event`;
+      const url = `${API_BASE}/functions/v1/track-share-event`;
       const body = JSON.stringify({
         token,
         share_link_slug: slug,
@@ -61,7 +61,6 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(supabase as any).supabaseKey}` // anon key
         },
         body,
         keepalive: true

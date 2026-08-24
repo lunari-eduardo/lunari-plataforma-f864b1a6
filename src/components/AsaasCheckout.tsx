@@ -228,6 +228,7 @@ export function AsaasCheckout({
   const [cardInstallments, setCardInstallments] = useState('1');
   const [cardError, setCardError] = useState<string | null>(null);
   const [cardSuccess, setCardSuccess] = useState(false);
+  const [cardProcessing, setCardProcessing] = useState(false);
 
   // ——— Inline field errors (suave UX, não bloqueia digitação) ———
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -578,17 +579,20 @@ export function AsaasCheckout({
             postalCode: cardCep.replace(/\D/g, ''),
             addressNumber: 'S/N',
           },
+          dadosExtras: {
+            valorBase: data.valorTotal,
+          },
         }),
       });
       const result = await res.json();
       if (!res.ok || !result.success) {
         throw new Error(result.error || 'Pagamento recusado');
       }
-      if (result.paid) {
+      if (result.paid || result.status === 'pago') {
         // Single payment (à vista) finalized inline by backend
         setCardSuccess(true);
         setTimeout(() => onPaymentConfirmed(), 2000);
-      } else if (result.requiresPolling && result.cobrancaId) {
+      } else if ((result.requiresPolling || result.creditCardStatus === 'AWAITING_RISK_ANALYSIS') && result.cobrancaId) {
         // Installment or async payment — poll check-payment-status
         setCardLoading(true);
         const cobrancaId = result.cobrancaId;
@@ -617,16 +621,14 @@ export function AsaasCheckout({
             } else {
               // Timeout — payment may still be processing
               setCardLoading(false);
-              setCardSuccess(true);
-              setTimeout(() => onPaymentConfirmed(), 2000);
+              setCardProcessing(true);
             }
           } catch {
             if (Date.now() - pollStart < maxPollTime) {
               setTimeout(poll, pollInterval);
             } else {
               setCardLoading(false);
-              setCardSuccess(true);
-              setTimeout(() => onPaymentConfirmed(), 2000);
+              setCardProcessing(true);
             }
           }
         };
@@ -659,6 +661,25 @@ export function AsaasCheckout({
           </div>
           <h1 className="text-2xl font-bold">Pagamento confirmado!</h1>
           <p className="text-muted-foreground">Sua seleção foi finalizada com sucesso.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ——— Processing state ———
+  if (cardProcessing) {
+    return (
+      <div
+        className={cn("min-h-screen flex items-center justify-center p-4 bg-background text-foreground", backgroundMode === 'dark' && 'dark')}
+        style={themeStyles}
+      >
+        <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+            <Loader2 className="h-10 w-10 text-blue-600 dark:text-blue-400 animate-spin" />
+          </div>
+          <h1 className="text-2xl font-bold">Pagamento em análise</h1>
+          <p className="text-muted-foreground">Seu pagamento está sendo processado. Você receberá a confirmação por e-mail assim que for aprovado.</p>
+          <Button onClick={onCancel} variant="outline" className="mt-4">Voltar</Button>
         </div>
       </div>
     );
@@ -910,22 +931,35 @@ export function AsaasCheckout({
           {/* ——— CARD TAB ——— */}
           {data.enabledMethods.creditCard && (
             <TabsContent value="card" className="space-y-3.5 mt-4">
-              {/* Seção 1: Dados do titular */}
-              <div className="space-y-2.5">
-                <div className="space-y-1">
-                  <Label htmlFor="cc-name" className="text-xs font-medium text-muted-foreground">Nome no cartão</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
-                    <Input
-                      id="cc-name"
-                      value={cardName}
-                      onChange={e => setCardName(e.target.value.toUpperCase())}
-                      placeholder="NOME COMPLETO"
-                      autoComplete="cc-name"
-                      className={cn(checkoutInputClass(), 'pl-10')}
-                    />
-                  </div>
+              
+              {feesError && !data.absorverTaxa ? (
+                <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-center space-y-3">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
+                  <p className="text-sm font-medium text-destructive">
+                    Não foi possível calcular as taxas de parcelamento no momento.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Para sua segurança, o pagamento via cartão está temporariamente indisponível. Tente novamente mais tarde ou utilize PIX.
+                  </p>
                 </div>
+              ) : (
+                <>
+                  {/* Seção 1: Dados do titular */}
+                  <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <Label htmlFor="cc-name" className="text-xs font-medium text-muted-foreground">Nome no cartão</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 pointer-events-none" />
+                        <Input
+                          id="cc-name"
+                          value={cardName}
+                          onChange={e => setCardName(e.target.value.toUpperCase())}
+                          placeholder="NOME COMPLETO"
+                          autoComplete="cc-name"
+                          className={cn(checkoutInputClass(), 'pl-10')}
+                        />
+                      </div>
+                    </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="cc-cpf" className="text-xs font-medium text-muted-foreground">CPF / CNPJ</Label>
@@ -1177,6 +1211,8 @@ export function AsaasCheckout({
                 <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                 Seus dados estão protegidos com segurança de ponta a ponta.
               </p>
+              </>
+              )}
             </TabsContent>
           )}
         </Tabs>

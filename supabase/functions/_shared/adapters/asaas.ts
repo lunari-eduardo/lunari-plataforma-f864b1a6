@@ -3,7 +3,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
-import { ensureAsaasWebhookSubscription } from "../asaas-helpers.ts";
+import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees } from "../asaas-helpers.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -208,6 +208,57 @@ export async function createAsaasPayment(
       addressNumber: holder.addressNumber || cliente?.numero || "S/N",
       phone: normalizePhone(holder.phone) || normalizePhone(cliente?.whatsapp || cliente?.telefone) || "",
     };
+
+    if (input.clientIp) {
+      paymentPayload.remoteIp = input.clientIp;
+    }
+
+    // Validação de taxas server-side
+    const baseValue = input.requestDadosExtras?.valorBase;
+    if (baseValue && typeof baseValue === "number" && baseValue > 0 && !settings.absorverTaxa) {
+      const chargeOverrides = input.requestDadosExtras || {};
+      const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
+        ? chargeOverrides.repassarTaxasProcessamento
+        : !settings.absorverTaxa;
+        
+      const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
+        ? chargeOverrides.anteciparParcelas
+        : (settings as any).incluirTaxaAntecipacao === true;
+        
+      const repassarAntecipacao = chargeOverrides.repassarTaxaAntecipacao !== undefined
+        ? chargeOverrides.repassarTaxaAntecipacao
+        : ((settings as any).incluirTaxaAntecipacao === true);
+        
+      try {
+        const feesRes = await fetch(`${baseUrl}/v3/myAccount/fees`, {
+          headers: { access_token: apiKey },
+        });
+        if (feesRes.ok) {
+          const feesData = await feesRes.json();
+          const normalizedFees = normalizeAsaasFees(feesData);
+          const iCount = paymentPayload.installmentCount || 1;
+          const { totalValue } = calculateCreditFees(
+            baseValue,
+            iCount,
+            normalizedFees,
+            repassarTaxas,
+            repassarAntecipacao
+          );
+          
+          // Se o valor cobrado diverge mais que R$ 1.00 (praxe pra arredondamento), rejeitamos
+          if (valor < totalValue - 1) {
+            console.error(`[asaas-adapter] Fraude/Divergência de valor: esperado ${totalValue}, recebido ${valor}`);
+            return {
+              success: false,
+              error: "Divergência no cálculo de taxas. O valor cobrado é inválido.",
+              errorCode: "FEE_MISMATCH",
+            };
+          }
+        }
+      } catch (feeErr) {
+        console.warn("[asaas-adapter] Falha ao validar taxas no servidor:", feeErr);
+      }
+    }
   }
 
   console.log(`[asaas-adapter] Criando cobrança no Asaas para cobranca=${cobrancaId}, billingType=${paymentPayload.billingType}, valor=${valor}`);

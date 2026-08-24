@@ -85,6 +85,10 @@ export interface CreateCobrancaResponse {
   pixQrCodeBase64?: string;
   provedor?: ProvedorPagamento;
   status?: StatusCobranca;
+  paid?: boolean;
+  creditCardStatus?: string;
+  requiresPolling?: boolean;
+  paymentId?: string;
   error?: string;
   errorCode?: string;
   reused?: boolean;
@@ -96,6 +100,8 @@ export interface AdapterCreatePaymentInput {
   valor: number;
   descricao: string;
   cliente: ClienteContact;
+  clientIp?: string;
+  requestDadosExtras?: Record<string, any>;
   integrationData: {
     accessToken?: string | null;
     dadosExtras?: Record<string, any> | null;

@@ -6,7 +6,7 @@
     },
     {
       "source": "/l/:cobrancaId",
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/payment-link-preview?id=:cobrancaId"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/payment-link-preview?id=:cobrancaId"
     },
     {
       "source": "/g/:token",
@@ -17,7 +17,7 @@
           "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
         }
       ],
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/gallery-og?token=:token"
     },
     {
       "source": "/c/:token",
@@ -28,7 +28,7 @@
           "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
         }
       ],
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token&type=deliver"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/gallery-og?token=:token&type=deliver"
     },
     {
       "source": "/formulario/:token",
@@ -39,7 +39,7 @@
           "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
         }
       ],
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?type=form&token=:token"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/gallery-og?type=form&token=:token"
     },
     {
       "source": "/p/:token",
@@ -50,11 +50,11 @@
           "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
         }
       ],
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?type=proposal&token=:token"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/gallery-og?type=proposal&token=:token"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/sitemap"
+      "destination": "https://lunari-edge-previews.eduardo22diehl.workers.dev/functions/v1/sitemap"
     },
     {
       "source": "/homepageapp",

@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { ClienteDocumento } from '@/types/cliente-supabase';
+import { resolveR2SignedUrl, deleteR2Object } from '@/hooks/useR2SignedUrl';
 
 export class ClienteSupabaseService {
   
@@ -92,11 +93,9 @@ export class ClienteSupabaseService {
   static async getDocumentUrl(documento: ClienteDocumento): Promise<string> {
     const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
     if (r2Path) {
-      const { data, error } = await supabase.functions.invoke('gestao-r2-signed-url', {
-        body: { storagePath: r2Path, expiresIn: 300 },
-      });
-      if (error || !data?.url) throw new Error('Falha ao gerar URL');
-      return data.url as string;
+      const url = await resolveR2SignedUrl(r2Path);
+      if (!url) throw new Error('Falha ao gerar URL');
+      return url;
     }
     // Legacy Supabase Storage
     const { data } = supabase.storage.from('client-documents').getPublicUrl(documento.storage_path);
@@ -109,7 +108,7 @@ export class ClienteSupabaseService {
     try {
       const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
       if (r2Path) {
-        await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: r2Path } });
+        await deleteR2Object(r2Path);
       } else if (documento.storage_path) {
         await supabase.storage.from('client-documents').remove([documento.storage_path]);
       }

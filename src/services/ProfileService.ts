@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { deleteR2Object } from '@/hooks/useR2SignedUrl';
 
 export interface UserProfile {
   id: string;
@@ -143,7 +144,7 @@ export class ProfileService {
       const oldPath = current.avatar_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
+          await deleteR2Object(oldPath);
         } catch (e) {
           console.warn('Falha ao remover avatar antigo:', e);
         }
@@ -172,7 +173,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
+          await deleteR2Object(storagePath);
         } catch (e) {
           console.warn('Falha ao remover avatar do R2:', e);
         }
@@ -205,7 +206,7 @@ export class ProfileService {
       const oldPath = current.logo_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
+          await deleteR2Object(oldPath);
         } catch (e) {
           console.warn('Falha ao remover logo antigo:', e);
         }
@@ -234,7 +235,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
+          await deleteR2Object(storagePath);
         } catch (e) {
           console.warn('Falha ao remover logo do R2:', e);
         }

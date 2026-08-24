@@ -284,7 +284,7 @@ async function getPhotographerAsaasConfig(supabase: any, userId: string) {
   }
 
   const env = integracao.dados_extras?.environment || integracao.dados_extras?.gestao_settings?.environment || "sandbox";
-  const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
+  const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
 
   console.log(`[check-payment-status] Using photographer's Asaas key (env: ${env})`);
   return { apiKey: integracao.access_token, baseUrl };

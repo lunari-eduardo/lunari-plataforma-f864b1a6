@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { Contrato, ContratoCreateInput, ContratoStatus } from '@/types/contrato';
 import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
+import { resolveR2SignedUrl } from '@/hooks/useR2SignedUrl';
 
 const QK = 'contratos';
 
@@ -163,12 +164,8 @@ export function useContratos(opts: UseContratosOpts = {}) {
   const getSignedUrl = async (path: string): Promise<string | null> => {
     if (!path) return null;
     // Novo: caminho do R2 (contratos-assinados/...)
-    if (path.startsWith('contratos-assinados/')) {
-      const { data, error } = await supabase.functions.invoke('gestao-r2-signed-url', {
-        body: { storagePath: path, expiresIn: 300 },
-      });
-      if (error || !data?.url) return null;
-      return data.url as string;
+    if (path.startsWith('contratos-assinados/') || path.startsWith('gestao/contratos-assinados/')) {
+      return resolveR2SignedUrl(path);
     }
     // Legado: bucket Supabase
     const { data, error } = await supabase.storage

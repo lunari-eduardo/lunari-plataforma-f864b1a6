@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
       invoiceUrl: adapterData.checkoutUrl,
       billingType,
       status: asaasStatus || (billingType === "PIX" ? "PENDING" : "CONFIRMED"),
-      creditCardStatus: asaasStatus || "CONFIRMED",
+      creditCardStatus: asaasStatus || undefined,
       paid: isPaid,
     }, 200);
   } catch (err: any) {
