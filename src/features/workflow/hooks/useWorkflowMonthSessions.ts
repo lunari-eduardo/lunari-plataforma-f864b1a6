@@ -209,6 +209,9 @@ export function useWorkflowMonthSessions() {
               s.desconto !== p.desconto ||
               s.qtd_fotos_extra !== p.qtd_fotos_extra ||
               s.status !== p.status ||
+              s.descricao !== p.descricao ||
+              s.pacote !== p.pacote ||
+              s.categoria !== p.categoria ||
               produtosSig(s) !== produtosSig(p)
             );
           });

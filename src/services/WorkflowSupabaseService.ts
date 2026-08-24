@@ -99,7 +99,7 @@ export class WorkflowSupabaseService {
       if (!Array.isArray(session?.produtos_incluidos) || session.produtos_incluidos.length === 0) {
         patch.produtos_incluidos = produtos;
       }
-      if (!session?.descricao && appointment.description) {
+      if (appointment.description !== undefined && appointment.description !== null) {
         patch.descricao = appointment.description;
       }
       if (Number(session?.valor_total || 0) < valorBase) {
@@ -181,6 +181,23 @@ export class WorkflowSupabaseService {
         // Nesse caso ela existe, mas sem pacote/valores/regras congeladas — o que
         // fazia o card do Workflow nascer vazio ao confirmar o agendamento.
         const hydrated = await this.hydrateStubSession(existingSession, appointmentId, user.user.id);
+
+        const { data: freshAppt } = await supabase
+          .from('appointments')
+          .select('description')
+          .eq('id', appointmentId)
+          .eq('user_id', user.user.id)
+          .maybeSingle();
+
+        if (freshAppt?.description && hydrated?.descricao !== freshAppt.description) {
+          await supabase
+            .from('clientes_sessoes')
+            .update({ descricao: freshAppt.description, updated_by: user.user.id })
+            .eq('id', hydrated.id)
+            .eq('user_id', user.user.id);
+          hydrated.descricao = freshAppt.description;
+        }
+
         console.log('✅ Session already exists for appointment:', appointmentId);
         return hydrated;
       }
@@ -431,7 +448,7 @@ export class WorkflowSupabaseService {
         pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, regrasCongeladas).valorUnitario : 0;
       
       // FASE 4: Montar descrição sem fallback para title
-      const descricao = appointmentData.description || '';
+      const descricao = hydratedData.description || appointmentData.description || '';
       console.log('📝 Descrição da sessão:', descricao || '(vazia)');
 
       // ✅ CORREÇÃO CRÍTICA: finalCategoria NUNCA deve ser nome de pacote

@@ -28,6 +28,7 @@ import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { buildPaymentShareUrl } from '@/utils/domainUtils';
 import { getUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
+import { normalizeAsaasFees, type NormalizedAsaasFees } from '@/lib/anticipationUtils';
 
 
 
@@ -114,6 +115,64 @@ export function ChargeModal({
   const [asaasPixCopiaECola, setAsaasPixCopiaECola] = useState<string | null>(null);
   const [asaasPixModalOpen, setAsaasPixModalOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
+  const [accountFees, setAccountFees] = useState<NormalizedAsaasFees | null>(null);
+
+  useEffect(() => {
+    if (selectedProvider !== 'asaas') return;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const response = await supabase.functions.invoke('asaas-fetch-fees', {
+          body: { userId: user.id },
+        });
+        if (response.data?.success && response.data?.accountFees) {
+          setAccountFees(response.data.accountFees);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar taxas Asaas:', err);
+      }
+    })();
+  }, [selectedProvider]);
+
+  const calcularLiquidoEstimado = () => {
+    if (!valor || valor <= 0) return { liquido: 0, detalhe: '' };
+    
+    if (overrideRepassarTaxas && (!overrideAntecipar || overrideRepassarAntecipacao)) {
+      return {
+        liquido: valor,
+        detalhe: 'Cliente arca com as taxas de processamento.',
+      };
+    }
+
+    const fees = accountFees || normalizeAsaasFees(null);
+    const tier1 = fees.creditCard?.tiers?.[0] || { percentageFee: 2.99 };
+    const opVal = fees.creditCard?.operationValue ?? 0.49;
+
+    let descontoProcessamento = 0;
+    if (!overrideRepassarTaxas) {
+      descontoProcessamento = (valor * tier1.percentageFee / 100) + opVal;
+    }
+
+    let descontoAntecipacao = 0;
+    if (overrideAntecipar && !overrideRepassarAntecipacao) {
+      const taxaMensal = fees.creditCard?.detachedMonthlyFeeValue ?? 1.25;
+      descontoAntecipacao = valor * (taxaMensal / 100);
+    }
+
+    const totalDesconto = descontoProcessamento + descontoAntecipacao;
+    const liquido = Math.max(0, valor - totalDesconto);
+
+    const desc = [];
+    if (!overrideRepassarTaxas) desc.push(`processamento (~R$ ${descontoProcessamento.toFixed(2).replace('.', ',')})`);
+    if (overrideAntecipar && !overrideRepassarAntecipacao) desc.push(`antecipação (~R$ ${descontoAntecipacao.toFixed(2).replace('.', ',')})`);
+
+    const detalhe = desc.length > 0
+      ? `Você absorve ${desc.join(' e ')}.`
+      : 'Você absorve as taxas no cartão.';
+
+    return { liquido, detalhe };
+  };
   
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
@@ -380,12 +439,7 @@ export function ChargeModal({
   const handleAsaasGeneratePix = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
-    if (!payerValidity?.allValidFor('pix_asaas')) {
-      const { toast } = await import('sonner');
-      toast.error('Preencha nome, telefone e CPF/CNPJ válidos do pagador antes de gerar o PIX.');
-      return;
-    }
-    await persistPayerToCrm();
+
     setAsaasPixLoading(true);
     try {
       const response = await supabase.functions.invoke('create-cobranca', {
@@ -424,12 +478,6 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
-    if (!payer.nome?.trim()) {
-      const { toast } = await import('sonner');
-      toast.error('Informe pelo menos o nome do pagador antes de gerar o link.');
-      return;
-    }
-    await persistPayerToCrm();
 
     setAsaasLinkLoading(true);
     try {
@@ -493,10 +541,6 @@ export function ChargeModal({
       setSelectedProvider('pix_manual');
     }
     
-    // Para provedores tipo "link" (asaas/mercadopago/infinitepay) usamos a URL
-    // branded /l/{id} — devolve OG dinâmico e redireciona ao checkout correto.
-    // Fallback para o link do provedor apenas se, por qualquer motivo, id faltar.
-    // Fallback para o link do provedor apenas se, por qualquer motivo, id faltar.
     const linkUrl = cobranca.id
       ? buildPaymentShareUrl(cobranca.id)
       : (cobranca.ipCheckoutUrl || cobranca.mpPaymentLink);
@@ -528,8 +572,8 @@ export function ChargeModal({
           )}
         >
           {/* ============================ CABEÇALHO FIXO ============================ */}
-          <header className="shrink-0 pt-4 pb-0 px-4 border-b border-border/60 relative">
-            <div className="flex items-center justify-between mb-4 pr-6">
+          <header className="shrink-0 pt-3.5 pb-0 px-4 border-b border-border/60 relative">
+            <div className="flex items-center justify-between mb-3 pr-6">
               <SheetTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
                 <CreditCard className="h-4 w-4 text-accent-gold" />
                 Cobrar cliente
@@ -541,94 +585,93 @@ export function ChargeModal({
             <div className="flex items-center gap-6">
               <button
                 className={cn(
-                  "flex items-center gap-2 pb-3 border-b-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 pb-2.5 border-b-2 text-xs font-semibold transition-colors",
                   activeTab === 'cobrar' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => setActiveTab('cobrar')}
               >
-                <CreditCard className="h-4 w-4" />
+                <CreditCard className="h-3.5 w-3.5" />
                 Nova cobrança
               </button>
               <button
                 className={cn(
-                  "flex items-center gap-2 pb-3 border-b-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 pb-2.5 border-b-2 text-xs font-semibold transition-colors",
                   activeTab === 'historico' ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => setActiveTab('historico')}
               >
-                <History className="h-4 w-4" />
+                <History className="h-3.5 w-3.5" />
                 Histórico ({cobrancas.length})
               </button>
             </div>
           </header>
 
           {/* =========================== CONTEÚDO ROLÁVEL =========================== */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 space-y-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {activeTab === 'cobrar' ? (
               <>
-                {/* VALOR DA COBRANÇA */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Valor da cobrança
-                  </Label>
+                {/* VALOR E TIPO DA COBRANÇA */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Valor da cobrança
+                    </Label>
+                    <RadioGroup
+                      value={valorType}
+                      onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="total" id="total" />
+                        <Label htmlFor="total" className="text-xs font-medium cursor-pointer">Total</Label>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="parcial" id="parcial" />
+                        <Label htmlFor="parcial" className="text-xs font-medium cursor-pointer">Parcial</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
                   <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                      <span className="text-lg font-bold text-muted-foreground">R$</span>
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                      <span className="text-base font-bold text-muted-foreground">R$</span>
                     </div>
                     <Input
                       type="number"
                       value={valor || ''}
                       onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
                       onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
-                      className="pl-14 h-14 text-xl font-bold bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
+                      className="pl-12 h-12 text-lg font-bold bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
                       disabled={valorType === 'total'}
                       placeholder="0,00"
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <Calculator className="h-5 w-5 text-muted-foreground/50" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                      <Calculator className="h-4 w-4 text-muted-foreground/50" />
                     </div>
                   </div>
                 </div>
 
-                {/* TIPO DE COBRANÇA (TOTAL / PARCIAL) */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Tipo de cobrança
-                  </Label>
-                  <RadioGroup
-                    value={valorType}
-                    onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
-                    className="flex gap-6"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="total" id="total" />
-                      <Label htmlFor="total" className="text-sm font-medium cursor-pointer">Total</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="parcial" id="parcial" />
-                      <Label htmlFor="parcial" className="text-sm font-medium cursor-pointer">Parcial</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {/* DESCRIÇÃO (OPCIONAL) */}
-                <div className="space-y-2 relative">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Descrição (Opcional)
-                  </Label>
-                  <Textarea
+                {/* DESCRIÇÃO (INPUT DE 1 LINHA COMPACTO) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Descrição (Opcional)
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      {descricao.length}/140
+                    </span>
+                  </div>
+                  <Input
+                    type="text"
                     placeholder="Ex.: Sinal do ensaio de Natal, pacote completo, etc."
                     value={descricao}
                     onChange={(e) => setDescricao(e.target.value.substring(0, 140))}
-                    className="resize-none h-20 text-sm bg-muted/30 border-border/60 rounded-xl pb-6 focus-visible:ring-1 focus-visible:ring-primary/50"
+                    className="h-10 text-xs bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
                   />
-                  <div className="absolute bottom-2 right-3 text-[10px] text-muted-foreground font-medium">
-                    {descricao.length}/140
-                  </div>
                 </div>
 
                 {/* MEIO DE COBRANÇA */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                     Meio de cobrança
                   </Label>
@@ -637,81 +680,16 @@ export function ChargeModal({
                     onSelect={handleProviderSelect}
                   />
                   {showLinkSection && (
-                    <div className="flex items-center gap-1.5 mt-2 text-[11px] text-muted-foreground">
-                      <Lock className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
+                      <Lock className="h-3 w-3" />
                       <span>O cliente receberá um link de pagamento para pagar online.</span>
                     </div>
                   )}
                 </div>
 
-                {/* DADOS DO PAGADOR */}
-                {(() => {
-                  const currentProvider =
-                    selectedProvider === 'asaas'
-                      ? (asaasMode === 'link' ? 'link_asaas' : 'pix_asaas')
-                      : selectedProvider === 'mercadopago_link'
-                        ? 'link_mp'
-                        : selectedProvider === 'infinitepay'
-                          ? 'link_infinitepay'
-                          : selectedProvider === 'pix_manual'
-                            ? 'pix_manual'
-                            : null;
-
-                  if (!currentProvider || currentProvider === 'pix_manual') return null;
-
-                  const missing = computeMissingFields(currentProvider, payer);
-                  const nothingMissing = missing.length === 0;
-
-                  if (currentProvider === 'link_infinitepay') {
-                    if (payerEditing) {
-                      return (
-                        <div className="space-y-2 mt-2 bg-muted/20 p-4 rounded-xl border border-border/60">
-                          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Dados do pagador</Label>
-                          <PayerFieldsBlock value={payer} onChange={setPayer} onValidityChange={setPayerValidity} provider={null} />
-                          <div className="flex justify-end">
-                            <Button type="button" variant="outline" size="sm" className="h-8 text-xs rounded-lg mt-2" onClick={() => setPayerEditing(false)}>Recolher</Button>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="text-[11px] text-muted-foreground flex items-center justify-between bg-muted/20 p-3 rounded-xl border border-border/60">
-                        <span>Dados do pagador serão preenchidos pelo cliente.</span>
-                        <Button type="button" variant="outline" size="sm" className="h-7 px-3 rounded text-[10px] uppercase font-bold" onClick={() => setPayerEditing(true)}>Editar</Button>
-                      </div>
-                    );
-                  }
-
-                  if (nothingMissing && !payerEditing) {
-                    return (
-                      <div className="text-[11px] text-muted-foreground flex items-center justify-between bg-muted/20 p-3 rounded-xl border border-border/60">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                          <span>Dados do pagador preenchidos.</span>
-                        </div>
-                        <Button type="button" variant="outline" size="sm" className="h-7 px-3 rounded text-[10px] uppercase font-bold" onClick={() => setPayerEditing(true)}>Revisar</Button>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-3 mt-2 bg-muted/20 p-4 rounded-xl border border-border/60">
-                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Complete os dados do pagador
-                      </Label>
-                      <PayerFieldsBlock value={payer} onChange={setPayer} onValidityChange={setPayerValidity} provider={currentProvider} onlyShow={payerEditing ? undefined : missing} />
-                      {payerEditing && (
-                        <div className="flex justify-end pt-2">
-                          <Button type="button" variant="outline" size="sm" className="h-8 text-xs rounded-lg" onClick={() => setPayerEditing(false)}>Recolher</Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* CONFIGURAÇÕES DO PAGAMENTO */}
+                {/* CONFIGURAÇÕES DO PAGAMENTO (APENAS OPÇÕES EDITÁVEIS NA CRIAÇÃO) */}
                 {showAsaasSection && asaasSettings && asaasMode === 'options' && (
-                  <div className="space-y-4 pt-2">
+                  <div className="space-y-3 pt-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         Configurações do pagamento
@@ -719,7 +697,7 @@ export function ChargeModal({
                       <button 
                         type="button" 
                         onClick={() => setShowSettings(!showSettings)}
-                        className="text-[11px] text-muted-foreground font-medium hover:text-foreground flex items-center gap-1.5 transition-colors"
+                        className="text-[11px] text-muted-foreground font-medium hover:text-foreground flex items-center gap-1 transition-colors"
                       >
                         {showSettings ? 'Ocultar' : 'Expandir'}
                         {showSettings ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -727,71 +705,40 @@ export function ChargeModal({
                     </div>
 
                     {showSettings && (
-                      <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
-                        {/* FORMAS ACEITAS */}
-                        <div className="space-y-2">
-                          <Label className="text-[10px] text-muted-foreground uppercase font-medium">Formas Aceitas</Label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className={cn("flex items-center justify-between p-3.5 rounded-xl border", asaasSettings.habilitarPix ? "border-primary bg-primary/5 text-primary shadow-sm" : "border-border/60 bg-muted/20 text-muted-foreground")}>
-                              <div className="flex items-center gap-2">
-                                <QrCode className="h-4 w-4" />
-                                <span className="text-sm font-semibold">Pix</span>
-                              </div>
-                              {asaasSettings.habilitarPix && <CheckCircle2 className="h-4 w-4" />}
-                            </div>
-                            <div className={cn("flex items-center justify-between p-3.5 rounded-xl border", asaasSettings.habilitarCartao ? "border-primary bg-primary/5 text-primary shadow-sm" : "border-border/60 bg-muted/20 text-muted-foreground")}>
-                              <div className="flex items-center gap-2">
-                                <CreditCard className="h-4 w-4" />
-                                <span className="text-sm font-semibold">Cartão de crédito</span>
-                              </div>
-                              {asaasSettings.habilitarCartao && <CheckCircle2 className="h-4 w-4" />}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* PARCELAMENTO NO CARTÃO */}
-                        {asaasSettings.habilitarCartao && (
-                          <div className="space-y-2">
-                            <Label className="text-[10px] text-muted-foreground uppercase font-medium">Parcelamento no cartão</Label>
-                            <div className="h-12 px-4 bg-muted/30 border border-border/60 rounded-xl flex items-center text-sm font-semibold shadow-sm text-foreground">
-                              Até {asaasSettings.maxParcelas}x
-                            </div>
-                          </div>
-                        )}
-
+                      <div className="space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
                         {/* TAXAS DO CARTÃO */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <Label className="text-[10px] text-muted-foreground uppercase font-medium">Taxas do Cartão</Label>
                           <RadioGroup 
                             value={overrideRepassarTaxas ? "cliente" : "eu"}
                             onValueChange={(v) => setOverrideRepassarTaxas(v === 'cliente')}
-                            className="grid grid-cols-1 gap-2.5"
+                            className="grid grid-cols-1 gap-2"
                           >
-                            <Label htmlFor="tx-cliente" className={cn("flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors shadow-sm", overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
+                            <Label htmlFor="tx-cliente" className={cn("flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors shadow-xs", overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
                               <RadioGroupItem value="cliente" id="tx-cliente" />
                               <div className="flex flex-col gap-0.5">
-                                <span className="text-sm font-semibold">Cliente paga as taxas</span>
-                                <span className="text-[11px] text-muted-foreground font-normal">O valor das taxas será repassado ao cliente.</span>
+                                <span className="text-xs font-semibold">Cliente paga as taxas</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">O valor das taxas será repassado ao cliente.</span>
                               </div>
                             </Label>
-                            <Label htmlFor="tx-eu" className={cn("flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors shadow-sm", !overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
+                            <Label htmlFor="tx-eu" className={cn("flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors shadow-xs", !overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
                               <RadioGroupItem value="eu" id="tx-eu" />
                               <div className="flex flex-col gap-0.5">
-                                <span className="text-sm font-semibold">Eu pago as taxas</span>
-                                <span className="text-[11px] text-muted-foreground font-normal">As taxas serão descontadas do valor recebido.</span>
+                                <span className="text-xs font-semibold">Eu pago as taxas</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">As taxas serão descontadas do valor recebido.</span>
                               </div>
                             </Label>
                           </RadioGroup>
                         </div>
 
                         {/* ANTECIPAÇÃO */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <Label className="text-[10px] text-muted-foreground uppercase font-medium">Antecipação</Label>
-                          <div className="p-3.5 bg-muted/30 border border-border/60 rounded-xl space-y-4 shadow-sm">
+                          <div className="p-3 bg-muted/30 border border-border/60 rounded-xl space-y-3 shadow-xs">
                              <div className="flex items-center justify-between">
                                <div className="flex flex-col gap-0.5">
-                                 <span className="text-sm font-semibold">Solicitar antecipação automática</span>
-                                 <span className="text-[11px] text-muted-foreground font-normal">Receba o valor das parcelas antecipado</span>
+                                 <span className="text-xs font-semibold">Solicitar antecipação automática</span>
+                                 <span className="text-[10px] text-muted-foreground font-normal">Receba o valor das parcelas antecipado</span>
                                </div>
                                <Switch checked={overrideAntecipar} onCheckedChange={(v) => {
                                  setOverrideAntecipar(v);
@@ -800,10 +747,10 @@ export function ChargeModal({
                              </div>
                              
                              {overrideAntecipar && (
-                               <div className="pt-3.5 border-t border-border/60 flex items-center justify-between animate-in fade-in">
+                               <div className="pt-2.5 border-t border-border/60 flex items-center justify-between animate-in fade-in">
                                  <div className="flex flex-col gap-0.5">
-                                   <span className="text-sm font-semibold text-primary">Repassar custo da antecipação</span>
-                                   <span className="text-[11px] text-muted-foreground font-normal">Inclui taxa no valor cobrado do cliente</span>
+                                   <span className="text-xs font-semibold text-primary">Repassar custo da antecipação</span>
+                                   <span className="text-[10px] text-muted-foreground font-normal">Inclui taxa no valor cobrado do cliente</span>
                                  </div>
                                  <Switch checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
                                </div>
@@ -811,28 +758,35 @@ export function ChargeModal({
                           </div>
                         </div>
 
-                        {/* RECEBIMENTO LÍQUIDO ESTIMADO */}
-                        <div className="flex items-center justify-between p-4 bg-muted/40 border border-border/60 rounded-xl shadow-sm mt-2">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
-                              <span className="text-sm font-bold text-muted-foreground">%</span>
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recebimento líquido estimado</span>
-                              <span className="text-[11px] text-muted-foreground truncate leading-tight">
-                                {overrideRepassarTaxas ? 'Cliente arca com as taxas.' : 'Você absorve as taxas no cartão.'}
+                        {/* RECEBIMENTO LÍQUIDO ESTIMADO (CALCULADO EM TEMPO REAL) */}
+                        {(() => {
+                          const est = calcularLiquidoEstimado();
+                          return (
+                            <div className="flex items-center justify-between p-3.5 bg-muted/40 border border-border/60 rounded-xl shadow-xs mt-1">
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-8 w-8 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
+                                  <span className="text-xs font-bold text-muted-foreground">%</span>
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recebimento líquido estimado</span>
+                                  <span className="text-[10px] text-muted-foreground truncate leading-tight">
+                                    {est.detalhe}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-base font-bold text-foreground pl-2 whitespace-nowrap">
+                                R$ {est.liquido.toFixed(2).replace('.', ',')}
                               </span>
                             </div>
-                          </div>
-                          <span className="text-base font-bold text-foreground pl-2 whitespace-nowrap">R$ {valor.toFixed(2).replace('.', ',')}</span>
-                        </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* AÇÕES DE GERAÇÃO E TIPO DE COBRANÇA */}
-                <div className="pt-6 space-y-4">
+                <div className="pt-3 space-y-3">
                   {showPixManualSection && (
                     <PixManualSection valor={valor} pixPayload={currentCharge?.pixPayload} status={currentCharge?.status} loading={creatingCharge} clienteWhatsapp={clienteWhatsapp} chargeId={currentChargeId || undefined} onGenerate={handleGenerateCharge} onConfirmPayment={confirmPixManualPayment} />
                   )}
@@ -843,21 +797,21 @@ export function ChargeModal({
 
                   {showAsaasSection && asaasMode === 'options' && asaasSettings && (
                     <>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                           Tipo de cobrança
                         </Label>
                         <AsaasChargeOptions valor={valor} selectedMethod={asaasSelectedMethod} onSelectMethod={setAsaasSelectedMethod} hasPix={asaasSettings.habilitarPix} />
                       </div>
                       
-                      <div className="pt-2">
+                      <div className="pt-1">
                         {asaasSelectedMethod === 'pix' ? (
-                          <Button onClick={handleAsaasGeneratePix} disabled={asaasPixLoading} className="w-full h-14 text-sm font-bold uppercase tracking-wider rounded-xl shadow-sm">
+                          <Button onClick={handleAsaasGeneratePix} disabled={asaasPixLoading} className="w-full h-12 text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs">
                             {asaasPixLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Gerar PIX — R$ {valor.toFixed(2).replace('.', ',')}
                           </Button>
                         ) : (
-                          <Button onClick={handleAsaasGenerateLink} disabled={asaasLinkLoading} className="w-full h-14 text-sm font-bold uppercase tracking-wider rounded-xl shadow-sm">
+                          <Button onClick={handleAsaasGenerateLink} disabled={asaasLinkLoading} className="w-full h-12 text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs">
                             {asaasLinkLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Gerar Link — R$ {valor.toFixed(2).replace('.', ',')}
                           </Button>
@@ -878,12 +832,12 @@ export function ChargeModal({
           </div>
           
           {/* ============================= RODAPÉ FIXO ============================== */}
-          <footer className="shrink-0 border-t border-border/60 p-4 px-5 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-3 shadow-lg">
-            <Button variant="outline" onClick={onClose} className="rounded-xl h-11 px-6 font-semibold bg-muted/50 hover:bg-muted border-border/60">
+          <footer className="shrink-0 border-t border-border/60 p-3 px-4 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-3 shadow-lg">
+            <Button variant="outline" onClick={onClose} className="rounded-xl h-10 px-5 text-xs font-semibold bg-muted/40 hover:bg-muted border-border/60">
               Cancelar
             </Button>
             {activeTab === 'historico' && (
-              <Button onClick={() => setActiveTab('cobrar')} className="rounded-xl h-11 px-6 font-semibold">
+              <Button onClick={() => setActiveTab('cobrar')} className="rounded-xl h-10 px-5 text-xs font-semibold">
                 Nova Cobrança
               </Button>
             )}

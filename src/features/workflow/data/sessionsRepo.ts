@@ -34,7 +34,7 @@ const SELECT_LEAN = `
   id, session_id, user_id, cliente_id,
   data_sessao, hora_sessao, status, status_financeiro,
   status_galeria, status_pagamento_fotos_extra,
-  categoria, pacote,
+  categoria, pacote, descricao,
   valor_total, valor_pago, valor_base_pacote,
   valor_foto_extra, valor_total_foto_extra, qtd_fotos_extra,
   valor_adicional, desconto, credito_aplicado,

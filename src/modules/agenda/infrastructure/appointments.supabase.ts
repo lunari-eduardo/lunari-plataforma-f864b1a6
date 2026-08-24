@@ -354,11 +354,34 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
 
     if (patch.description !== undefined) {
       try {
-        await supabase
+        const { data: appt } = await supabase
+          .from("appointments")
+          .select("session_id")
+          .eq("id", id)
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        let query = supabase
           .from("clientes_sessoes")
-          .update({ descricao: patch.description || "" })
-          .eq("appointment_id", id)
+          .update({ descricao: patch.description || "", updated_by: session.user.id })
           .eq("user_id", session.user.id);
+
+        if (appt?.session_id) {
+          query = query.or(`appointment_id.eq.${id},session_id.eq.${appt.session_id}`);
+        } else {
+          query = query.eq("appointment_id", id);
+        }
+
+        const { data: updatedSessions } = await query.select();
+        if (typeof window !== "undefined" && updatedSessions && updatedSessions.length > 0) {
+          for (const s of updatedSessions) {
+            window.dispatchEvent(
+              new CustomEvent("workflow-session-updated", {
+                detail: { kind: "update", session: s, sessionId: s.id, source: "agenda-sync" },
+              }),
+            );
+          }
+        }
       } catch (err) {
         console.warn("⚠️ [agenda.repo] Falha ao sincronizar descrição para o workflow:", err);
       }
