@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 import { Switch } from '@/components/ui/switch';
-import { CreditCard, History, Settings2 } from 'lucide-react';
+import { CreditCard, History, Settings2, Loader2, Link2, QrCode } from 'lucide-react';
 import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
@@ -27,6 +27,7 @@ import { ChargeStepBadge } from './ChargeStepBadge';
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { buildPaymentShareUrl } from '@/utils/domainUtils';
+import { getUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
 
 
 
@@ -106,6 +107,7 @@ export function ChargeModal({
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
+  const [asaasSelectedMethod, setAsaasSelectedMethod] = useState<'link' | 'pix'>('link');
   const [asaasLinkLoading, setAsaasLinkLoading] = useState(false);
   const [asaasPixLoading, setAsaasPixLoading] = useState(false);
   const [asaasPixQrCode, setAsaasPixQrCode] = useState<string | null>(null);
@@ -222,7 +224,7 @@ export function ChargeModal({
         .eq('status', 'ativo')
         .single();
       if (data?.dados_extras) {
-        const d = data.dados_extras as Record<string, unknown>;
+        const d = getUnifiedPaymentSettings<Record<string, unknown>>(data.dados_extras);
         // Read new fields with backward compat
         const legacyAntecipar = d.incluirTaxaAntecipacao === true;
         const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
@@ -238,7 +240,7 @@ export function ChargeModal({
           ireiAntecipar,
           repassarTaxaAntecipacao,
         });
-        // Pre-fill per-charge overrides from global settings
+        // Pre-fill per-charge overrides from global settings (qualquer override na hora de gerar deve prevalecer)
         setOverrideRepassarTaxas(!absorverTaxa);
         setOverrideAntecipar(ireiAntecipar);
         setOverrideRepassarAntecipacao(ireiAntecipar ? repassarTaxaAntecipacao : false);
@@ -787,10 +789,8 @@ export function ChargeModal({
                   {showAsaasSection && asaasMode === 'options' && asaasSettings && (
                     <AsaasChargeOptions
                       valor={valor}
-                      onSelectPix={handleAsaasGeneratePix}
-                      onSelectLink={handleAsaasGenerateLink}
-                      pixLoading={asaasPixLoading}
-                      linkLoading={asaasLinkLoading}
+                      selectedMethod={asaasSelectedMethod}
+                      onSelectMethod={setAsaasSelectedMethod}
                       hasPix={asaasSettings.habilitarPix}
                     />
                   )}
@@ -828,16 +828,45 @@ export function ChargeModal({
             </div>
           </Tabs>
 
-          {/* Footer */}
-          <div className="p-4 pt-2 border-t flex justify-end gap-2">
-            {showAsaasSection && asaasMode === 'link' && (
-              <Button variant="ghost" onClick={() => { setAsaasMode('options'); setCurrentCharge(null); }}>
-                Voltar
-              </Button>
-            )}
-            <Button variant="ghost" onClick={onClose}>
+          {/* Footer — Fechar na esquerda, Ações na direita */}
+          <div className="p-4 pt-2 border-t flex items-center justify-between gap-2">
+            <Button variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
               Fechar
             </Button>
+
+            <div className="flex items-center gap-2">
+              {showAsaasSection && asaasMode === 'link' && (
+                <Button variant="outline" size="sm" onClick={() => { setAsaasMode('options'); setCurrentCharge(null); }}>
+                  Voltar
+                </Button>
+              )}
+
+              {showAsaasSection && asaasMode === 'options' && asaasSettings && (
+                <Button
+                  type="button"
+                  onClick={asaasSelectedMethod === 'link' ? handleAsaasGenerateLink : handleAsaasGeneratePix}
+                  disabled={asaasLinkLoading || asaasPixLoading}
+                  className="gap-2 font-medium px-5"
+                >
+                  {(asaasLinkLoading || asaasPixLoading) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : asaasSelectedMethod === 'link' ? (
+                    <>
+                      <Link2 className="h-4 w-4" />
+                      Gerar Link de Checkout
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4" />
+                      Gerar PIX Presencial
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

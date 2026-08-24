@@ -149,9 +149,11 @@ export async function createAsaasPayment(
     dadosExtras = integ.dados_extras;
   }
 
-  const settings = (dadosExtras || {}) as {
-    environment?: string;
-    absorverTaxa?: boolean;
+  const rawSettings = (dadosExtras || {}) as Record<string, any>;
+  const settings = {
+    ...((rawSettings.gestao_settings as Record<string, any>) || {}),
+    ...((rawSettings.gallery_settings as Record<string, any>) || {}),
+    ...rawSettings,
   };
 
   const baseUrl = settings.environment === "production"
@@ -215,7 +217,7 @@ export async function createAsaasPayment(
 
     // Validação de taxas server-side
     const baseValue = input.requestDadosExtras?.valorBase;
-    if (baseValue && typeof baseValue === "number" && baseValue > 0 && !settings.absorverTaxa) {
+    if (baseValue && typeof baseValue === "number" && baseValue > 0) {
       const chargeOverrides = input.requestDadosExtras || {};
       const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
         ? chargeOverrides.repassarTaxasProcessamento
@@ -223,11 +225,11 @@ export async function createAsaasPayment(
         
       const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
         ? chargeOverrides.anteciparParcelas
-        : (settings as any).incluirTaxaAntecipacao === true;
+        : (settings.ireiAntecipar ?? (settings.incluirTaxaAntecipacao === true));
         
-      const repassarAntecipacao = chargeOverrides.repassarTaxaAntecipacao !== undefined
-        ? chargeOverrides.repassarTaxaAntecipacao
-        : ((settings as any).incluirTaxaAntecipacao === true);
+      const repassarAntecipacao = ireiAntecipar
+        ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : (settings.repassarTaxaAntecipacao ?? (settings.incluirTaxaAntecipacao === true)))
+        : false;
         
       try {
         const feesRes = await fetch(`${baseUrl}/v3/myAccount/fees`, {

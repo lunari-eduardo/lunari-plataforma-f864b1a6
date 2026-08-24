@@ -191,16 +191,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const settings = (integracao.dados_extras || {}) as {
-      environment?: string;
-      habilitarPix?: boolean;
-      habilitarCartao?: boolean;
-      habilitarBoleto?: boolean;
-      maxParcelas?: number;
-      absorverTaxa?: boolean;
-      ireiAntecipar?: boolean;
-      repassarTaxaAntecipacao?: boolean;
-      incluirTaxaAntecipacao?: boolean;
+    const rawExtras = (integracao.dados_extras || {}) as Record<string, any>;
+    const settings = {
+      ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+      ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+      ...rawExtras,
     };
 
     const asaasBaseUrl = settings.environment === 'production'
@@ -213,24 +208,28 @@ Deno.serve(async (req) => {
       console.warn('[checkout-get-data] Webhook auto-sync error (non-fatal):', e);
     });
 
-    // Resolve fee settings: per-charge overrides (dados_extras) > global settings
+    // Resolve fee settings: per-charge overrides (cobranca.dados_extras) > global settings (usuarios_integracoes)
     const chargeOverrides = (cobranca.dados_extras || {}) as {
       repassarTaxasProcessamento?: boolean;
       anteciparParcelas?: boolean;
       repassarTaxaAntecipacao?: boolean;
     };
-    const hasOverrides = Object.keys(chargeOverrides).length > 0;
 
     const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
     const globalAbsorverTaxa = settings.absorverTaxa === true;
     const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
     const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
 
-    const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
+    // Regra canônica: qualquer override explícito na cobrança PREVALECE sobre a configuração global
+    const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
+      ? chargeOverrides.repassarTaxasProcessamento
+      : !globalAbsorverTaxa;
     const absorverTaxa = !repassarTaxas;
-    const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
+    const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
+      ? chargeOverrides.anteciparParcelas
+      : globalIreiAntecipar;
     const repassarTaxaAntecipacao = ireiAntecipar
-      ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
+      ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : globalRepassarAntecipacao)
       : false;
 
     // 4. Fetch Asaas account fees

@@ -1,66 +1,89 @@
-import { QrCode, Link2, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { QrCode, Link2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AsaasChargeOptionsProps {
   valor: number;
-  onSelectPix: () => void;
-  onSelectLink: () => void;
-  pixLoading?: boolean;
-  linkLoading?: boolean;
+  selectedMethod: 'link' | 'pix';
+  onSelectMethod: (method: 'link' | 'pix') => void;
   hasPix: boolean;
 }
 
 export function AsaasChargeOptions({
-  onSelectPix,
-  onSelectLink,
-  pixLoading,
-  linkLoading,
+  selectedMethod,
+  onSelectMethod,
   hasPix,
 }: AsaasChargeOptionsProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className={cn("grid gap-3", hasPix ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
-        <Button
-          type="button"
-          variant="default"
-          className="h-auto py-3 px-3.5 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all hover:scale-[1.01]"
-          onClick={onSelectLink}
-          disabled={linkLoading || pixLoading}
+        {/* Card: Link de Checkout */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelectMethod('link')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectMethod('link'); } }}
+          className={cn(
+            "relative p-3.5 flex flex-col items-center justify-center gap-2 rounded-xl border cursor-pointer transition-all text-center select-none",
+            selectedMethod === 'link'
+              ? "border-primary bg-primary/10 text-foreground shadow-sm ring-2 ring-primary/20"
+              : "border-border/80 bg-card/40 hover:bg-muted/40 hover:border-border text-muted-foreground hover:text-foreground"
+          )}
         >
-          {linkLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <div className="p-1 rounded-md bg-primary-foreground/15 text-primary-foreground">
-              <Link2 className="h-4 w-4" />
+          {selectedMethod === 'link' && (
+            <div className="absolute top-2.5 right-2.5 text-primary">
+              <CheckCircle2 className="h-4 w-4" />
             </div>
           )}
-          <div className="text-center">
-            <p className="font-semibold text-xs sm:text-sm leading-snug">Gerar Link de Checkout</p>
-            <p className="text-[10px] opacity-80 font-normal">Enviar por WhatsApp (Pix + Cartão)</p>
+          <div className={cn(
+            "p-2 rounded-lg transition-colors",
+            selectedMethod === 'link' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+          )}>
+            <Link2 className="h-4 w-4" />
           </div>
-        </Button>
+          <div>
+            <p className={cn("font-semibold text-xs sm:text-sm leading-snug", selectedMethod === 'link' ? "text-foreground font-bold" : "text-foreground")}>
+              Gerar Link de Checkout
+            </p>
+            <p className="text-[10px] text-muted-foreground font-normal mt-0.5">
+              Enviar por WhatsApp (Pix + Cartão)
+            </p>
+          </div>
+        </div>
 
+        {/* Card: PIX Presencial */}
         {hasPix && (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-auto py-3 px-3.5 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-background/50 hover:bg-accent/40 hover:border-primary/40 transition-all hover:scale-[1.01]"
-            onClick={onSelectPix}
-            disabled={pixLoading || linkLoading}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelectMethod('pix')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectMethod('pix'); } }}
+            className={cn(
+              "relative p-3.5 flex flex-col items-center justify-center gap-2 rounded-xl border cursor-pointer transition-all text-center select-none",
+              selectedMethod === 'pix'
+                ? "border-primary bg-primary/10 text-foreground shadow-sm ring-2 ring-primary/20"
+                : "border-border/80 bg-card/40 hover:bg-muted/40 hover:border-border text-muted-foreground hover:text-foreground"
+            )}
           >
-            {pixLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            ) : (
-              <div className="p-1 rounded-md bg-primary/10 text-primary">
-                <QrCode className="h-4 w-4" />
+            {selectedMethod === 'pix' && (
+              <div className="absolute top-2.5 right-2.5 text-primary">
+                <CheckCircle2 className="h-4 w-4" />
               </div>
             )}
-            <div className="text-center">
-              <p className="font-semibold text-xs sm:text-sm text-foreground leading-snug">PIX Presencial (Balcão)</p>
-              <p className="text-[10px] text-muted-foreground font-normal">Exibir QR Code na tela agora</p>
+            <div className={cn(
+              "p-2 rounded-lg transition-colors",
+              selectedMethod === 'pix' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            )}>
+              <QrCode className="h-4 w-4" />
             </div>
-          </Button>
+            <div>
+              <p className={cn("font-semibold text-xs sm:text-sm leading-snug", selectedMethod === 'pix' ? "text-foreground font-bold" : "text-foreground")}>
+                PIX Presencial (Balcão)
+              </p>
+              <p className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                Exibir QR Code na tela agora
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>

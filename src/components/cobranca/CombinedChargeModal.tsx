@@ -28,6 +28,8 @@ import {
   Copy,
   MessageCircle,
   Settings2,
+  Link2,
+  QrCode,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -41,6 +43,7 @@ import { ChargeLinkSection } from './ChargeLinkSection';
 import { useCobranca } from '@/hooks/useCobranca';
 import type { CobrancaResponse } from '@/types/cobranca';
 import { getPublicShareBaseUrl } from '@/utils/domainUtils';
+import { getUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
 
 interface CombinedChargeModalProps {
   isOpen: boolean;
@@ -104,6 +107,7 @@ export function CombinedChargeModal({
   // Asaas
   const [asaasSettings, setAsaasSettings] = useState<AsaasSettingsState | null>(null);
   const [asaasMode, setAsaasMode] = useState<'options' | 'link' | null>(null);
+  const [asaasSelectedMethod, setAsaasSelectedMethod] = useState<'link' | 'pix'>('link');
   const [asaasPixLoading, setAsaasPixLoading] = useState(false);
   const [asaasLinkLoading, setAsaasLinkLoading] = useState(false);
   const [asaasPixQrCode, setAsaasPixQrCode] = useState<string | null>(null);
@@ -155,7 +159,7 @@ export function CombinedChargeModal({
         .eq('status', 'ativo')
         .maybeSingle();
       if (data?.dados_extras) {
-        const d = data.dados_extras as Record<string, unknown>;
+        const d = getUnifiedPaymentSettings<Record<string, unknown>>(data.dados_extras);
         const legacyAntecipar = d.incluirTaxaAntecipacao === true;
         const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
         const repassarTaxaAntecipacao = (d.repassarTaxaAntecipacao as boolean) ?? legacyAntecipar;
@@ -479,10 +483,8 @@ export function CombinedChargeModal({
             {!result && showAsaas && asaasSettings && asaasMode === 'options' && (
               <AsaasChargeOptions
                 valor={valorTotal}
-                onSelectPix={handleAsaasPix}
-                onSelectLink={handleAsaasLink}
-                pixLoading={asaasPixLoading}
-                linkLoading={asaasLinkLoading}
+                selectedMethod={asaasSelectedMethod}
+                onSelectMethod={setAsaasSelectedMethod}
                 hasPix={asaasSettings.habilitarPix}
               />
             )}
@@ -519,10 +521,36 @@ export function CombinedChargeModal({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border/50 bg-background/50">
-            <Button variant="ghost" onClick={onClose}>
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border/50 bg-background/50">
+            <Button variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
               {result ? 'Fechar' : 'Cancelar'}
             </Button>
+
+            {!result && showAsaas && asaasSettings && asaasMode === 'options' && (
+              <Button
+                type="button"
+                onClick={asaasSelectedMethod === 'link' ? handleAsaasLink : handleAsaasPix}
+                disabled={asaasLinkLoading || asaasPixLoading}
+                className="gap-2 font-medium px-5"
+              >
+                {(asaasLinkLoading || asaasPixLoading) ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : asaasSelectedMethod === 'link' ? (
+                  <>
+                    <Link2 className="h-4 w-4" />
+                    Gerar Link de Checkout
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="h-4 w-4" />
+                    Gerar PIX Presencial
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

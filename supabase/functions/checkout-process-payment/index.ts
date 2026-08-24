@@ -128,39 +128,38 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const globalSettings = (integracao?.dados_extras || {}) as {
-      environment?: string;
-      absorverTaxa?: boolean;
-      ireiAntecipar?: boolean;
-      repassarTaxaAntecipacao?: boolean;
-      incluirTaxaAntecipacao?: boolean;
+    const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
+    const globalSettings = {
+      ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+      ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+      ...rawExtras,
     };
 
     const asaasBaseUrl = globalSettings.environment === "production"
       ? "https://api.asaas.com"
       : "https://api-sandbox.asaas.com";
 
-    // Resolução de preferências de taxa: overrides por cobrança > configuração global
+    // Resolução de preferências de taxa: overrides por cobrança (dados_extras) > configuração global
     const chargeOverrides = (cobranca.dados_extras || {}) as {
       repassarTaxasProcessamento?: boolean;
       anteciparParcelas?: boolean;
       repassarTaxaAntecipacao?: boolean;
     };
-    const hasOverrides = Object.keys(chargeOverrides).length > 0;
 
     const legacyAntecipar = globalSettings.incluirTaxaAntecipacao === true;
     const globalAbsorverTaxa = globalSettings.absorverTaxa === true;
     const globalIreiAntecipar = globalSettings.ireiAntecipar ?? legacyAntecipar;
     const globalRepassarAntecipacao = globalIreiAntecipar ? (globalSettings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
 
-    const repassarTaxas = hasOverrides && chargeOverrides.repassarTaxasProcessamento !== undefined
+    // Regra canônica: qualquer override explícito na cobrança PREVALECE sobre a configuração global
+    const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
       ? chargeOverrides.repassarTaxasProcessamento
       : !globalAbsorverTaxa;
-    const ireiAntecipar = hasOverrides && chargeOverrides.anteciparParcelas !== undefined
+    const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
       ? chargeOverrides.anteciparParcelas
       : globalIreiAntecipar;
     const repassarAntecipacao = ireiAntecipar
-      ? (hasOverrides && chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : globalRepassarAntecipacao)
+      ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : globalRepassarAntecipacao)
       : false;
 
     const baseValue = Number(cobranca.valor);
