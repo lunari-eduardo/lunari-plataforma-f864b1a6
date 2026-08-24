@@ -1302,8 +1302,8 @@ export default function ClientGallery() {
     console.debug('[ClientGallery] selectionLocked=true, blockedReason=', blockedReason);
   }
 
-  // Preview finalizada só se pago
-  if (selectionLocked && hasPaid && galleryResponse?.finalized) {
+  // Preview finalizada só se pago ou confirmado
+  if (selectionLocked && (hasPaid || isConfirmed) && (galleryResponse?.finalized || isConfirmed)) {
     return (
       <FinalizedPreviewScreen
         photos={galleryResponse.photos || []}
@@ -1495,9 +1495,19 @@ export default function ClientGallery() {
 
 
 
+  // Se o pagamento acabou de ser confirmado localmente mas o refetch ainda está em trânsito
+  if (selectionLocked && isConfirmed && !hasPaid) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background" style={themeStyles}>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+        <p className="mt-4 text-sm text-muted-foreground">Finalizando sua seleção...</p>
+      </div>
+    );
+  }
+
   // Pending payment screen - travada e não paga (fonte: selectionLocked + !hasPaid).
   // Cobre também o caso awaitingCharge (sem cobrança viva â†’ botão "gerar novo link").
-  if (selectionLocked && !hasPaid && !isProcessingPaymentReturn) {
+  if (selectionLocked && !hasPaid && !isProcessingPaymentReturn && !isConfirmed) {
     const pendingPaymentMethod = galleryResponse?.paymentMethod;
     const pendingPixDados = galleryResponse?.pixDados;
     const pendingCheckoutUrl = galleryResponse?.checkoutUrl;
@@ -1676,10 +1686,11 @@ export default function ClientGallery() {
               data={galleryResponse.asaasCheckoutData as AsaasCheckoutData}
               studioName={galleryResponse.studioSettings?.studio_name}
               studioLogoUrl={galleryResponse.studioSettings?.studio_logo_url}
-              onPaymentConfirmed={() => {
+              onPaymentConfirmed={async () => {
+                setShowInlineCheckout(false);
                 setCurrentStep('confirmed');
                 setIsConfirmed(true);
-                refetchGallery();
+                await refetchGallery();
               }}
               onMissingCpf={openMissingCpfModal}
               payerHints={payerHintsPrefill}
@@ -2378,11 +2389,11 @@ export default function ClientGallery() {
           data={asaasCheckoutData}
           studioName={galleryResponse?.studioSettings?.studio_name}
           studioLogoUrl={galleryResponse?.studioSettings?.studio_logo_url}
-          onPaymentConfirmed={() => {
+          onPaymentConfirmed={async () => {
             setAsaasCheckoutData(null);
             setCurrentStep('confirmed');
             setIsConfirmed(true);
-            refetchGallery();
+            await refetchGallery();
           }}
           onCancel={() => {
             setAsaasCheckoutData(null);

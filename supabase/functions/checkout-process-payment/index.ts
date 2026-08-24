@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     // 1. Buscar cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from("cobrancas")
-      .select("id, user_id, cliente_id, session_id, valor, descricao, status, provedor, dados_extras")
+      .select("id, user_id, cliente_id, session_id, galeria_id, finalidade, valor, descricao, status, provedor, dados_extras")
       .eq("id", cobrancaId)
       .maybeSingle();
 
@@ -287,6 +287,18 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error(`[checkout-process-payment] Erro crítico ao atualizar a cobrança ${cobranca.id} no banco de dados:`, updateError);
       return errorResponse("Erro interno ao consolidar pagamento", 500, "UPDATE_COBRANCA_FAILED", updateError);
+    }
+
+    if (isPaid && (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras")) {
+      try {
+        await supabase.rpc("finalize_gallery_payment", {
+          p_cobranca_id: cobranca.id,
+          p_paid_at: updatePayload.data_pagamento,
+        });
+        console.log(`[checkout-process-payment] finalize_gallery_payment executado para cobranca=${cobranca.id}`);
+      } catch (finalizeErr) {
+        console.error("[checkout-process-payment] Falha não fatal ao invocar finalize_gallery_payment:", finalizeErr);
+      }
     }
 
     console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso (status=${updatePayload.status || 'pendente'})!`);

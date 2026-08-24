@@ -376,6 +376,18 @@ Deno.serve(async (req) => {
 
     await supabase.from("cobrancas").update(updateData).eq("id", cobrancaId);
 
+    if (isPaid && (binding.finalidade === "fotos_extras" || binding.finalidade === "sessao_e_extras")) {
+      try {
+        await supabase.rpc("finalize_gallery_payment", {
+          p_cobranca_id: cobrancaId,
+          p_paid_at: updateData.data_pagamento,
+        });
+        console.log(`[create-cobranca] finalize_gallery_payment executado com sucesso para cobranca=${cobrancaId}`);
+      } catch (finalizeErr) {
+        console.error(`[create-cobranca] Falha não fatal ao invocar finalize_gallery_payment:`, finalizeErr);
+      }
+    }
+
     console.log(`[create-cobranca] Cobrança ${cobrancaId} finalizada com sucesso (status=${updateData.status || 'pendente'})! Checkout: ${finalCheckoutUrl}`);
 
     const response: CreateCobrancaResponse = {
