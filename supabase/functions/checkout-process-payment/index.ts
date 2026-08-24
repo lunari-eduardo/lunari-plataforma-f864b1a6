@@ -244,7 +244,6 @@ Deno.serve(async (req) => {
     // 5. Atualizar registro da cobrança com IDs e breakdown de taxas
     const updatePayload: Record<string, any> = {
       provider_order_id: adapterData.providerOrderId || null,
-      asaas_payment_id: adapterData.providerOrderId || null,
       checkout_url: adapterData.checkoutUrl || null,
       pix_copia_cola: adapterData.pixCopiaCola || null,
       pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,

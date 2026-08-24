@@ -497,7 +497,14 @@ export default function SessionPanel({
         ignoreAppointmentId: appointment?.id,
         silentOnPending: effectiveStatus !== 'confirmado',
         exec: async () => {
-          const next = { ...form, status: effectiveStatus, date: parsedDate, time: finalTime };
+          const next = { 
+            ...form, 
+            status: effectiveStatus, 
+            date: parsedDate, 
+            time: finalTime,
+            clienteId: resolved.clienteId,
+            clientName: resolved.nome
+          };
           setForm(next);
           await onSave(buildPayload(next, resolved));
 

@@ -532,31 +532,6 @@ export function ChargeModal({
     }
   };
 
-  const handleViewCharge = (cobranca: Cobranca) => {
-    if (cobranca.provedor === 'infinitepay') {
-      setSelectedProvider('infinitepay');
-    } else if (cobranca.provedor === 'mercadopago') {
-      setSelectedProvider('mercadopago_link');
-    } else if (cobranca.provedor === 'pix_manual') {
-      setSelectedProvider('pix_manual');
-    }
-    
-    const linkUrl = cobranca.id
-      ? buildPaymentShareUrl(cobranca.id)
-      : (cobranca.ipCheckoutUrl || cobranca.mpPaymentLink);
-    setCurrentCharge({
-      qrCode: cobranca.mpQrCode,
-      qrCodeBase64: cobranca.mpQrCodeBase64,
-      pixCopiaCola: cobranca.mpPixCopiaCola,
-      pixPayload: cobranca.provedor === 'pix_manual' ? cobranca.mpPixCopiaCola : undefined,
-      paymentLink: linkUrl,
-      checkoutUrl: linkUrl,
-      status: cobranca.status,
-    });
-    setCurrentChargeId(cobranca.id);
-    setActiveTab('cobrar');
-  };
-
   const showLinkSection = selectedProvider === 'mercadopago_link' || selectedProvider === 'infinitepay';
   const showPixManualSection = selectedProvider === 'pix_manual';
   const showAsaasSection = selectedProvider === 'asaas';
@@ -827,7 +802,7 @@ export function ChargeModal({
 
               </>
             ) : (
-              <ChargeHistory cobrancas={cobrancas} onCancel={cancelCharge} onView={handleViewCharge} />
+              <ChargeHistory cobrancas={cobrancas} onCancel={cancelCharge} />
             )}
           </div>
           
