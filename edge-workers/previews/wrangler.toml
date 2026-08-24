@@ -1,0 +1,12 @@
+name = "lunari-edge-previews"
+main = "src/index.ts"
+compatibility_date = "2024-04-05"
+
+[vars]
+# Valores padrão
+VITE_SITE_URL = "https://app.lunarihub.com"
+R2_CDN_BASE = "https://media.lunarihub.com"
+FALLBACK_OG_IMAGE = "https://app.lunarihub.com/branding/logo-site-gold.png"
+
+# As credenciais SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
+# DEVEM ser configuradas através do arquivo .dev.vars local.
