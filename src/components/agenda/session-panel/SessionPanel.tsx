@@ -235,7 +235,26 @@ export default function SessionPanel({
     sessionId: appointment?.sessionId,
     clienteId: !appointment?.sessionId ? form.clienteId || undefined : undefined,
   });
-  const cobranca = cobrancas[0];
+
+  const pagoCobrancas = useMemo(
+    () => cobrancas.filter(c => ['pago', 'pago_manual'].includes(c.status)),
+    [cobrancas],
+  );
+  const pendenteCobrancas = useMemo(
+    () => cobrancas.filter(c => c.status === 'pendente'),
+    [cobrancas],
+  );
+  const totalPagoCobrancas = useMemo(
+    () => pagoCobrancas.reduce((acc, c) => acc + (Number(c.valor) || 0), 0),
+    [pagoCobrancas],
+  );
+
+  const cobrancaPendente = pendenteCobrancas[0] || null;
+  const cobrancaPendenteLink = cobrancaPendente
+    ? (cobrancaPendente.id ? buildPaymentShareUrl(cobrancaPendente.id) : (cobrancaPendente.mpPaymentLink || cobrancaPendente.ipCheckoutUrl || ''))
+    : '';
+
+  const cobranca = pagoCobrancas[0] || pendenteCobrancas[0] || cobrancas[0] || null;
   const cobrancaLink = cobranca
     ? (cobranca.id ? buildPaymentShareUrl(cobranca.id) : (cobranca.mpPaymentLink || cobranca.ipCheckoutUrl || ''))
     : '';
@@ -870,18 +889,19 @@ export default function SessionPanel({
                         </Button>
                       </div>
                     </div>
-                  ) : ['pago', 'pago_manual'].includes(cobranca.status) ? (
-                    <div className="space-y-1.5">
+                  ) : pagoCobrancas.length > 0 ? (
+                    <div className="space-y-2">
                       <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-4 w-4 shrink-0" />
                             <span>Pago</span>
-                            <span className="text-muted-foreground font-normal">• R$ {cobranca.valor.toFixed(2)}</span>
+                            <span className="text-muted-foreground font-normal">• R$ {totalPagoCobrancas.toFixed(2)}</span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
-                            {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                            {pagoCobrancas[0].provedor === 'pix_manual' ? 'PIX Manual' : pagoCobrancas[0].provedor}
+                            {pagoCobrancas.length > 1 && ` (${pagoCobrancas.length} pagamentos)`}
                           </p>
                         </div>
                         <Button
@@ -893,8 +913,61 @@ export default function SessionPanel({
                           Histórico
                         </Button>
                       </div>
+
+                      {/* Se houver cobrança pendente adicional (ex: extras ou novo link), exibir alerta e ações */}
+                      {cobrancaPendente && cobrancaPendenteLink && (
+                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span className="text-xs font-medium text-amber-500">
+                                Cobrança adicional pendente
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold text-foreground">
+                              R$ {cobrancaPendente.valor.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 rounded text-[11px] px-2 gap-1"
+                              onClick={() => window.open(cobrancaPendenteLink, '_blank', 'noopener')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Abrir link
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 rounded text-[11px] px-2 gap-1"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(cobrancaPendenteLink);
+                                toast.success('Link de checkout copiado!');
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copiar link
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 rounded text-[11px] px-2 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                              onClick={async () => {
+                                if (confirm('Deseja realmente cancelar esta cobrança pendente?')) {
+                                  await cancelCharge(cobrancaPendente.id);
+                                }
+                              }}
+                            >
+                              <Ban className="h-3 w-3" />
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
+                  ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) && pendenteCobrancas.length === 0 ? (
                     <div className="space-y-1.5">
                       <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
@@ -927,33 +1000,33 @@ export default function SessionPanel({
                               Aguardando pagamento
                             </span>
                             <span className="text-xs text-muted-foreground capitalize">
-                              {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                              {(cobrancaPendente || cobranca)?.provedor === 'pix_manual' ? 'PIX Manual' : (cobrancaPendente || cobranca)?.provedor}
                             </span>
                           </div>
                           <span className="text-sm font-semibold text-foreground">
-                            R$ {cobranca.valor.toFixed(2)}
+                            R$ {(cobrancaPendente || cobranca)?.valor.toFixed(2)}
                           </span>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
-                          {cobrancaLink && (
+                          {(cobrancaPendenteLink || cobrancaLink) && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-7 rounded-md text-xs gap-1.5"
-                              onClick={() => window.open(cobrancaLink, '_blank', 'noopener')}
+                              onClick={() => window.open(cobrancaPendenteLink || cobrancaLink, '_blank', 'noopener')}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                               Abrir link
                             </Button>
                           )}
-                          {cobrancaLink && (
+                          {(cobrancaPendenteLink || cobrancaLink) && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-7 rounded-md text-xs gap-1.5"
                               onClick={() => {
-                                navigator.clipboard?.writeText(cobrancaLink);
+                                navigator.clipboard?.writeText(cobrancaPendenteLink || cobrancaLink);
                                 toast.success('Link de checkout copiado!');
                               }}
                             >
@@ -967,7 +1040,7 @@ export default function SessionPanel({
                             className="h-7 rounded-md text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
                             onClick={async () => {
                               if (confirm('Deseja realmente cancelar esta cobrança pendente?')) {
-                                await cancelCharge(cobranca.id);
+                                await cancelCharge((cobrancaPendente || cobranca)!.id);
                               }
                             }}
                           >
