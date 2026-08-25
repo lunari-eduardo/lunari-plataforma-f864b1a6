@@ -347,12 +347,12 @@ export function AsaasCheckout({
       let result;
       let res;
       
-      const payerContactData = showPixContactForm ? {
+      const payerContactData = {
         name: pixName.trim(),
         email: pixEmail.trim(),
         cpfCnpj: pixCpfCnpj.replace(/\D/g, ''),
         phone: pixPhone.replace(/\D/g, '')
-      } : undefined;
+      };
       
       if (data.cobrancaId) {
         // Fluxo 1: Já existe uma cobrança (Workflow, Agenda, Link) -> Processa

@@ -7,6 +7,7 @@ import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput, ClienteContact } from "../_shared/payment-types.ts";
 import { normalizeAsaasFees, calculateCreditFees } from "../_shared/asaas-helpers.ts";
 import { createAsaasPayment } from "../_shared/adapters/asaas.ts";
+import { resolvePayerHints } from "../_shared/payer-hints.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -99,15 +100,23 @@ Deno.serve(async (req) => {
         console.log(`[checkout-process-payment] CRM enriquecido:`, Object.keys(patch));
       }
     }
+    
+    // Resolve dicas de contato, caso a requisição não traga os dados ou falte algo
+    const resolvedHints = await resolvePayerHints({
+      supabase,
+      clienteId: cobranca.cliente_id || null,
+      galleryId: cobranca.galeria_id || null,
+      sessionId: cobranca.session_id || null,
+    });
 
     const mergedCliente: ClienteContact = {
       id: cobranca.cliente_id || undefined,
-      nome: payerContact?.name || cliente?.nome || creditCard?.holderName || "Cliente",
-      email: payerContact?.email || cliente?.email || creditCardHolderInfo?.email,
-      telefone: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || creditCardHolderInfo?.phone,
-      whatsapp: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || creditCardHolderInfo?.phone,
-      cpfCnpj: payerContact?.cpfCnpj || cliente?.cpf_cnpj || creditCardHolderInfo?.cpfCnpj,
-      cep: cliente?.cep || creditCardHolderInfo?.postalCode,
+      nome: payerContact?.name || cliente?.nome || resolvedHints.name || creditCard?.holderName || "Cliente",
+      email: payerContact?.email || cliente?.email || resolvedHints.email || creditCardHolderInfo?.email,
+      telefone: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,
+      whatsapp: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,
+      cpfCnpj: payerContact?.cpfCnpj || cliente?.cpf_cnpj || resolvedHints.cpfCnpj || creditCardHolderInfo?.cpfCnpj,
+      cep: cliente?.cep || resolvedHints.postalCode || creditCardHolderInfo?.postalCode,
       endereco: cliente?.endereco,
       numero: cliente?.numero || creditCardHolderInfo?.addressNumber,
       complemento: cliente?.complemento,

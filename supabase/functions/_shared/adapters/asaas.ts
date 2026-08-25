@@ -3,7 +3,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
-import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer, ensureAsaasCustomerCpf } from "../asaas-helpers.ts";
+import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer } from "../asaas-helpers.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;

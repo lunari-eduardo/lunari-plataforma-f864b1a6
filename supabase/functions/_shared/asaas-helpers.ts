@@ -351,7 +351,7 @@ export async function ensureAsaasWebhookSubscription(
 
     const postData = await postRes.json();
     if (!postRes.ok || !postData.id) {
-      console.warn(`[asaas-webhook-sync] Erro ao criar webhook:`, postData);
+      console.warn('[asaas-webhook-sync] Erro ao criar webhook:', postData);
       return { ok: false, error: postData.errors?.[0]?.description || "Falha ao criar webhook" };
     }
 
@@ -362,4 +362,29 @@ export async function ensureAsaasWebhookSubscription(
   }
 }
 
-
+export async function putAsaasCustomer(
+  baseUrl: string,
+  apiKey: string,
+  customerId: string,
+  payload: Record<string, any>
+): Promise<{ ok: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch($/v3/customers/{customerId}, {
+      method: "PUT",
+      headers: {
+        access_token: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.warn(`[asaas-helpers] Erro ao atualizar cliente ${customerId}:`, data);
+      return { ok: false, error: data.errors?.[0]?.description || "Erro ao atualizar cliente" };
+    }
+    return { ok: true, data };
+  } catch (err: any) {
+    console.error(`[asaas-helpers] Exceção ao atualizar cliente ${customerId}:`, err);
+    return { ok: false, error: err.message };
+  }
+}

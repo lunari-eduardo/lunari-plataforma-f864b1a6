@@ -4,7 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { requireServiceRole, corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../_shared/payment-types.ts";
-import { putAsaasCustomer, ensureAsaasCustomerCpf } from "../_shared/asaas-helpers.ts";
+import { putAsaasCustomer } from "../_shared/asaas-helpers.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
