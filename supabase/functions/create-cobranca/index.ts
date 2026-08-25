@@ -452,6 +452,7 @@ Deno.serve(async (req) => {
       socialShareUrl,
       pixCopiaCola: adapterData.pixCopiaCola,
       pixQrCodeBase64: adapterData.pixQrCodeBase64,
+      pixQrCodeMissing: adapterData.pixQrCodeMissing,
       provedor,
       status: isPaid ? "pago" : "pendente",
       paid: isPaid,

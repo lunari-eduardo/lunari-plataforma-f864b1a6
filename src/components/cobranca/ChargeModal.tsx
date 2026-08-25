@@ -467,6 +467,11 @@ export function ChargeModal({
       setAsaasPixCopiaECola(response.data.pixCopiaCola || null);
       setAsaasPixModalOpen(true);
       setCurrentChargeId(response.data.cobrancaId);
+
+      if (response.data?.pixQrCodeMissing || (!qrCode && !response.data.pixCopiaCola)) {
+        const { toast } = await import('sonner');
+        toast.warning('Cobrança criada, mas o QR Code não foi gerado pelo Asaas. Verifique se há uma chave PIX cadastrada na sua conta Asaas.');
+      }
     } catch (err) {
       const { toast } = await import('sonner');
       toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX');

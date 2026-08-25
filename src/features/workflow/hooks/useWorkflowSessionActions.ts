@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useWorkflowRealtime } from "@/features/workflow";
 import type { WorkflowSession } from "@/features/workflow";
@@ -17,6 +18,7 @@ import { deriveDenormalizedProdutos } from "@/features/workflow/domain/productDe
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { WorkflowCurrentMonth } from "./useWorkflowMonthSessions";
+import type { SessionFinancials } from "./useSessionFinancials";
 
 interface Params {
   workflowSessions: WorkflowSession[];
@@ -48,6 +50,7 @@ export function useWorkflowSessionActions({
 }: Params) {
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   const runCapability = useRunCapability();
+  const queryClient = useQueryClient();
   const { pacotes: pacotesCtx, categoriasFull: categoriasCtx } = useAppContext();
   const { user } = useAuth();
 
@@ -322,6 +325,70 @@ export function useWorkflowSessionActions({
               console.warn("[updateSession] upsert otimista falhou", e);
             }
           }
+
+          // Atualização otimista imediata do cache TanStack query dos financeiros
+          if (touchedTotalAffectingField) {
+            queryClient.setQueryData<SessionFinancials>(["session-financials", sessionId], (old) => {
+              if (!old) return old;
+              const novoTotal = (cacheSafeUpdates as any).valor_total ?? old.valor_total;
+              const novoAdicional =
+                "valor_adicional" in cacheSafeUpdates
+                  ? Number((cacheSafeUpdates as any).valor_adicional) || 0
+                  : old.valor_adicional;
+              const novoDesconto =
+                "desconto" in cacheSafeUpdates
+                  ? Number((cacheSafeUpdates as any).desconto) || 0
+                  : old.desconto_manual;
+              const novoBase =
+                "valor_base_pacote" in cacheSafeUpdates
+                  ? Number((cacheSafeUpdates as any).valor_base_pacote) || 0
+                  : old.valor_base_pacote;
+              const novaQtdFotos =
+                "qtd_fotos_extra" in cacheSafeUpdates
+                  ? Number((cacheSafeUpdates as any).qtd_fotos_extra) || 0
+                  : old.qtd_fotos_extra;
+              const novoValorExtras =
+                "valor_total_foto_extra" in cacheSafeUpdates
+                  ? Number((cacheSafeUpdates as any).valor_total_foto_extra) || 0
+                  : old.valor_extras_com_desconto;
+              const novoProdutos =
+                "produtos_incluidos" in cacheSafeUpdates && Array.isArray((cacheSafeUpdates as any).produtos_incluidos)
+                  ? (cacheSafeUpdates as any).produtos_incluidos.reduce(
+                      (acc: number, p: any) =>
+                        p?.tipo === "manual" ? acc + (Number(p.quantidade) || 0) * (Number(p.valorUnitario) || 0) : acc,
+                      0,
+                    )
+                  : old.valor_produtos;
+              const novoValorPago = old.valor_pago;
+              const novoPendente = Math.max(0, novoTotal - novoValorPago);
+              return {
+                ...old,
+                valor_base_pacote: novoBase,
+                valor_adicional: novoAdicional,
+                desconto_manual: novoDesconto,
+                valor_produtos: novoProdutos,
+                qtd_fotos_extra: novaQtdFotos,
+                valor_extras_bruto: novoValorExtras,
+                valor_extras_com_desconto: novoValorExtras,
+                valor_total: novoTotal,
+                valor_pago: novoValorPago,
+                valor_pendente: novoPendente,
+              };
+            });
+          }
+
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("workflow-session-updated", {
+                detail: { sessionId, session: deltaPayload, source: "useWorkflowSessionActions" },
+              }),
+            );
+            window.dispatchEvent(
+              new CustomEvent("workflow-session-financials-stale", {
+                detail: { sessionId, source: "useWorkflowSessionActions" },
+              }),
+            );
+          }
         }
 
         const needsLegacyPath = updatesRequireRefreeze(validUpdates);
@@ -337,8 +404,10 @@ export function useWorkflowSessionActions({
           if (!isOk(result)) {
             throw new Error(result.error.message || "Falha ao atualizar sessão.");
           }
+          void queryClient.invalidateQueries({ queryKey: ["session-financials", sessionId] });
         } else {
           await updateSessionRealtime(sessionId, validUpdates, silent);
+          void queryClient.invalidateQueries({ queryKey: ["session-financials", sessionId] });
         }
       } catch (error) {
         console.error("Error updating session:", error);
@@ -349,7 +418,7 @@ export function useWorkflowSessionActions({
         throw error;
       }
     },
-    [resolveCurrentSession, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability, pacotesCtx, categoriasCtx],
+    [resolveCurrentSession, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability, pacotesCtx, categoriasCtx, queryClient],
   );
 
   const handleStatusChange = useCallback(

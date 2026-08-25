@@ -83,6 +83,7 @@ export interface CreateCobrancaResponse {
   socialShareUrl?: string;
   pixCopiaCola?: string;
   pixQrCodeBase64?: string;
+  pixQrCodeMissing?: boolean;
   provedor?: ProvedorPagamento;
   status?: StatusCobranca;
   paid?: boolean;
@@ -120,6 +121,7 @@ export interface AdapterCreatePaymentOutput {
   checkoutUrl?: string;
   pixCopiaCola?: string;
   pixQrCodeBase64?: string;
+  pixQrCodeMissing?: boolean;
   dadosExtras?: Record<string, any>;
   error?: string;
   errorCode?: string;

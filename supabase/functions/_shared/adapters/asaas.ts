@@ -212,6 +212,16 @@ export async function createAsaasPayment(
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const installments = installmentCount && installmentCount > 1 ? installmentCount : undefined;
 
+  // Validação prévia de documento para PIX
+  const docDigits = digitsOnly(cliente?.cpfCnpj);
+  if (billingType === "PIX" && (!docDigits || (docDigits.length !== 11 && docDigits.length !== 14))) {
+    return {
+      success: false,
+      error: "CPF ou CNPJ do cliente é obrigatório para cobranças PIX via Asaas.",
+      errorCode: "MISSING_CPF",
+    };
+  }
+
   const paymentPayload: Record<string, any> = {
     customer: customerId,
     billingType: billingType || "PIX",
@@ -226,7 +236,25 @@ export async function createAsaasPayment(
     paymentPayload.installmentValue = Math.round((valor / installments) * 100) / 100;
   }
 
-  if (billingType === "CREDIT_CARD" && creditCard) {
+  if (billingType === "CREDIT_CARD") {
+    if (!creditCard || !creditCard.number || !creditCard.holderName || !creditCard.expiryMonth || !creditCard.expiryYear || !creditCard.ccv) {
+      return {
+        success: false,
+        error: "Dados do cartão de crédito incompletos.",
+        errorCode: "INVALID_CREDIT_CARD",
+      };
+    }
+
+    const holder = creditCardHolderInfo || {};
+    const holderCpf = digitsOnly(holder.cpfCnpj) || docDigits;
+    if (!holderCpf || (holderCpf.length !== 11 && holderCpf.length !== 14)) {
+      return {
+        success: false,
+        error: "CPF ou CNPJ do titular do cartão é obrigatório.",
+        errorCode: "MISSING_HOLDER_CPF",
+      };
+    }
+
     paymentPayload.creditCard = {
       holderName: creditCard.holderName,
       number: digitsOnly(creditCard.number),
@@ -235,11 +263,10 @@ export async function createAsaasPayment(
       ccv: creditCard.ccv,
     };
 
-    const holder = creditCardHolderInfo || {};
     paymentPayload.creditCardHolderInfo = {
       name: holder.name || cliente?.nome || creditCard.holderName,
       email: cleanEmail(holder.email) || cleanEmail(cliente?.email) || "cliente@lunarihub.com",
-      cpfCnpj: digitsOnly(holder.cpfCnpj) || digitsOnly(cliente?.cpfCnpj) || "",
+      cpfCnpj: holderCpf,
       postalCode: digitsOnly(holder.postalCode) || digitsOnly(cliente?.cep) || "",
       addressNumber: holder.addressNumber || cliente?.numero || "S/N",
       phone: normalizePhone(holder.phone) || normalizePhone(cliente?.whatsapp || cliente?.telefone) || "",
@@ -321,19 +348,42 @@ export async function createAsaasPayment(
 
   let pixCopiaCola: string | undefined;
   let pixQrCodeBase64: string | undefined;
+  let pixQrCodeMissing = false;
 
   if (payData.billingType === "PIX") {
-    try {
-      const qrRes = await fetch(`${baseUrl}/v3/payments/${payData.id}/pixQrCode`, {
-        headers: { access_token: apiKey },
-      });
-      if (qrRes.ok) {
-        const qrData = await qrRes.json();
-        pixCopiaCola = qrData.payload;
-        pixQrCodeBase64 = qrData.encodedImage;
+    const fetchQr = async (): Promise<{ ok: boolean; payload?: string; encodedImage?: string; error?: string }> => {
+      try {
+        const qrRes = await fetch(`${baseUrl}/v3/payments/${payData.id}/pixQrCode`, {
+          headers: { access_token: apiKey },
+        });
+        if (qrRes.ok) {
+          const qrData = await qrRes.json();
+          if (qrData.payload || qrData.encodedImage) {
+            return { ok: true, payload: qrData.payload, encodedImage: qrData.encodedImage };
+          }
+        } else {
+          const errData = await qrRes.json().catch(() => null);
+          return { ok: false, error: errData?.errors?.[0]?.description || `HTTP ${qrRes.status}` };
+        }
+      } catch (err: any) {
+        return { ok: false, error: err?.message || "Network error" };
       }
-    } catch (qrErr) {
-      console.warn("[asaas-adapter] Falha não impeditiva ao buscar QR Code Pix:", qrErr);
+      return { ok: false, error: "Empty QR code response" };
+    };
+
+    let qrResult = await fetchQr();
+    if (!qrResult.ok) {
+      // Retry com breve pausa caso o Asaas ainda esteja provisionando a chave
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      qrResult = await fetchQr();
+    }
+
+    if (qrResult.ok) {
+      pixCopiaCola = qrResult.payload;
+      pixQrCodeBase64 = qrResult.encodedImage;
+    } else {
+      pixQrCodeMissing = true;
+      console.warn(`[asaas-adapter] Falha não impeditiva ao buscar QR Code Pix para payment=${payData.id}:`, qrResult.error);
     }
   }
 
@@ -343,6 +393,7 @@ export async function createAsaasPayment(
     checkoutUrl: payData.invoiceUrl || payData.bankSlipUrl || socialShareUrl,
     pixCopiaCola,
     pixQrCodeBase64,
+    pixQrCodeMissing,
     dadosExtras: {
       customerId,
       paymentId: payData.id,

@@ -93,19 +93,19 @@ export function WorkflowCardCollapsed({
   const hasGaleria = fin.hasGaleria;
 
   const calculateRestante = useCallback(() => {
-    const total = parseSignedMoney(session.total);
-    const pago = parseSignedMoney(session.valorPago);
-    if (hasGaleria && fin.totalVisual > 0) {
+    if (fin.totalVisual > 0 || fin.pagoTotal > 0) {
       return fin.pendenteTot;
     }
+    const total = parseSignedMoney(session.total);
+    const pago = parseSignedMoney(session.valorPago);
     if (total || pago) return total - pago;
     return parseSignedMoney(session.restante);
   }, [
     session.restante,
     session.total,
     session.valorPago,
-    hasGaleria,
     fin.totalVisual,
+    fin.pagoTotal,
     fin.pendenteTot,
   ]);
 

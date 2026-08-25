@@ -175,10 +175,12 @@ export function WorkflowCardExpanded({
     }
   }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
 
-  // Totais visuais vêm 100% da RPC — sem recomposição local.
-  const totalVisual = fin.totalVisual;
-  const pendenteVisual = fin.pendenteTot;
-  const pendenteSessaoSugerido = fin.pendenteSess;
+  // Totais visuais vêm da RPC com fallback resiliente para o snapshot local da sessão.
+  const valorTotalFallback = parseCurrency(String(session.total || "0"));
+  const totalVisual = fin.totalVisual > 0 ? fin.totalVisual : valorTotalFallback;
+  const valorPagoDisplay = fin.pagoTotal > 0 ? fin.pagoTotal : valorPago;
+  const pendenteVisual = fin.totalVisual > 0 || fin.pagoTotal > 0 ? fin.pendenteTot : Math.max(0, valorTotalFallback - valorPago);
+  const pendenteSessaoSugerido = fin.totalVisual > 0 ? fin.pendenteSess : pendenteVisual;
 
   // Pagamento rápido com escopo do excedente (sessão vs fotos extras)
   const quickPay = useQuickPaymentScope({
@@ -578,7 +580,7 @@ export function WorkflowCardExpanded({
 
       <ExpandedFinancialFooter
         total={totalVisual}
-        valorPago={fin.pagoTotal}
+        valorPago={valorPagoDisplay}
         pendente={pendenteVisual}
         paymentInput={paymentInput}
         setPaymentInput={setPaymentInput}
