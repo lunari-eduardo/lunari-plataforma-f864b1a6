@@ -347,6 +347,13 @@ export function AsaasCheckout({
       let result;
       let res;
       
+      const payerContactData = showPixContactForm ? {
+        name: pixName.trim(),
+        email: pixEmail.trim(),
+        cpfCnpj: pixCpfCnpj.replace(/\D/g, ''),
+        phone: pixPhone.replace(/\D/g, '')
+      } : undefined;
+      
       if (data.cobrancaId) {
         // Fluxo 1: Já existe uma cobrança (Workflow, Agenda, Link) -> Processa
         res = await fetch(`${SUPABASE_URL}/functions/v1/checkout-process-payment`, {
@@ -355,12 +362,7 @@ export function AsaasCheckout({
           body: JSON.stringify({
             cobrancaId: data.cobrancaId,
             billingType: 'PIX',
-            payerContact: showPixContactForm ? {
-              name: pixName.trim(),
-              email: pixEmail.trim(),
-              cpfCnpj: pixCpfCnpj.replace(/\D/g, ''),
-              phone: pixPhone.replace(/\D/g, '')
-            } : undefined
+            payerContact: payerContactData
           }),
         });
         result = await res.json();
@@ -380,6 +382,7 @@ export function AsaasCheckout({
             finalidade: data.finalidade || 'fotos_extras',
             provedor: 'asaas',
             billingType: 'PIX',
+            payerContact: payerContactData
           }),
         });
         result = await res.json();
@@ -412,11 +415,14 @@ export function AsaasCheckout({
       }
 
       // Renderiza QR Code com fallback
-      if (result.pixQrCode) {
-        setPixQrCode(result.pixQrCode.startsWith('data:image') ? result.pixQrCode : `data:image/png;base64,${result.pixQrCode}`);
-      } else if (result.pixCopiaECola) {
+      const rawQrCode = result.pixQrCodeBase64 || result.pixQrCode;
+      const rawCopiaECola = result.pixCopiaCola || result.pixCopiaECola;
+
+      if (rawQrCode && rawQrCode.length > 50) {
+        setPixQrCode(rawQrCode.startsWith('data:image') ? rawQrCode : `data:image/png;base64,${rawQrCode}`);
+      } else if (rawCopiaECola) {
         try {
-          const qrCodeUrl = await QRCode.toDataURL(result.pixCopiaECola);
+          const qrCodeUrl = await QRCode.toDataURL(rawCopiaECola);
           setPixQrCode(qrCodeUrl);
         } catch (e) {
           console.error("Erro gerando QRCode fallback:", e);
@@ -425,7 +431,7 @@ export function AsaasCheckout({
         setPixQrCode(null);
       }
 
-      setPixCopiaECola(result.pixCopiaECola || null);
+      setPixCopiaECola(rawCopiaECola || null);
       setPixCobrancaId(result.cobrancaId || data.cobrancaId || null);
 
       // Start polling
@@ -458,7 +464,7 @@ export function AsaasCheckout({
     } finally {
       setPixLoading(false);
     }
-  }, [data, onPaymentConfirmed, onMissingCpf, showPixContactForm]);
+  }, [data, onPaymentConfirmed, onMissingCpf, showPixContactForm, pixName, pixEmail, pixCpfCnpj, pixPhone]);
 
   // ——— Validação do formulário inline de PIX ———
   const pixFormValid = (() => {

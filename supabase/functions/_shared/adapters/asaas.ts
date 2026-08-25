@@ -3,7 +3,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
-import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees } from "../asaas-helpers.ts";
+import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer, ensureAsaasCustomerCpf } from "../asaas-helpers.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -31,6 +31,8 @@ export async function ensureAsaasCustomer(
   const email = cleanEmail(cliente?.email);
   const phone = normalizePhone(cliente?.whatsapp || cliente?.telefone);
   const name = cliente?.nome?.trim() || "Cliente Lunari";
+  
+  let existingCustomer: any = null;
 
   if (doc) {
     const searchRes = await fetch(`${baseUrl}/v3/customers?cpfCnpj=${doc}`, {
@@ -39,21 +41,33 @@ export async function ensureAsaasCustomer(
     if (searchRes.ok) {
       const searchData = await searchRes.json();
       if (searchData.data && searchData.data.length > 0) {
-        return { customerId: searchData.data[0].id };
+        existingCustomer = searchData.data[0];
       }
     }
   }
 
-  if (email) {
+  if (!existingCustomer && email) {
     const searchRes = await fetch(`${baseUrl}/v3/customers?email=${encodeURIComponent(email)}`, {
       headers: { access_token: apiKey },
     });
     if (searchRes.ok) {
       const searchData = await searchRes.json();
       if (searchData.data && searchData.data.length > 0) {
-        return { customerId: searchData.data[0].id };
+        existingCustomer = searchData.data[0];
       }
     }
+  }
+  
+  if (existingCustomer) {
+    // Se o cliente existe, mas não tem o cpfCnpj preenchido no Asaas, vamos atualizar agora
+    if (doc && (!existingCustomer.cpfCnpj || digitsOnly(existingCustomer.cpfCnpj) !== doc)) {
+      await putAsaasCustomer(baseUrl, apiKey, existingCustomer.id, {
+        cpfCnpj: doc,
+        name: existingCustomer.name || name, // Mantém o nome antigo se houver, ou atualiza
+        mobilePhone: existingCustomer.mobilePhone || phone,
+      });
+    }
+    return { customerId: existingCustomer.id };
   }
 
   const createPayload: Record<string, any> = {
@@ -85,6 +99,26 @@ export async function ensureAsaasCustomer(
   const createData = await createRes.json();
 
   if (!createRes.ok || !createData.id) {
+    // Fallback: se deu erro por conta do e-mail inválido, tentar sem e-mail
+    const isEmailError = (createData.errors || []).some((e: any) => 
+      String(e.code || "").includes("invalid_email") || String(e.description || "").toLowerCase().includes("email")
+    );
+    
+    if (isEmailError && createPayload.email) {
+      delete createPayload.email;
+      const retryRes = await fetch(`${baseUrl}/v3/customers`, {
+        method: "POST",
+        headers: { access_token: apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify(createPayload),
+      });
+      const retryData = await retryRes.json();
+      if (retryRes.ok && retryData.id) {
+        return { customerId: retryData.id };
+      }
+      console.error("[asaas-adapter] Falha ao criar cliente no Asaas (retry sem email):", retryData);
+      return { customerId: "", error: retryData.errors?.[0]?.description || "Erro ao registrar cliente no Asaas" };
+    }
+    
     console.error("[asaas-adapter] Falha ao criar cliente no Asaas:", createData);
     return { customerId: "", error: createData.errors?.[0]?.description || "Erro ao registrar cliente no Asaas" };
   }

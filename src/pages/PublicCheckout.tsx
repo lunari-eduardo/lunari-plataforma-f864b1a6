@@ -513,7 +513,12 @@ export default function PublicCheckout() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cobrancaId,
-          ...contactData
+          payer: {
+            nome: contactData.nome,
+            email: contactData.email,
+            telefone: contactData.phone,
+            cpfCnpj: contactData.cpfCnpj,
+          }
         }),
       });
     } catch (e) {
