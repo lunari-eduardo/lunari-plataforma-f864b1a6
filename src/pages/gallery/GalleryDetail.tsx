@@ -1131,16 +1131,15 @@ export default function GalleryDetail() {
                   valorPendente: calculatedExtraTotal || 0,
                   statusPagamento: supabaseGallery.statusPagamento || 'sem_cobranca',
                   totalExtrasVendidas: supabaseGallery.totalFotosExtrasVendidas || 0,
-                  ultimoPagamentoEm: cobrancaData?.data_pagamento || null,
+                  ultimoPagamentoEm: cobrancasPagas[0]?.data_pagamento || null,
                   onVerDetalhes: () => setActiveTab('details'),
                 }}
               />
 
 
-              {/* Payment Status Card — só aparece quando há saldo NOVO ou cobrança pendente atual.
-                  Histórico (valorTotalVendido) NÃO entra como pendente para evitar a falsa impressão
-                  de que o cliente deve novamente o que já pagou em ciclos anteriores. */}
-              {(calculatedExtraTotal > 0 || (cobrancaData && !['pago','pago_manual','cancelado'].includes(cobrancaData.status))) && (
+              {/* Payment Status Card — só aparece quando há saldo NOVO a cobrar ou aguardando confirmação manual.
+                  Se calculatedExtraTotal <= 0 (tudo pago), o resumo de faturamento do SelectionSummary é suficiente. */}
+              {(calculatedExtraTotal > 0 || supabaseGallery.statusPagamento === 'aguardando_confirmacao') && (
                 <div className="mt-4">
                   <PaymentStatusCard
                     status={cobrancaData?.status || (calculatedExtraTotal > 0 ? 'pendente' : supabaseGallery.statusPagamento)}
@@ -1399,7 +1398,7 @@ export default function GalleryDetail() {
             )}
 
             {/* Current Payment Status - for pending payments and actions */}
-            {calculatedExtraTotal > 0 && cobrancaData && !['pago', 'pago_manual'].includes(cobrancaData.status) && (
+            {((calculatedExtraTotal > 0 && cobrancaData && !['pago', 'pago_manual', 'cancelado'].includes(cobrancaData.status)) || supabaseGallery.statusPagamento === 'aguardando_confirmacao') && (
               <PaymentStatusCard
                 status={cobrancaData.status}
                 provedor={cobrancaData?.provedor || (supabaseGallery.statusPagamento === 'aguardando_confirmacao' ? 'pix_manual' : undefined)}

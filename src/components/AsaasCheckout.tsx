@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import QRCode from 'qrcode';
 import {
   CreditCard,
   QrCode,
@@ -51,11 +52,13 @@ export interface AccountFees {
 }
 
 export interface AsaasCheckoutData {
-  galeriaId: string;
+  galeriaId?: string;
   userId: string;
   valorTotal: number;
   descricao: string;
-  qtdFotos: number;
+  qtdFotos?: number;
+  cobrancaId?: string;
+  finalidade?: string;
   clienteId?: string;
   sessionId?: string;
   galleryToken?: string;
@@ -105,6 +108,7 @@ interface AsaasCheckoutProps {
   onPersistContact?: (data: { email?: string; phone?: string; nome?: string; cpfCnpj?: string }) => Promise<void>;
   themeStyles?: React.CSSProperties;
   backgroundMode?: 'light' | 'dark';
+  initialAccountFees?: AccountFees;
 }
 
 // ——— Masks ———
@@ -189,6 +193,7 @@ export function AsaasCheckout({
   onPersistContact,
   themeStyles = {},
   backgroundMode = 'light',
+  initialAccountFees,
 }: AsaasCheckoutProps) {
   const defaultTab = data.enabledMethods.pix ? 'pix' : 'card';
 
@@ -230,6 +235,19 @@ export function AsaasCheckout({
   const [cardSuccess, setCardSuccess] = useState(false);
   const [cardProcessing, setCardProcessing] = useState(false);
 
+  // Atualiza estados reativamente caso os hints cheguem assíncronos após montagem
+  useEffect(() => {
+    if (payerHints?.fullName && !pixName) setPixName(payerHints.fullName);
+    if (payerHints?.email && !pixEmail) setPixEmail(payerHints.email);
+    if (payerHints?.cpfCnpj && !pixCpfCnpj) setPixCpfCnpj(maskCpfCnpj(payerHints.cpfCnpj));
+    if (payerHints?.phone && !pixPhone) setPixPhone(maskPhone(payerHints.phone));
+
+    if (payerHints?.fullName && (!cardName || cardName === '')) setCardName(payerHints.fullName.toUpperCase());
+    if (payerHints?.email && !cardEmail) setCardEmail(payerHints.email);
+    if (payerHints?.cpfCnpj && !cardCpfCnpj) setCardCpfCnpj(maskCpfCnpj(payerHints.cpfCnpj));
+    if (payerHints?.phone && !cardPhone) setCardPhone(maskPhone(payerHints.phone));
+  }, [payerHints]);
+
   // ——— Inline field errors (suave UX, não bloqueia digitação) ———
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const setFieldError = (key: string, msg: string | null) => {
@@ -265,12 +283,16 @@ export function AsaasCheckout({
 
 
   // ——— Real-time fees from Asaas API ———
-  const [accountFees, setAccountFees] = useState<AccountFees | null>(null);
+  const [accountFees, setAccountFees] = useState<AccountFees | null>(initialAccountFees || null);
   const [feesLoading, setFeesLoading] = useState(false);
   const [feesError, setFeesError] = useState(false);
 
   // Fetch fees from Asaas API on mount
   useEffect(() => {
+    if (initialAccountFees) {
+      setAccountFees(initialAccountFees);
+      return;
+    }
     if (!data.userId || data.absorverTaxa) return; // No need to fetch fees if photographer absorbs
     
     let cancelled = false;
@@ -303,7 +325,7 @@ export function AsaasCheckout({
       });
     
     return () => { cancelled = true; };
-  }, [data.userId, data.absorverTaxa]);
+  }, [data.userId, data.absorverTaxa, initialAccountFees]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -322,23 +344,47 @@ export function AsaasCheckout({
         headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
       }
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          userId: data.userId,
-          clienteId: data.clienteId,
-          sessionId: data.sessionId,
-          valor: data.valorTotal,
-          descricao: data.descricao,
-          galeriaId: data.galeriaId,
-          qtdFotos: data.qtdFotos,
-          finalidade: 'fotos_extras',
-          provedor: 'asaas',
-          billingType: 'PIX',
-        }),
-      });
-      const result = await res.json();
+      let result;
+      let res;
+      
+      if (data.cobrancaId) {
+        // Fluxo 1: Já existe uma cobrança (Workflow, Agenda, Link) -> Processa
+        res = await fetch(`${SUPABASE_URL}/functions/v1/checkout-process-payment`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            cobrancaId: data.cobrancaId,
+            billingType: 'PIX',
+            payerContact: showPixContactForm ? {
+              name: pixName.trim(),
+              email: pixEmail.trim(),
+              cpfCnpj: pixCpfCnpj.replace(/\D/g, ''),
+              phone: pixPhone.replace(/\D/g, '')
+            } : undefined
+          }),
+        });
+        result = await res.json();
+      } else {
+        // Fluxo 2: Cria a cobrança na hora (Fotos extras)
+        res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            userId: data.userId,
+            clienteId: data.clienteId,
+            sessionId: data.sessionId,
+            valor: data.valorTotal,
+            descricao: data.descricao,
+            galeriaId: data.galeriaId,
+            qtdFotos: data.qtdFotos,
+            finalidade: data.finalidade || 'fotos_extras',
+            provedor: 'asaas',
+            billingType: 'PIX',
+          }),
+        });
+        result = await res.json();
+      }
+
       if (!res.ok || !result.success) {
         // Backend exigiu CPF do pagador.
         if (result?.code === 'MISSING_CPF_CNPJ') {
@@ -364,9 +410,23 @@ export function AsaasCheckout({
         }
         throw new Error(result.error || 'Erro ao gerar PIX');
       }
-      setPixQrCode(result.pixQrCode ? `data:image/png;base64,${result.pixQrCode}` : null);
+
+      // Renderiza QR Code com fallback
+      if (result.pixQrCode) {
+        setPixQrCode(result.pixQrCode.startsWith('data:image') ? result.pixQrCode : `data:image/png;base64,${result.pixQrCode}`);
+      } else if (result.pixCopiaECola) {
+        try {
+          const qrCodeUrl = await QRCode.toDataURL(result.pixCopiaECola);
+          setPixQrCode(qrCodeUrl);
+        } catch (e) {
+          console.error("Erro gerando QRCode fallback:", e);
+        }
+      } else {
+        setPixQrCode(null);
+      }
+
       setPixCopiaECola(result.pixCopiaECola || null);
-      setPixCobrancaId(result.cobrancaId || null);
+      setPixCobrancaId(result.cobrancaId || data.cobrancaId || null);
 
       // Start polling
       pollStartRef.current = Date.now();
@@ -549,42 +609,64 @@ export function AsaasCheckout({
         headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
       }
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          userId: data.userId,
-          clienteId: data.clienteId,
-          sessionId: data.sessionId,
-          valor: valorComTaxas,
-          descricao: data.descricao,
-          galeriaId: data.galeriaId,
-          qtdFotos: data.qtdFotos,
-          finalidade: 'fotos_extras',
-          provedor: 'asaas',
-          billingType: 'CREDIT_CARD',
-          installmentCount: parseInt(cardInstallments),
-          creditCard: {
-            holderName: cardName,
-            number: rawCard,
-            expiryMonth: expM,
-            expiryYear: `20${expY}`,
-            ccv: cardCvv,
-          },
-          creditCardHolderInfo: {
-            name: cardName,
-            cpfCnpj: cardCpfCnpj.replace(/\D/g, ''),
-            email: cardEmail,
-            phone: cardPhone.replace(/\D/g, ''),
-            postalCode: cardCep.replace(/\D/g, ''),
-            addressNumber: 'S/N',
-          },
-          dadosExtras: {
-            valorBase: data.valorTotal,
-          },
-        }),
-      });
-      const result = await res.json();
+      let result;
+      let res;
+      
+      const creditCardPayload = {
+        holderName: cardName,
+        number: rawCard,
+        expiryMonth: expM,
+        expiryYear: `20${expY}`,
+        ccv: cardCvv,
+      };
+      const creditCardHolderInfoPayload = {
+        name: cardName,
+        cpfCnpj: cardCpfCnpj.replace(/\D/g, ''),
+        email: cardEmail,
+        phone: cardPhone.replace(/\D/g, ''),
+        postalCode: cardCep.replace(/\D/g, ''),
+        addressNumber: 'S/N',
+      };
+
+      if (data.cobrancaId) {
+        res = await fetch(`${SUPABASE_URL}/functions/v1/checkout-process-payment`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            cobrancaId: data.cobrancaId,
+            billingType: 'CREDIT_CARD',
+            creditCard: creditCardPayload,
+            creditCardHolderInfo: creditCardHolderInfoPayload,
+            installmentCount: parseInt(cardInstallments)
+          }),
+        });
+        result = await res.json();
+      } else {
+        res = await fetch(`${SUPABASE_URL}/functions/v1/create-cobranca`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            userId: data.userId,
+            clienteId: data.clienteId,
+            sessionId: data.sessionId,
+            valor: valorComTaxas,
+            descricao: data.descricao,
+            galeriaId: data.galeriaId,
+            qtdFotos: data.qtdFotos,
+            finalidade: data.finalidade || 'fotos_extras',
+            provedor: 'asaas',
+            billingType: 'CREDIT_CARD',
+            installmentCount: parseInt(cardInstallments),
+            creditCard: creditCardPayload,
+            creditCardHolderInfo: creditCardHolderInfoPayload,
+            dadosExtras: {
+              valorBase: data.valorTotal,
+            },
+          }),
+        });
+        result = await res.json();
+      }
+
       if (!res.ok || !result.success) {
         throw new Error(result.error || 'Pagamento recusado');
       }
@@ -592,10 +674,10 @@ export function AsaasCheckout({
         // Single payment (à vista) finalized inline by backend
         setCardSuccess(true);
         setTimeout(() => onPaymentConfirmed(), 2000);
-      } else if ((result.requiresPolling || result.creditCardStatus === 'AWAITING_RISK_ANALYSIS') && result.cobrancaId) {
+      } else if ((result.requiresPolling || result.creditCardStatus === 'AWAITING_RISK_ANALYSIS') && (result.cobrancaId || data.cobrancaId)) {
         // Installment or async payment — poll check-payment-status
         setCardLoading(true);
-        const cobrancaId = result.cobrancaId;
+        const cobrancaId = result.cobrancaId || data.cobrancaId;
         const pollStart = Date.now();
         const maxPollTime = 2 * 60 * 1000; // 2 minutes
         const pollInterval = 12000; // 12s (Realtime cobre confirmação instantânea; polling é fallback)
@@ -660,7 +742,11 @@ export function AsaasCheckout({
             <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
           <h1 className="text-2xl font-bold">Pagamento confirmado!</h1>
-          <p className="text-muted-foreground">Sua seleção foi finalizada com sucesso.</p>
+          <p className="text-muted-foreground">
+            {data.cobrancaId 
+              ? "Obrigado! Seu pagamento foi processado com sucesso." 
+              : "Sua seleção foi finalizada com sucesso."}
+          </p>
         </div>
       </div>
     );

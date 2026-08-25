@@ -14,6 +14,8 @@ import {
   resolveCobrancaBinding,
   assertExtraPaymentWithinIdeal,
   assertNotAmbiguousSessionCharge,
+  cancelStalePendingChargesForSession,
+  cancelStalePendingChargesForGallery,
 } from "../_shared/cobrancaBinding.ts";
 import { generatePixPayload } from "../_shared/pix-utils.ts";
 import { createMercadoPagoPayment } from "../_shared/adapters/mercadopago.ts";
@@ -214,6 +216,14 @@ Deno.serve(async (req) => {
     cobranca = inserted;
     const cobrancaId = cobranca.id;
     console.log(`[create-cobranca] Cobrança inicial criada id=${cobrancaId}, provedor=${provedor}, finalidade=${binding.finalidade}`);
+
+    // Cancelar cobranças pendentes anteriores órfãs da mesma galeria/sessão
+    if (binding.galeria_id) {
+      await cancelStalePendingChargesForGallery(supabase, binding.galeria_id, cobrancaId);
+    }
+    if (normalizedSessionId) {
+      await cancelStalePendingChargesForSession(supabase, normalizedSessionId, cobrancaId);
+    }
 
     // 6. Buscar e mesclar dados do cliente
     const { data: clienteDb } = await supabase

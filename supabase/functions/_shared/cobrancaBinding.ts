@@ -261,6 +261,36 @@ export async function cancelStalePendingChargesForSession(
 }
 
 /**
+ * Cancela cobranças pendentes anteriores vinculadas à mesma galeria (fotos_extras)
+ * para evitar duplicidade de cobranças ativas quando uma nova é gerada.
+ */
+export async function cancelStalePendingChargesForGallery(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  galeriaId: string,
+  keepCobrancaId: string,
+): Promise<{ cancelled: number }> {
+  const { data, error } = await supabase
+    .from("cobrancas")
+    .update({
+      status: "cancelado",
+      obs_manual: `Cancelada — substituída por nova cobrança ${keepCobrancaId}`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("galeria_id", galeriaId)
+    .eq("status", "pendente")
+    .in("finalidade", ["fotos_extras", "sessao_e_extras"])
+    .neq("id", keepCobrancaId)
+    .select("id");
+
+  if (error) {
+    console.error("cancelStalePendingChargesForGallery error:", error);
+    return { cancelled: 0 };
+  }
+  return { cancelled: (data ?? []).length };
+}
+
+/**
  * Garante que `valor` solicitado não excede o saldo ideal calculado pela RPC
  * canônica `calculate_gallery_extra_payment` (regra congelada + descontos +
  * abatimento do que já foi pago). Tolerância de R$0,01 para float.

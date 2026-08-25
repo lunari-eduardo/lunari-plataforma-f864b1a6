@@ -13,6 +13,7 @@ import CheckoutShell, { CheckoutSkeleton } from './checkout/CheckoutShell';
 import ProviderCheckout, { ProviderBlock, Provedor } from './checkout/ProviderCheckout';
 import { PayerValue } from './checkout/PayerGate';
 import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
+import { AsaasCheckout } from '@/components/AsaasCheckout';
 
 const SUPABASE_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'tlnjspsywycbudhewsfv'}.supabase.co`;
 const POLL_INTERVAL = 15_000;
@@ -503,301 +504,56 @@ export default function PublicCheckout() {
   }
 
   const { cobranca, photographer, settings } = data;
-  const bothTabs = settings.habilitarPix && settings.habilitarCartao;
 
-  // ——— Layout base (estilo Gallery, imagens 4 e 5) ———
+  const handlePersistContact = async (contactData: { email?: string; phone?: string; nome?: string; cpfCnpj?: string }) => {
+    if (!cobrancaId) return;
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/checkout-save-payer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cobrancaId,
+          ...contactData
+        }),
+      });
+    } catch (e) {
+      console.error("Erro ao salvar payer:", e);
+    }
+  };
+
   return (
-    <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined} className="flex flex-col items-center px-4 py-6">
+    <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined}>
       <Sonner />
-      <div className="max-w-md w-full space-y-4">
-        {/* Header — logo/nome do fotógrafo + selo em uma linha compacta */}
-        <div className="flex items-center justify-between gap-3">
-          {photographer.logoUrl ? (
-            <img src={photographer.logoUrl} alt="Logotipo" className="h-8 max-w-[160px] object-contain opacity-90" />
-          ) : <span />}
-          <div className="flex items-center gap-1 text-[10px] text-primary shrink-0">
-            <Lock className="h-3 w-3" />
-            Ambiente seguro
-          </div>
-        </div>
-
-        {/* Valor destacado (compacto) */}
-        <div className="text-center">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Pagamento</p>
-          <p className="text-3xl font-bold text-primary tracking-tight leading-tight">
-            R$ {cobranca.valor.toFixed(2).replace('.', ',')}
-          </p>
-          {cobranca.descricao && (
-            <p className="text-xs text-neutral-600 mt-0.5">{cobranca.descricao}</p>
-          )}
-        </div>
-
-
-        {/* Tabs segmentadas (pill) — só quando ambos habilitados */}
-        {bothTabs && (
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-neutral-100">
-            <button
-              type="button"
-              onClick={() => setTab('pix')}
-              className={cn(
-                'flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all',
-                tab === 'pix'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900',
-              )}
-            >
-              <QrCode className="h-4 w-4" /> PIX
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('card')}
-              className={cn(
-                'flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all',
-                tab === 'card'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900',
-              )}
-            >
-              <CreditCard className="h-4 w-4" /> Cartão
-            </button>
-          </div>
-        )}
-
-        {/* ══════════════════ PIX ══════════════════ */}
-        {tab === 'pix' && settings.habilitarPix && (
-          <div className="space-y-4">
-            {!pixCopiaECola ? (
-              <>
-                {/* Coleta inline: pergunta apenas o que falta */}
-                {(stillMissing.name || stillMissing.email || stillMissing.phone || stillMissing.cpfCnpj) && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-                      <User className="h-4 w-4 text-primary" />
-                      Seus dados para o PIX
-                    </div>
-                    <p className="text-xs text-neutral-600">
-                      Precisamos destes dados para gerar a cobrança e enviar o comprovante.
-                    </p>
-
-                    {stillMissing.name && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-700">Nome completo</Label>
-                        <Input
-                          value={payerName}
-                          onChange={(e) => setPayerName(e.target.value)}
-                          placeholder="Seu nome"
-                          className="bg-white border-neutral-200"
-                        />
-                      </div>
-                    )}
-                    {stillMissing.cpfCnpj && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-700">CPF ou CNPJ</Label>
-                        <Input
-                          value={payerCpf}
-                          onChange={(e) => setPayerCpf(maskCpfCnpj(e.target.value))}
-                          placeholder="000.000.000-00"
-                          inputMode="numeric"
-                          className="bg-white border-neutral-200"
-                        />
-                      </div>
-                    )}
-                    {stillMissing.email && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-700">Email</Label>
-                        <Input
-                          type="email"
-                          value={payerEmail}
-                          onChange={(e) => setPayerEmail(e.target.value)}
-                          placeholder="voce@email.com"
-                          className="bg-white border-neutral-200"
-                        />
-                      </div>
-                    )}
-                    {stillMissing.phone && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-700">Telefone</Label>
-                        <Input
-                          value={payerPhone}
-                          onChange={(e) => setPayerPhone(maskPhone(e.target.value))}
-                          placeholder="(00) 00000-0000"
-                          inputMode="tel"
-                          className="bg-white border-neutral-200"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {pixError && (
-                  <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-md p-3">
-                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{pixError}</span>
-                  </div>
-                )}
-
-                <Button
-                  className="w-full h-12 gap-2 text-base font-medium"
-                  onClick={generatePix}
-                  disabled={pixLoading}
-                >
-                  {pixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                  Gerar QR Code PIX
-                </Button>
-              </>
-            ) : (
-              <div className="space-y-4">
-                {pixQrCode && (
-                  <div className="flex justify-center">
-                    <img src={pixQrCode} alt="QR Code PIX" className="w-56 h-56 rounded-lg border border-neutral-200 bg-white p-2" />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label className="text-xs text-neutral-700">Código PIX Copia e Cola</Label>
-                  <div className="flex gap-2">
-                    <Input value={pixCopiaECola} readOnly className="font-mono text-xs bg-white border-neutral-200" />
-                    <Button variant="outline" size="icon" onClick={handleCopyPix} className="shrink-0">
-                      {pixCopied ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-xs text-neutral-600 text-center flex items-center justify-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Aguardando confirmação do pagamento...
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ══════════════════ CARTÃO ══════════════════ */}
-        {tab === 'card' && settings.habilitarCartao && (
-          <div className="space-y-3">
-            {/* Dados do titular */}
-            <div className="grid grid-cols-1 gap-2">
-              <Input
-                value={payerName}
-                onChange={(e) => setPayerName(e.target.value.toUpperCase())}
-                placeholder="Nome no cartão"
-                className="h-9 bg-white border-neutral-200"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  value={payerCpf}
-                  onChange={(e) => setPayerCpf(maskCpfCnpj(e.target.value))}
-                  placeholder="CPF / CNPJ"
-                  inputMode="numeric"
-                  className="h-9 bg-white border-neutral-200"
-                />
-                <Input
-                  type="email"
-                  value={payerEmail}
-                  onChange={(e) => setPayerEmail(e.target.value)}
-                  placeholder="Email"
-                  className="h-9 bg-white border-neutral-200"
-                />
-              </div>
-            </div>
-
-            {/* Dados do cartão */}
-            <div className="grid grid-cols-1 gap-2">
-              <Input
-                value={cardNumber}
-                onChange={(e) => setCardNumber(maskCardNumber(e.target.value))}
-                placeholder="Número do cartão"
-                inputMode="numeric"
-                className="h-9 bg-white border-neutral-200"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  value={cardExpiry}
-                  onChange={(e) => setCardExpiry(maskExpiry(e.target.value))}
-                  placeholder="MM/AA"
-                  inputMode="numeric"
-                  className="h-9 bg-white border-neutral-200"
-                />
-                <Input
-                  value={cardCvv}
-                  onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="CVV"
-                  inputMode="numeric"
-                  className="h-9 bg-white border-neutral-200"
-                />
-                <Input
-                  value={cardCep}
-                  onChange={(e) => setCardCep(maskCep(e.target.value))}
-                  placeholder="CEP"
-                  inputMode="numeric"
-                  className="h-9 bg-white border-neutral-200"
-                />
-              </div>
-              <Input
-                value={payerPhone}
-                onChange={(e) => setPayerPhone(maskPhone(e.target.value))}
-                placeholder="Telefone (opcional)"
-                inputMode="tel"
-                className="h-9 bg-white border-neutral-200"
-              />
-            </div>
-
-            {/* Parcelas */}
-            <Select value={cardInstallments} onValueChange={setCardInstallments}>
-              <SelectTrigger className="h-9 bg-white border-neutral-200">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {installmentOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {cardError && (
-              <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-md p-2.5">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{cardError}</span>
-              </div>
-            )}
-
-            <Button
-              className="w-full h-11 gap-2 text-base font-medium"
-              onClick={handleCardSubmit}
-              disabled={cardLoading}
-            >
-              {cardLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-              Finalizar · R$ {valorComTaxas.toFixed(2).replace('.', ',')}
-            </Button>
-
-            <p className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-1">
-              <ShieldCheck className="h-3 w-3" />
-              Seus dados estão protegidos com segurança de ponta a ponta.
-            </p>
-          </div>
-        )}
-
-
-        {/* Voltar */}
-        {(pixCopiaECola || tab === 'card') && (
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (pixCopiaECola) {
-                  setPixCopiaECola(null);
-                  setPixQrCode(null);
-                  if (pollRef.current) clearInterval(pollRef.current);
-                } else {
-                  setTab('pix');
-                }
-              }}
-              className="text-sm text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1.5"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Voltar
-            </button>
-          </div>
-        )}
-      </div>
+      <AsaasCheckout
+        data={{
+          userId: photographer.userId,
+          valorTotal: cobranca.valor,
+          descricao: cobranca.descricao,
+          cobrancaId: cobranca.id,
+          enabledMethods: {
+            pix: settings.habilitarPix,
+            creditCard: settings.habilitarCartao,
+            boleto: settings.habilitarBoleto,
+          },
+          maxParcelas: settings.maxParcelas || 12,
+          absorverTaxa: settings.absorverTaxa,
+          ireiAntecipar: settings.ireiAntecipar,
+          repassarTaxaAntecipacao: settings.repassarTaxaAntecipacao,
+          incluirTaxaAntecipacao: settings.incluirTaxaAntecipacao,
+        }}
+        initialAccountFees={data.accountFees || undefined}
+        studioName={photographer.name || undefined}
+        studioLogoUrl={photographer.logoUrl || undefined}
+        payerHints={{
+          fullName: data.payerHints?.fullName,
+          email: data.payerHints?.email,
+          phone: data.payerHints?.phone,
+          cpfCnpj: data.payerHints?.cpfCnpj,
+        }}
+        payerMissing={data.payerMissing}
+        onPaymentConfirmed={() => setPixConfirmed(true)}
+        onPersistContact={handlePersistContact}
+      />
     </PublicThemeWrapper>
   );
 }
