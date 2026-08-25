@@ -57,7 +57,7 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
   const [habilitarCartao, setHabilitarCartao] = useState(true);
   const [habilitarBoleto, setHabilitarBoleto] = useState(false);
   const [maxParcelas, setMaxParcelas] = useState('12');
-  const [absorverTaxa, setAbsorverTaxa] = useState(false);
+  const [absorverTaxa, setAbsorverTaxa] = useState(true);
   const [ireiAntecipar, setIreiAntecipar] = useState(false);
   const [repassarTaxaAntecipacao, setRepassarTaxaAntecipacao] = useState(false);
 
@@ -80,7 +80,7 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
       setHabilitarCartao(settings.habilitarCartao ?? true);
       setHabilitarBoleto(settings.habilitarBoleto ?? false);
       setMaxParcelas(String(settings.maxParcelas ?? 12));
-      setAbsorverTaxa(settings.absorverTaxa ?? false);
+      setAbsorverTaxa(settings.absorverTaxa ?? true);
       // Backward compat: ireiAntecipar didn't exist before, derive from incluirTaxaAntecipacao
       const legacyAntecipar = settings.incluirTaxaAntecipacao ?? false;
       setIreiAntecipar(settings.ireiAntecipar ?? legacyAntecipar);

@@ -163,7 +163,7 @@ export function CombinedChargeModal({
         const legacyAntecipar = d.incluirTaxaAntecipacao === true;
         const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
         const repassarTaxaAntecipacao = (d.repassarTaxaAntecipacao as boolean) ?? legacyAntecipar;
-        const absorverTaxa = d.absorverTaxa === true;
+        const absorverTaxa = d.absorverTaxa ?? true;
 
         setAsaasSettings({
           habilitarPix: d.habilitarPix !== false,

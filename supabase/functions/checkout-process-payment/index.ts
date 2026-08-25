@@ -76,28 +76,46 @@ Deno.serve(async (req) => {
     }
 
     // 2. Enriquecimento de contato do cliente no CRM
-    const { data: cliente } = await supabase
+    const effectiveClienteId = cobranca.cliente_id || (
+      await resolvePayerHints({
+        supabase,
+        galleryId: cobranca.galeria_id || null,
+        sessionId: cobranca.session_id || null,
+      })
+    )?.cpfCnpj ? cobranca.cliente_id : cobranca.cliente_id;
+
+    const { data: cliente } = effectiveClienteId ? await supabase
       .from("clientes")
       .select("id, nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, numero, complemento, bairro, cidade, estado")
-      .eq("id", cobranca.cliente_id)
-      .maybeSingle();
+      .eq("id", effectiveClienteId)
+      .maybeSingle() : { data: null };
 
-    if (payerContact && cobranca.cliente_id) {
+    const targetClienteId = cliente?.id || cobranca.cliente_id;
+    if (targetClienteId) {
       const patch: Record<string, string> = {};
       const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-      if (payerContact.name?.trim() && isEmpty(cliente?.nome)) patch.nome = payerContact.name.trim();
-      if (payerContact.email?.trim() && isEmpty(cliente?.email)) patch.email = payerContact.email.trim().toLowerCase();
-      if (payerContact.phone?.trim() && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
-        patch.whatsapp = payerContact.phone.trim();
+      const candidateName = payerContact?.name?.trim() || creditCardHolderInfo?.name?.trim();
+      const candidateEmail = payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
+      const candidatePhone = payerContact?.phone?.trim() || creditCardHolderInfo?.phone?.trim();
+      const candidateCpf = payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
+      const candidateCep = creditCardHolderInfo?.postalCode?.trim();
+
+      if (candidateName && isEmpty(cliente?.nome)) patch.nome = candidateName;
+      if (candidateEmail && isEmpty(cliente?.email)) patch.email = candidateEmail.toLowerCase();
+      if (candidatePhone && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
+        patch.whatsapp = candidatePhone.replace(/\D/g, "");
       }
-      if (payerContact.cpfCnpj?.trim() && isEmpty(cliente?.cpf_cnpj)) {
-        patch.cpf_cnpj = payerContact.cpfCnpj.trim();
+      if (candidateCpf && isEmpty(cliente?.cpf_cnpj)) {
+        patch.cpf_cnpj = candidateCpf.replace(/\D/g, "");
+      }
+      if (candidateCep && isEmpty(cliente?.cep)) {
+        patch.cep = candidateCep.replace(/\D/g, "");
       }
 
       if (Object.keys(patch).length > 0) {
-        await supabase.from("clientes").update(patch).eq("id", cobranca.cliente_id);
-        console.log(`[checkout-process-payment] CRM enriquecido:`, Object.keys(patch));
+        await supabase.from("clientes").update(patch).eq("id", targetClienteId);
+        console.log(`[checkout-process-payment] CRM enriquecido para cliente=${targetClienteId}:`, Object.keys(patch));
       }
     }
     
@@ -285,8 +303,23 @@ Deno.serve(async (req) => {
     if (isPaid) {
       updatePayload.status = "pago";
       updatePayload.data_pagamento = new Date().toISOString();
-      if (adapterData.dadosExtras?.netValue != null) {
-        updatePayload.valor_liquido = adapterData.dadosExtras.netValue;
+
+      if (repassarTaxas && repassarAntecipacao) {
+        // Todas as taxas foram repassadas ao cliente -> fotógrafo recebe o valor integral nominal
+        updatePayload.valor_liquido = cobranca.valor;
+      } else if (repassarTaxas) {
+        // Taxas de processamento repassadas, fotógrafo absorve apenas antecipação (se houver)
+        updatePayload.valor_liquido = Math.max(0, Math.round((cobranca.valor - (taxaAntecipacao || 0)) * 100) / 100);
+      } else {
+        // Fotógrafo absorveu taxas de processamento
+        if (finalInstallments && finalInstallments > 1 && adapterData.dadosExtras?.netValue != null) {
+          // Asaas retorna netValue de UMA parcela -> líquido total é a soma das parcelas
+          updatePayload.valor_liquido = Math.round(adapterData.dadosExtras.netValue * finalInstallments * 100) / 100;
+        } else if (adapterData.dadosExtras?.netValue != null) {
+          updatePayload.valor_liquido = adapterData.dadosExtras.netValue;
+        } else {
+          updatePayload.valor_liquido = Math.max(0, Math.round((cobranca.valor - (taxaProcessamento || 0) - (taxaAntecipacao || 0)) * 100) / 100);
+        }
       }
     }
 
@@ -295,6 +328,30 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error(`[checkout-process-payment] Erro crítico ao atualizar a cobrança ${cobranca.id} no banco de dados:`, updateError);
       return errorResponse("Erro interno ao consolidar pagamento", 500, "UPDATE_COBRANCA_FAILED", updateError);
+    }
+
+    // Registrar parcela em cobranca_parcelas se houver providerOrderId
+    if (adapterData.providerOrderId) {
+      const numParcelas = finalInstallments || 1;
+      const valorBrutoParcela = Math.round((cobranca.valor / numParcelas) * 100) / 100;
+      const valorLiqParcela = adapterData.dadosExtras?.netValue != null
+        ? adapterData.dadosExtras.netValue
+        : Math.round((updatePayload.valor_liquido / numParcelas) * 100) / 100;
+
+      await supabase.from("cobranca_parcelas").upsert({
+        cobranca_id: cobranca.id,
+        numero_parcela: 1,
+        asaas_payment_id: adapterData.providerOrderId,
+        valor_bruto: valorBrutoParcela,
+        taxa_gateway: repassarTaxas ? 0 : Math.max(0, Math.round((valorBrutoParcela - valorLiqParcela) * 100) / 100),
+        taxa_antecipacao: repassarAntecipacao ? 0 : Math.round((taxaAntecipacao / numParcelas) * 100) / 100,
+        valor_liquido: valorLiqParcela,
+        status: isPaid ? "confirmado" : "pendente",
+        billing_type: billingType,
+        data_vencimento: new Date().toISOString().split("T")[0],
+        data_pagamento: isPaid ? updatePayload.data_pagamento : null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "asaas_payment_id" }).maybeSingle();
     }
 
     if (isPaid && (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras")) {

@@ -113,7 +113,7 @@ export function PaymentSettings() {
   const [asaasHabilitarCartao, setAsaasHabilitarCartao] = useState(true);
   const [asaasHabilitarBoleto, setAsaasHabilitarBoleto] = useState(false);
   const [asaasMaxParcelas, setAsaasMaxParcelas] = useState('12');
-  const [asaasAbsorverTaxa, setAsaasAbsorverTaxa] = useState(false);
+  const [asaasAbsorverTaxa, setAsaasAbsorverTaxa] = useState(true);
   const [asaasIreiAntecipar, setAsaasIreiAntecipar] = useState(false);
   const [asaasRepassarAntecipacao, setAsaasRepassarAntecipacao] = useState(false);
 
@@ -192,7 +192,7 @@ export function PaymentSettings() {
       setAsaasHabilitarCartao(d.habilitarCartao ?? true);
       setAsaasHabilitarBoleto(d.habilitarBoleto ?? false);
       setAsaasMaxParcelas(String(d.maxParcelas ?? 12));
-      setAsaasAbsorverTaxa(d.absorverTaxa ?? false);
+      setAsaasAbsorverTaxa(d.absorverTaxa ?? true);
       setAsaasIreiAntecipar(d.ireiAntecipar ?? d.incluirTaxaAntecipacao ?? false);
       setAsaasRepassarAntecipacao(d.repassarTaxaAntecipacao ?? d.incluirTaxaAntecipacao ?? false);
     }

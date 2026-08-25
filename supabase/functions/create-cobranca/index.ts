@@ -232,16 +232,43 @@ Deno.serve(async (req) => {
       .eq("id", clienteId)
       .maybeSingle();
 
+    // Enriquecer CRM caso o cliente não possua os dados preenchidos
+    const patchCliente: Record<string, string> = {};
+    const isEmptyField = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
+
+    const candName = payerContact?.nome?.trim() || creditCardHolderInfo?.name?.trim();
+    const candEmail = payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
+    const candPhone = payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim() || creditCardHolderInfo?.phone?.trim();
+    const candCpf = payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
+    const candCep = payerContact?.cep?.trim() || creditCardHolderInfo?.postalCode?.trim();
+
+    if (candName && isEmptyField(clienteDb?.nome)) patchCliente.nome = candName;
+    if (candEmail && isEmptyField(clienteDb?.email)) patchCliente.email = candEmail.toLowerCase();
+    if (candPhone && isEmptyField(clienteDb?.whatsapp) && isEmptyField(clienteDb?.telefone)) {
+      patchCliente.whatsapp = candPhone.replace(/\D/g, "");
+    }
+    if (candCpf && isEmptyField(clienteDb?.cpf_cnpj)) {
+      patchCliente.cpf_cnpj = candCpf.replace(/\D/g, "");
+    }
+    if (candCep && isEmptyField(clienteDb?.cep)) {
+      patchCliente.cep = candCep.replace(/\D/g, "");
+    }
+
+    if (Object.keys(patchCliente).length > 0) {
+      await supabase.from("clientes").update(patchCliente).eq("id", clienteId);
+      console.log(`[create-cobranca] CRM enriquecido para cliente=${clienteId}:`, Object.keys(patchCliente));
+    }
+
     const mergedCliente: ClienteContact = {
       id: clienteId,
-      nome: clienteDb?.nome || payerContact?.nome || "Cliente",
-      email: clienteDb?.email || payerContact?.email,
-      telefone: clienteDb?.telefone || payerContact?.telefone,
-      whatsapp: clienteDb?.whatsapp || payerContact?.whatsapp,
-      cpfCnpj: clienteDb?.cpf_cnpj || payerContact?.cpfCnpj,
-      cep: clienteDb?.cep || payerContact?.cep,
+      nome: clienteDb?.nome || candName || "Cliente",
+      email: clienteDb?.email || candEmail,
+      telefone: clienteDb?.telefone || candPhone,
+      whatsapp: clienteDb?.whatsapp || candPhone,
+      cpfCnpj: clienteDb?.cpf_cnpj || candCpf,
+      cep: clienteDb?.cep || candCep,
       endereco: clienteDb?.endereco || payerContact?.endereco,
-      numero: clienteDb?.numero || payerContact?.numero,
+      numero: clienteDb?.numero || payerContact?.numero || creditCardHolderInfo?.addressNumber,
       complemento: clienteDb?.complemento || payerContact?.complemento,
       bairro: clienteDb?.bairro || payerContact?.bairro,
       cidade: clienteDb?.cidade || payerContact?.cidade,
@@ -379,8 +406,25 @@ Deno.serve(async (req) => {
     if (isPaid) {
       updateData.status = "pago";
       updateData.data_pagamento = new Date().toISOString();
-      if (adapterData.dadosExtras?.netValue != null) {
-        updateData.valor_liquido = adapterData.dadosExtras.netValue;
+
+      const repassarTaxas = dadosExtras?.repassarTaxasProcessamento === true;
+      const repassarAntecipacao = dadosExtras?.repassarTaxaAntecipacao === true;
+      const taxaAntecipacao = Number(dadosExtras?.taxaAntecipacao || 0);
+      const taxaProcessamento = Number(dadosExtras?.taxaProcessamento || 0);
+      const iCount = installmentCount && installmentCount > 1 ? installmentCount : 1;
+
+      if (repassarTaxas && repassarAntecipacao) {
+        updateData.valor_liquido = cobranca.valor;
+      } else if (repassarTaxas) {
+        updateData.valor_liquido = Math.max(0, Math.round((cobranca.valor - taxaAntecipacao) * 100) / 100);
+      } else {
+        if (iCount > 1 && adapterData.dadosExtras?.netValue != null) {
+          updateData.valor_liquido = Math.round(adapterData.dadosExtras.netValue * iCount * 100) / 100;
+        } else if (adapterData.dadosExtras?.netValue != null) {
+          updateData.valor_liquido = adapterData.dadosExtras.netValue;
+        } else {
+          updateData.valor_liquido = Math.max(0, Math.round((cobranca.valor - taxaProcessamento - taxaAntecipacao) * 100) / 100);
+        }
       }
     }
 

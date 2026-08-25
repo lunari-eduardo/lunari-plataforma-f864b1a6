@@ -634,6 +634,13 @@ export function AsaasCheckout({
         addressNumber: 'S/N',
       };
 
+      const payerContactPayload = {
+        name: cardName.trim(),
+        cpfCnpj: cardCpfCnpj.replace(/\D/g, ''),
+        email: cardEmail.trim(),
+        phone: cardPhone.replace(/\D/g, ''),
+      };
+
       if (data.cobrancaId) {
         res = await fetch(`${SUPABASE_URL}/functions/v1/checkout-process-payment`, {
           method: 'POST',
@@ -641,6 +648,7 @@ export function AsaasCheckout({
           body: JSON.stringify({
             cobrancaId: data.cobrancaId,
             billingType: 'CREDIT_CARD',
+            payerContact: payerContactPayload,
             creditCard: creditCardPayload,
             creditCardHolderInfo: creditCardHolderInfoPayload,
             installmentCount: parseInt(cardInstallments)
@@ -663,6 +671,7 @@ export function AsaasCheckout({
             provedor: 'asaas',
             billingType: 'CREDIT_CARD',
             installmentCount: parseInt(cardInstallments),
+            payerContact: payerContactPayload,
             creditCard: creditCardPayload,
             creditCardHolderInfo: creditCardHolderInfoPayload,
             dadosExtras: {

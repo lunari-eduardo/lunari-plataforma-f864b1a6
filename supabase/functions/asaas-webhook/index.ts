@@ -547,7 +547,23 @@ Deno.serve(async (req) => {
               };
               if (parentStatus === "pago") {
                 cobrancaUpdate.data_pagamento = new Date().toISOString();
-                if (payment.netValue) cobrancaUpdate.valor_liquido = payment.netValue;
+                const dadosExtras = (cobranca as any).dados_extras || {};
+                const repassarTaxas = dadosExtras.repassarTaxasProcessamento === true;
+                const repassarAntecipacao = dadosExtras.repassarTaxaAntecipacao === true;
+                const taxaAntecipacao = Number(dadosExtras.taxaAntecipacao || 0);
+                const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
+
+                if (repassarTaxas && repassarAntecipacao) {
+                  cobrancaUpdate.valor_liquido = cobranca.valor;
+                } else if (repassarTaxas) {
+                  cobrancaUpdate.valor_liquido = Math.max(0, Math.round((cobranca.valor - taxaAntecipacao) * 100) / 100);
+                } else if (payment.netValue) {
+                  if (totalParcelas > 1) {
+                    cobrancaUpdate.valor_liquido = Math.round(payment.netValue * totalParcelas * 100) / 100;
+                  } else {
+                    cobrancaUpdate.valor_liquido = payment.netValue;
+                  }
+                }
               }
               await adminClient.from("cobrancas").update(cobrancaUpdate).eq("id", cobranca.id);
 
