@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       injectRegister: false,
+      registerType: 'prompt',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
         name: 'Lunari',
@@ -84,8 +85,8 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
+        // Removido skipWaiting e clientsClaim para evitar ChunkLoadError
+        // O update agora usa o padrão 'prompt' e espera a confirmação do usuário.
         cleanupOutdatedCaches: true,
         navigationPreload: false,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB

@@ -40,14 +40,21 @@ export class RootErrorBoundary extends React.Component<Props, State> {
     if (isChunkLoadError(error)) {
       const key = 'chunk_auto_reload_ts';
       const last = Number(sessionStorage.getItem(key) || '0');
-      if (Date.now() - last > 15_000) {
+      
+      // Aumentado para 30s para evitar loops infinitos se o arquivo estiver permanentemente quebrado
+      if (Date.now() - last > 30_000) {
         sessionStorage.setItem(key, String(Date.now()));
+        
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(regs => {
-            regs.forEach(r => r.update());
-          });
+            // Desregistra o SW antigo para garantir que o reload busque os arquivos mais recentes da Vercel
+            Promise.all(regs.map(r => r.unregister())).finally(() => {
+              window.location.reload();
+            });
+          }).catch(() => window.location.reload());
+        } else {
+          window.location.reload();
         }
-        window.location.reload();
       }
     }
   }
