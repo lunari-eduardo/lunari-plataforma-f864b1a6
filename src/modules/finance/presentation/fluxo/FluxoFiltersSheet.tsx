@@ -66,6 +66,7 @@ const FluxoFiltersSheet = memo(function FluxoFiltersSheet({
               <SelectItem value="financeiro">Financeiro</SelectItem>
               <SelectItem value="workflow">Workflow</SelectItem>
               <SelectItem value="gallery">Galeria</SelectItem>
+              <SelectItem value="venda_avulsa">Venda Avulsa</SelectItem>
               <SelectItem value="cartao">Cartão</SelectItem>
             </SelectContent>
           </Select>

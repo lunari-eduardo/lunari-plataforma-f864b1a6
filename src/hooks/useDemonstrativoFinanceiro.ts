@@ -50,7 +50,7 @@ export async function fetchDemonstrativo(
     .reduce((sum: number, l: any) => sum + Number(l.valor), 0);
 
   const receitaProdutos = entradas
-    .filter((l: any) => l.origem === 'gallery')
+    .filter((l: any) => l.origem === 'gallery' || l.origem === 'venda_avulsa')
     .reduce((sum: number, l: any) => sum + Number(l.valor), 0);
 
   const receitaNaoOperacional = entradas

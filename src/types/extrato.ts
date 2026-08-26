@@ -1,5 +1,5 @@
 export type ExtratoTipo = 'entrada' | 'saida';
-export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao' | 'gallery';
+export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao' | 'gallery' | 'venda_avulsa';
 export type ExtratoStatus = 'Pago' | 'Faturado' | 'Agendado';
 // Escopo do pagamento (a que se refere o valor recebido)
 export type ExtratoEscopo = 'sessao' | 'fotos_extras' | 'sessao_e_extras' | 'avulso';

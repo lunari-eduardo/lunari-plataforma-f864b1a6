@@ -301,6 +301,7 @@ export async function assertExtraPaymentWithinIdeal(
   galeriaId: string,
   valor: number,
   bypassPreSelecaoGate = true,
+  allowManualOverride = false,
 ): Promise<{ error?: BindingError; snapshot?: Record<string, unknown> }> {
   const { data, error } = await supabase.rpc(
     "calculate_gallery_extra_payment",
@@ -308,6 +309,9 @@ export async function assertExtraPaymentWithinIdeal(
   );
 
   if (error || !data || data.success === false) {
+    if (allowManualOverride) {
+      return { snapshot: {} };
+    }
     return {
       error: {
         code: "EXTRA_PAYMENT_RPC_FAILED",
@@ -319,7 +323,7 @@ export async function assertExtraPaymentWithinIdeal(
   }
 
   const idealRemaining = Number(data.valor_a_cobrar ?? 0);
-  if (valor > idealRemaining + 0.01) {
+  if (!allowManualOverride && valor > idealRemaining + 0.01) {
     return {
       error: {
         code: "EXTRA_PAYMENT_EXCEEDS_IDEAL",

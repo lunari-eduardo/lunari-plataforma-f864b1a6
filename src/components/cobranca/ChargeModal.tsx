@@ -173,7 +173,7 @@ export function ChargeModal({
 
     return { liquido, detalhe };
   };
-  
+
   // Current charge state (after generation)
   const [currentCharge, setCurrentCharge] = useState<{
     qrCode?: string;
@@ -195,11 +195,11 @@ export function ChargeModal({
   const [payerValidity, setPayerValidity] = useState<PayerFieldsValidity | null>(null);
   const [payerEditing, setPayerEditing] = useState(false);
 
-
   const {
     cobrancas,
     creatingCharge,
     createPixCharge,
+    createAsaasPixCharge,
     createLinkCharge,
     createPixManualCharge,
     confirmPixManualPayment,
@@ -228,7 +228,6 @@ export function ChargeModal({
       setPayerEditing(false);
       // Hidratar payer a partir do cliente
       (async () => {
-
         const { data } = await supabase
           .from('clientes')
           .select('nome, email, telefone, whatsapp, cpf_cnpj')
@@ -442,39 +441,29 @@ export function ChargeModal({
 
     setAsaasPixLoading(true);
     try {
-      const response = await supabase.functions.invoke('create-cobranca', {
-        body: {
-          clienteId,
-          sessionId,
-          valor,
-          descricao: descricao || undefined,
-          provedor: 'asaas',
-          billingType: 'PIX',
-          finalidade: binding.finalidade,
-          idempotencyKey: crypto.randomUUID(),
-        },
+      const result = await createAsaasPixCharge({
+        clienteId,
+        sessionId,
+        valor,
+        descricao: descricao || undefined,
+        provedor: 'asaas',
+        finalidade: binding.finalidade,
       });
 
-      if (response.error) throw new Error(response.error.message);
-      if (!response.data?.success) {
-        throw new Error(mapBackendError(response.data?.code, response.data?.error));
-      }
+      if (result.success) {
+        const qrCode = result.pixQrCodeBase64
+          ? (result.pixQrCodeBase64.startsWith('data:') ? result.pixQrCodeBase64 : `data:image/png;base64,${result.pixQrCodeBase64}`)
+          : null;
+        setAsaasPixQrCode(qrCode);
+        setAsaasPixCopiaECola(result.pixCopiaCola || null);
+        setAsaasPixModalOpen(true);
+        if (result.cobrancaId) setCurrentChargeId(result.cobrancaId);
 
-      const qrCode = response.data.pixQrCodeBase64
-        ? (response.data.pixQrCodeBase64.startsWith('data:') ? response.data.pixQrCodeBase64 : `data:image/png;base64,${response.data.pixQrCodeBase64}`)
-        : null;
-      setAsaasPixQrCode(qrCode);
-      setAsaasPixCopiaECola(response.data.pixCopiaCola || null);
-      setAsaasPixModalOpen(true);
-      setCurrentChargeId(response.data.cobrancaId);
-
-      if (response.data?.pixQrCodeMissing || (!qrCode && !response.data.pixCopiaCola)) {
-        const { toast } = await import('sonner');
-        toast.warning('Cobrança criada, mas o QR Code não foi gerado pelo Asaas. Verifique se há uma chave PIX cadastrada na sua conta Asaas.');
+        if (result.pixQrCodeMissing || (!qrCode && !result.pixCopiaCola)) {
+          const { toast } = await import('sonner');
+          toast.warning('Cobrança criada, mas o QR Code não foi gerado pelo Asaas. Verifique se há uma chave PIX cadastrada na sua conta Asaas.');
+        }
       }
-    } catch (err) {
-      const { toast } = await import('sonner');
-      toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX');
     } finally {
       setAsaasPixLoading(false);
     }

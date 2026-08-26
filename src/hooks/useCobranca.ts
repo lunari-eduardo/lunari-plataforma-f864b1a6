@@ -362,11 +362,20 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     };
   }, [options.clienteId, options.sessionId, fetchCobrancas]);
 
+  // Create Asaas Pix charge helper
+  const createAsaasPixCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
+    return createPixCharge({
+      ...request,
+      provedor: 'asaas',
+    });
+  };
+
   return {
     cobrancas,
     loading,
     creatingCharge,
     createPixCharge,
+    createAsaasPixCharge,
     createLinkCharge,
     createPixManualCharge,
     confirmPixManualPayment,
@@ -375,3 +384,4 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     refetch: fetchCobrancas,
   };
 }
+

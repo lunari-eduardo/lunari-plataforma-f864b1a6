@@ -12,7 +12,8 @@ export const ORIGEM_COLORS = {
   workflow: 'bg-blue-500/10 text-blue-700 border-blue-200',
   financeiro: 'bg-purple-500/10 text-purple-700 border-purple-200',
   cartao: 'bg-orange-500/10 text-orange-700 border-orange-200',
-  gallery: 'bg-emerald-500/10 text-emerald-700 border-emerald-200'
+  gallery: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+  venda_avulsa: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
 } as const;
 
 export const STATUS_COLORS = {
@@ -36,7 +37,8 @@ export const ORIGEM_LABELS = {
   workflow: 'Studio',
   financeiro: 'Financeiro',
   cartao: 'Cartão',
-  gallery: 'Gallery'
+  gallery: 'Gallery',
+  venda_avulsa: 'Venda Avulsa'
 } as const;
 
 export const MEIO_PAGAMENTO_LABELS: Record<string, string> = {

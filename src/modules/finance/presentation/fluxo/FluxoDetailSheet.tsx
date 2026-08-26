@@ -3,12 +3,15 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LinhaExtrato } from '@/types/extrato';
 import { formatCurrency } from '@/utils/financialUtils';
 import { parseFinancialInput } from '@/utils/financialPrecision';
 import { cn } from '@/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Trash2 } from 'lucide-react';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
+import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { PaymentSupabaseService } from '@/services/PaymentSupabaseService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +49,10 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
   const [localStatus, setLocalStatus] = useState<string>('');
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isCharging, setIsCharging] = useState(false);
+  const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
+  const [sessionClienteId, setSessionClienteId] = useState<string>('');
+  const [formaPagamento, setFormaPagamento] = useState<string>('pix');
 
   useEffect(() => {
     if (linha) {
@@ -53,6 +60,15 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
       setData(linha.data);
       setObservacoes(linha.observacoes ?? '');
       setLocalStatus(linha.status);
+      
+      if (linha.origem === 'workflow' || linha.origem === 'venda_avulsa') {
+        const sessionId = linha.referenciaId.replace('cs_', '');
+        PaymentSupabaseService.getSessionBinding(sessionId).then(binding => {
+          if (binding) {
+            setSessionClienteId(binding.cliente_id);
+          }
+        });
+      }
     }
   }, [linha]);
 
@@ -88,6 +104,30 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
     }
   };
 
+  const handleRegisterSessionPayment = async () => {
+    if (!linha) return;
+    setSaving(true);
+    try {
+      const sessionId = linha.referenciaId.replace('cs_', '');
+      const paymentValue = parseFinancialInput(valor);
+      const desc = observacoes ? `${observacoes} - Pago via ${formaPagamento}` : `Pago via ${formaPagamento}`;
+      
+      const success = await PaymentSupabaseService.saveSinglePaymentToSupabase(sessionId, {
+        valor: paymentValue,
+        data: data,
+        observacoes: desc,
+        forma_pagamento: formaPagamento,
+      });
+      
+      if (success) {
+        setLocalStatus('Pago');
+        setIsRegisteringPayment(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const headerExtra = (
     <div className="flex items-center gap-2 flex-wrap">
       <span
@@ -120,6 +160,8 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
     }
   };
 
+  const isSessao = linha.origem === 'workflow' || linha.origem === 'venda_avulsa';
+
   const footer = (
     <SidePanel.Footer
       left={
@@ -151,6 +193,21 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             <Button size="sm" onClick={handleSave} disabled={saving}>
               Salvar
             </Button>
+          )}
+          {localStatus !== 'Pago' && isSessao && (
+            <>
+              {isRegisteringPayment ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => setIsRegisteringPayment(false)}>Cancelar</Button>
+                  <Button size="sm" onClick={handleRegisterSessionPayment} disabled={saving}>Confirmar Pagamento</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setIsRegisteringPayment(true)}>Registrar pagamento</Button>
+                  <Button size="sm" onClick={() => setIsCharging(true)}>Cobrar online</Button>
+                </>
+              )}
+            </>
           )}
         </>
       }
@@ -201,9 +258,9 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             <Label className="text-xs text-muted-foreground">Valor</Label>
             <Input
               inputMode="decimal"
-              value={editable ? valor : formatCurrency(linha.valor)}
+              value={editable || isRegisteringPayment ? valor : formatCurrency(linha.valor)}
               onChange={(e) => setValor(e.target.value)}
-              disabled={!editable}
+              disabled={!editable && !isRegisteringPayment}
             />
           </div>
 
@@ -213,9 +270,28 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              disabled={!editable}
+              disabled={!editable && !isRegisteringPayment}
             />
           </div>
+
+          {isRegisteringPayment && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Forma de pagamento</Label>
+              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                  <SelectItem value="transferencia">Transferência Bancária</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Descrição / observação</Label>
@@ -224,7 +300,7 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
               onChange={(e) => setObservacoes(e.target.value)}
               rows={3}
               placeholder="Notas internas…"
-              disabled={!editable}
+              disabled={!editable && !isRegisteringPayment}
             />
           </div>
         </section>
@@ -277,6 +353,16 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    {isSessao && (
+      <ChargeModal
+        isOpen={isCharging}
+        onClose={() => setIsCharging(false)}
+        clienteId={sessionClienteId}
+        clienteNome={linha.cliente || ''}
+        sessionId={linha.referenciaId.replace('cs_', '')}
+        valorSugerido={linha.valor}
+      />
+    )}
     </>
   );
 });

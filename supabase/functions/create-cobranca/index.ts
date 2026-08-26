@@ -97,12 +97,12 @@ Deno.serve(async (req) => {
 
     // Guardas anti-overcharge em fotos extras (apenas quando a galeria já tiver cálculo formal consolidado e não for override de sessão)
     if (binding.finalidade === "fotos_extras" && binding.galeria_id && !sessionId) {
-      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
+      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor, true, body.allowManualOverride === true);
       if (guard.error) {
         return jsonResponse({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }, 400);
       }
     } else if (binding.finalidade === "sessao_e_extras" && binding.galeria_id && binding.valor_extras_componente && !sessionId) {
-      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, binding.valor_extras_componente);
+      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, binding.valor_extras_componente, true, body.allowManualOverride === true);
       if (guard.error) {
         return jsonResponse({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }, 400);
       }

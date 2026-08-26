@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Camera, CreditCard, Receipt, ChevronRight, Check, Loader2 } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Camera, CreditCard, Receipt, ChevronRight, Check, Loader2, ShoppingBag } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
 import type { LinhaExtrato } from '@/types/extrato';
@@ -27,6 +27,7 @@ function iconForLinha(l: LinhaExtrato) {
   if (l.origem === 'workflow') return Camera;
   if (l.origem === 'cartao') return CreditCard;
   if (l.origem === 'gallery') return Receipt;
+  if (l.origem === 'venda_avulsa') return ShoppingBag;
   return l.tipo === 'entrada' ? ArrowDownRight : ArrowUpRight;
 }
 

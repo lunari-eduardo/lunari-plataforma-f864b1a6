@@ -237,8 +237,7 @@ Deno.serve(async (req) => {
       taxaAntecipacao = 0;
     }
 
-    // 4. Invocar o adaptador create-asaas-payment via Service Role
-    const adapterUrl = `${SUPABASE_URL}/functions/v1/create-asaas-payment`;
+    // 4. Invocar o adaptador Asaas diretamente em processo
     const adapterPayload: AdapterCreatePaymentInput = {
       cobrancaId: cobranca.id,
       userId: cobranca.user_id,
@@ -252,7 +251,6 @@ Deno.serve(async (req) => {
       installmentCount: finalInstallments,
     };
 
-    // 4. Invocar o adaptador Asaas diretamente em processo
     const adapterData: AdapterCreatePaymentOutput = await createAsaasPayment(
       supabase,
       adapterPayload,

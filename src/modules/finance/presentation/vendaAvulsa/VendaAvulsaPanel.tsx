@@ -22,6 +22,8 @@ import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 import { SectionHeader } from '@/modules/finance/presentation/shell/fields/SectionHeader';
 import { DisclosureSection } from '@/modules/finance/presentation/shell/fields/DisclosureSection';
+import { Switch } from '@/components/ui/switch';
+import ChargeModal from '@/components/cobranca/ChargeModal';
 import { SmartSelect, PaidToggle, type SmartSelectOption } from '@/modules/finance/presentation/shell/fields';
 
 const FORMAS_PAGAMENTO: SmartSelectOption[] = [
@@ -69,6 +71,8 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
   const [formaPagamento, setFormaPagamento] = useState('pix');
+  const [gerarCobrancaOnline, setGerarCobrancaOnline] = useState(false);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
 
   const valorCalculado = useMemo(
     () => produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0),
@@ -110,6 +114,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
     setObservacoes('');
     setRegistrarPagamento(true);
     setFormaPagamento('pix');
+    setGerarCobrancaOnline(false);
   };
 
   const handleProdutoSelect = (product: ProductComboboxItem | null) => {
@@ -142,7 +147,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
     if (!clienteId || valorFinal <= 0) return;
 
     try {
-      await criarVendaAvulsa({
+      const sessao = await criarVendaAvulsa({
         clienteId,
         data,
         // Venda avulsa nunca inventa categoria nem pacote — a receita é do produto.
@@ -162,6 +167,13 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
         })),
       });
 
+      if (!registrarPagamento && gerarCobrancaOnline && sessao?.session_id) {
+        setCreatedSessionId(sessao.session_id);
+        // Do not close the side panel yet or reset form, so ChargeModal can render.
+        // If we close, the modal unmounts. Actually, let's reset form except for ChargeModal state.
+        return;
+      }
+
       resetForm();
       onSucesso?.();
       onFechar();
@@ -174,6 +186,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   const maisOpcoesFilled = observacoes.trim() ? 1 : 0;
 
   return (
+    <>
     <SidePanel
       open={aberto}
       onOpenChange={(v) => !v && onFechar()}
@@ -416,15 +429,33 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
               labelInactive="A receber"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Forma de pagamento</Label>
-            <SmartSelect
-              value={formaPagamento}
-              onChange={setFormaPagamento}
-              options={FORMAS_PAGAMENTO}
-              placeholder="Não informado"
-            />
-          </div>
+          
+          {registrarPagamento && (
+            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+              <Label className="text-xs text-muted-foreground">Forma de pagamento</Label>
+              <SmartSelect
+                value={formaPagamento}
+                onChange={setFormaPagamento}
+                options={FORMAS_PAGAMENTO}
+                placeholder="Não informado"
+              />
+            </div>
+          )}
+
+          {!registrarPagamento && (
+            <div className="flex items-center justify-between bg-muted/20 border border-border/50 rounded-lg p-3 animate-in fade-in slide-in-from-top-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Gerar cobrança online agora</Label>
+                <div className="text-xs text-muted-foreground">
+                  Abre o painel para gerar Pix ou link de pagamento.
+                </div>
+              </div>
+              <Switch
+                checked={gerarCobrancaOnline}
+                onCheckedChange={setGerarCobrancaOnline}
+              />
+            </div>
+          )}
         </section>
 
         {/* Mais opções */}
@@ -455,5 +486,21 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
         </DisclosureSection>
       </div>
     </SidePanel>
+    
+    <ChargeModal
+      isOpen={!!createdSessionId}
+      onClose={() => {
+        setCreatedSessionId(null);
+        resetForm();
+        onSucesso?.();
+        onFechar();
+      }}
+      clienteId={clienteId}
+      sessionId={createdSessionId || ''}
+      valorSugerido={valorFinal}
+      allowChangeValor={false}
+      descricao={descricaoFinal}
+    />
+    </>
   );
 }
