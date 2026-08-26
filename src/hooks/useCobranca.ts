@@ -7,6 +7,7 @@ import { buildPaymentShareUrl } from '@/utils/domainUtils';
 interface UseCobrancaOptions {
   clienteId?: string;
   sessionId?: string;
+  galeriaId?: string;
 }
 
 export function useCobranca(options: UseCobrancaOptions = {}) {
@@ -14,9 +15,9 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [creatingCharge, setCreatingCharge] = useState(false);
 
-  // Fetch charges for client/session
+  // Fetch charges for client/session/galeria
   const fetchCobrancas = useCallback(async () => {
-    if (!options.clienteId && !options.sessionId) return;
+    if (!options.clienteId && !options.sessionId && !options.galeriaId) return;
 
     setLoading(true);
     try {
@@ -25,8 +26,12 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (options.sessionId) {
+      if (options.sessionId && options.galeriaId) {
+        query = query.or(`session_id.eq.${options.sessionId},galeria_id.eq.${options.galeriaId}`);
+      } else if (options.sessionId) {
         query = query.eq('session_id', options.sessionId);
+      } else if (options.galeriaId) {
+        query = query.eq('galeria_id', options.galeriaId);
       } else if (options.clienteId) {
         query = query.eq('cliente_id', options.clienteId);
       }

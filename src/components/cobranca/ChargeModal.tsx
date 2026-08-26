@@ -4,12 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
 import { Switch } from '@/components/ui/switch';
-import { CreditCard, History, Settings2, Loader2, Link2, QrCode, Calculator, Lock, ChevronDown, ChevronUp, X, CheckCircle2 } from 'lucide-react';
+import { CreditCard, History, Loader2, Calculator, Lock, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
@@ -23,15 +20,9 @@ import { SelectedProvider } from './ProviderRow';
 import { assertNotAmbiguousSessionChargeClient } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
 import { ChargeStepBadge } from './ChargeStepBadge';
-
-import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
-import { buildPaymentShareUrl } from '@/utils/domainUtils';
 import { getUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
 import { normalizeAsaasFees, type NormalizedAsaasFees } from '@/lib/anticipationUtils';
-
-
-
 
 /** Códigos de erro do backend → mensagens pt-BR mapeadas para exibição. */
 const BACKEND_ERROR_MESSAGES: Record<string, string> = {
@@ -55,8 +46,7 @@ function mapBackendError(code?: string, fallback?: string): string {
   return fallback || 'Erro ao processar cobrança.';
 }
 
-
-interface ChargeModalProps {
+export interface ChargeModalProps {
   isOpen: boolean;
   onClose: () => void;
   clienteId: string;
@@ -66,6 +56,14 @@ interface ChargeModalProps {
   valorSugerido: number;
   /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
   step?: import('./ChargeStepBadge').ChargeStep | null;
+  /** Finalidade da cobrança: sessão (padrão), fotos extras ou combinada */
+  finalidade?: 'sessao' | 'fotos_extras' | 'sessao_e_extras';
+  galeriaId?: string | null;
+  qtdFotos?: number | null;
+  snapshotFotosIncluidas?: number | null;
+  valorSessaoComponente?: number | null;
+  valorExtrasComponente?: number | null;
+  nomeSessao?: string;
 }
 
 interface AsaasSettingsState {
@@ -87,6 +85,13 @@ export function ChargeModal({
   sessionId,
   valorSugerido,
   step,
+  finalidade = 'sessao',
+  galeriaId,
+  qtdFotos,
+  snapshotFotosIncluidas,
+  valorSessaoComponente,
+  valorExtrasComponente,
+  nomeSessao,
 }: ChargeModalProps) {
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
@@ -101,10 +106,6 @@ export function ChargeModal({
   const [overrideRepassarTaxas, setOverrideRepassarTaxas] = useState(false);
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
-
-
-
-
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
@@ -205,14 +206,20 @@ export function ChargeModal({
     confirmPixManualPayment,
     cancelCharge,
     checkPaymentStatus,
-  } = useCobranca({ clienteId, sessionId });
+  } = useCobranca({ clienteId, sessionId, galeriaId: galeriaId ?? undefined });
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setValor(valorSugerido);
       setValorType('total');
-      setDescricao('');
+      if (finalidade === 'fotos_extras') {
+        setDescricao(`Fotos extras${nomeSessao ? ` - ${nomeSessao}` : ''}`);
+      } else if (finalidade === 'sessao_e_extras') {
+        setDescricao(`Sessão + fotos extras${nomeSessao ? ` - ${nomeSessao}` : ''}`);
+      } else {
+        setDescricao('');
+      }
       setSelectedProvider(null);
       setCurrentCharge(null);
       setCurrentChargeId(null);
@@ -226,6 +233,7 @@ export function ChargeModal({
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
       setPayerEditing(false);
+
       // Hidratar payer a partir do cliente
       (async () => {
         const { data } = await supabase
@@ -250,20 +258,7 @@ export function ChargeModal({
         }
       })();
     }
-  }, [isOpen, valorSugerido, clienteId, clienteNome, clienteWhatsapp]);
-
-  // (Removido) — o modal antigo tinha um bloco "Finalidade: Fotos extras"
-  // com snapshot da RPC. Extras agora são cobrados exclusivamente pelo
-  // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
-
-
-
-
-
-
-
-
-
+  }, [isOpen, valorSugerido, clienteId, clienteNome, clienteWhatsapp, finalidade, nomeSessao]);
 
   // Fetch Asaas settings when provider is selected
   useEffect(() => {
@@ -284,7 +279,6 @@ export function ChargeModal({
         .single();
       if (data?.dados_extras) {
         const d = getUnifiedPaymentSettings<Record<string, unknown>>(data.dados_extras);
-        // Read new fields with backward compat
         const legacyAntecipar = d.incluirTaxaAntecipacao === true;
         const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
         const repassarTaxaAntecipacao = (d.repassarTaxaAntecipacao as boolean) ?? legacyAntecipar;
@@ -299,7 +293,6 @@ export function ChargeModal({
           ireiAntecipar,
           repassarTaxaAntecipacao,
         });
-        // Pre-fill per-charge overrides from global settings (qualquer override na hora de gerar deve prevalecer)
         setOverrideRepassarTaxas(!absorverTaxa);
         setOverrideAntecipar(ireiAntecipar);
         setOverrideRepassarAntecipacao(ireiAntecipar ? repassarTaxaAntecipacao : false);
@@ -321,20 +314,38 @@ export function ChargeModal({
   };
 
   /**
-   * Valida o contrato Gestão↔Gallery antes de submeter qualquer cobrança.
-   *
-   * IMPORTANTE: Este modal só cobra a SESSÃO. Fotos extras têm modal
-   * dedicado (`ExtraChargeModal`) que chama `gallery-create-payment`.
-   * Mantemos o guard anti-ambiguidade para bloquear "cobrar como sessão"
-   * um valor que bata com o saldo pendente de extras.
+   * Valida e constrói o payload de binding Gestão↔Gallery antes de submeter qualquer cobrança.
    */
   const buildBindingPayload = async (): Promise<
     | {
-        finalidade: 'sessao';
+        finalidade: 'sessao' | 'fotos_extras' | 'sessao_e_extras';
+        galeriaId?: string | null;
+        qtdFotos?: number | null;
+        snapshotFotosIncluidas?: number | null;
+        valorSessaoComponente?: number | null;
+        valorExtrasComponente?: number | null;
       }
     | null
   > => {
     const { toast } = await import('sonner');
+    if (finalidade === 'fotos_extras') {
+      return {
+        finalidade: 'fotos_extras',
+        galeriaId: galeriaId || null,
+        qtdFotos: qtdFotos || null,
+        snapshotFotosIncluidas: snapshotFotosIncluidas || null,
+      };
+    }
+    if (finalidade === 'sessao_e_extras') {
+      return {
+        finalidade: 'sessao_e_extras',
+        galeriaId: galeriaId || null,
+        qtdFotos: qtdFotos || null,
+        snapshotFotosIncluidas: snapshotFotosIncluidas || null,
+        valorSessaoComponente: valorSessaoComponente ?? 0,
+        valorExtrasComponente: valorExtrasComponente ?? valor,
+      };
+    }
     if (sessionId) {
       const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
       if (guard.error) {
@@ -344,7 +355,6 @@ export function ChargeModal({
     }
     return { finalidade: 'sessao' };
   };
-
 
   /**
    * Persiste os dados do pagador no CRM antes de gerar cobrança.
@@ -388,6 +398,11 @@ export function ChargeModal({
       const result = await createPixManualCharge({
         clienteId,
         sessionId,
+        galeriaId: binding.galeriaId,
+        qtdFotos: binding.qtdFotos,
+        snapshotFotosIncluidas: binding.snapshotFotosIncluidas,
+        valorSessaoComponente: binding.valorSessaoComponente,
+        valorExtrasComponente: binding.valorExtrasComponente,
         valor,
         descricao: descricao || undefined,
         tipoCobranca: 'pix',
@@ -413,6 +428,11 @@ export function ChargeModal({
     const result = await createLinkCharge({
       clienteId,
       sessionId,
+      galeriaId: binding.galeriaId,
+      qtdFotos: binding.qtdFotos,
+      snapshotFotosIncluidas: binding.snapshotFotosIncluidas,
+      valorSessaoComponente: binding.valorSessaoComponente,
+      valorExtrasComponente: binding.valorExtrasComponente,
       valor,
       descricao: descricao || undefined,
       tipoCobranca: 'link',
@@ -423,6 +443,7 @@ export function ChargeModal({
     if (result.success) {
       const linkUrl = result.checkoutUrl || result.paymentLink;
       if (linkUrl) {
+        window.open(linkUrl, '_blank', 'noopener,noreferrer');
         setCurrentCharge({
           paymentLink: linkUrl,
           checkoutUrl: linkUrl,
@@ -444,6 +465,11 @@ export function ChargeModal({
       const result = await createAsaasPixCharge({
         clienteId,
         sessionId,
+        galeriaId: binding.galeriaId,
+        qtdFotos: binding.qtdFotos,
+        snapshotFotosIncluidas: binding.snapshotFotosIncluidas,
+        valorSessaoComponente: binding.valorSessaoComponente,
+        valorExtrasComponente: binding.valorExtrasComponente,
         valor,
         descricao: descricao || undefined,
         provedor: 'asaas',
@@ -478,8 +504,13 @@ export function ChargeModal({
       const result = await createLinkCharge({
         clienteId,
         sessionId,
+        galeriaId: binding.galeriaId,
+        qtdFotos: binding.qtdFotos,
+        snapshotFotosIncluidas: binding.snapshotFotosIncluidas,
+        valorSessaoComponente: binding.valorSessaoComponente,
+        valorExtrasComponente: binding.valorExtrasComponente,
         valor,
-        descricao: descricao || 'Cobrança Asaas',
+        descricao: descricao || (finalidade === 'fotos_extras' ? 'Fotos extras' : finalidade === 'sessao_e_extras' ? 'Sessão + fotos extras' : 'Cobrança Asaas'),
         tipoCobranca: 'link',
         provedor: 'asaas',
         finalidade: binding.finalidade,
@@ -493,6 +524,7 @@ export function ChargeModal({
       if (result.success) {
         const linkUrl = result.checkoutUrl || result.paymentLink;
         if (linkUrl) {
+          window.open(linkUrl, '_blank', 'noopener,noreferrer');
           setCurrentCharge({
             paymentLink: linkUrl,
             checkoutUrl: linkUrl,
@@ -545,11 +577,21 @@ export function ChargeModal({
             <div className="flex items-center justify-between mb-3 pr-6">
               <SheetTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
                 <CreditCard className="h-4 w-4 text-accent-gold" />
-                Cobrar cliente
+                {finalidade === 'fotos_extras'
+                  ? 'Cobrar fotos extras'
+                  : finalidade === 'sessao_e_extras'
+                  ? 'Cobrar tudo (link único)'
+                  : 'Cobrar cliente'}
                 <span className="text-sm font-normal text-muted-foreground ml-1">· {clienteNome}</span>
               </SheetTitle>
               {step ? <ChargeStepBadge step={step} /> : null}
             </div>
+
+            {nomeSessao && (
+              <div className="text-xs text-muted-foreground mb-2">
+                Sessão: <strong className="text-foreground">{nomeSessao}</strong>
+              </div>
+            )}
 
             <div className="flex items-center gap-6">
               <button
@@ -579,6 +621,37 @@ export function ChargeModal({
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {activeTab === 'cobrar' ? (
               <>
+                {/* Breakdown para cobrança combinada */}
+                {finalidade === 'sessao_e_extras' && (
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-2.5 shadow-xs">
+                    <div className="text-xs text-muted-foreground">
+                      {(valorSessaoComponente ?? 0) > 0 && (
+                        <>
+                          Sessão <strong className="text-foreground">R$ {(valorSessaoComponente ?? 0).toFixed(2).replace('.', ',')}</strong>
+                          <span className="mx-1.5 opacity-60">+</span>
+                        </>
+                      )}
+                      Extras ({qtdFotos ?? 0}){' '}
+                      <strong className="text-foreground">R$ {(valorExtrasComponente ?? 0).toFixed(2).replace('.', ',')}</strong>
+                    </div>
+                    <div className="text-sm font-bold text-primary">
+                      Total R$ {valor.toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info badge para cobrança de fotos extras */}
+                {finalidade === 'fotos_extras' && qtdFotos != null && qtdFotos > 0 && (
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-2.5 shadow-xs">
+                    <div className="text-xs text-muted-foreground">
+                      Fotos extras selecionadas: <strong className="text-foreground">{qtdFotos}</strong>
+                    </div>
+                    <div className="text-sm font-bold text-primary">
+                      Total R$ {valor.toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+                )}
+
                 {/* VALOR E TIPO DA COBRANÇA */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -656,7 +729,7 @@ export function ChargeModal({
                   )}
                 </div>
 
-                {/* CONFIGURAÇÕES DO PAGAMENTO (APENAS OPÇÕES EDITÁVEIS NA CRIAÇÃO) */}
+                {/* CONFIGURAÇÕES DO PAGAMENTO (ASAAS) */}
                 {showAsaasSection && asaasSettings && asaasMode === 'options' && (
                   <div className="space-y-3 pt-1">
                     <div className="flex items-center justify-between">

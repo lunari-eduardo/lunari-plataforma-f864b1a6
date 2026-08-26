@@ -634,6 +634,7 @@ export function WorkflowCardExpanded({
           isOpen={showExtraChargeModal}
           onClose={() => setShowExtraChargeModal(false)}
           galeriaId={resolvedGalleryId}
+          clienteId={session.clienteId}
           clienteNome={session.nome}
           clienteWhatsapp={session.whatsapp}
           nomeSessao={session.pacote || session.nome}

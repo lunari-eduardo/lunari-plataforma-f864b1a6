@@ -722,6 +722,7 @@ export function SessionPaymentsManager({
           isOpen={showExtraChargeModal}
           onClose={() => setShowExtraChargeModal(false)}
           galeriaId={fin.resolvedGalleryId}
+          clienteId={sessionData.clienteId}
           clienteNome={sessionData.nome}
           nomeSessao={sessionData.descricao || sessionData.categoria}
           clienteWhatsapp={sessionData.whatsapp}
