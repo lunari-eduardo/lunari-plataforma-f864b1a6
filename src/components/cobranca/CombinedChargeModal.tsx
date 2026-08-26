@@ -16,11 +16,13 @@
  * pago da galeria.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Send,
   Loader2,
@@ -30,7 +32,10 @@ import {
   Settings2,
   Link2,
   QrCode,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +49,7 @@ import { useCobranca } from '@/hooks/useCobranca';
 import type { CobrancaResponse } from '@/types/cobranca';
 import { getPublicShareBaseUrl } from '@/utils/domainUtils';
 import { getUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
+import { normalizeAsaasFees, type NormalizedAsaasFees } from '@/lib/anticipationUtils';
 
 interface CombinedChargeModalProps {
   isOpen: boolean;
@@ -117,6 +123,65 @@ export function CombinedChargeModal({
   const [overrideRepassarTaxas, setOverrideRepassarTaxas] = useState(false);
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
+  const [accountFees, setAccountFees] = useState<NormalizedAsaasFees | null>(null);
+
+  useEffect(() => {
+    if (selectedProvider !== 'asaas') return;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const response = await supabase.functions.invoke('asaas-fetch-fees', {
+          body: { userId: user.id },
+        });
+        if (response.data?.success && response.data?.accountFees) {
+          setAccountFees(response.data.accountFees);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar taxas Asaas:', err);
+      }
+    })();
+  }, [selectedProvider]);
+
+  const calcularLiquidoEstimado = () => {
+    if (!valorTotal || valorTotal <= 0) return { liquido: 0, detalhe: '' };
+    
+    if (overrideRepassarTaxas && (!overrideAntecipar || overrideRepassarAntecipacao)) {
+      return {
+        liquido: valorTotal,
+        detalhe: 'Cliente arca com as taxas de processamento.',
+      };
+    }
+
+    const fees = accountFees || normalizeAsaasFees(null);
+    const tier1 = fees.creditCard?.tiers?.[0] || { percentageFee: 2.99 };
+    const opVal = fees.creditCard?.operationValue ?? 0.49;
+
+    let descontoProcessamento = 0;
+    if (!overrideRepassarTaxas) {
+      descontoProcessamento = (valorTotal * tier1.percentageFee / 100) + opVal;
+    }
+
+    let descontoAntecipacao = 0;
+    if (overrideAntecipar && !overrideRepassarAntecipacao) {
+      const taxaMensal = fees.creditCard?.detachedMonthlyFeeValue ?? 1.25;
+      descontoAntecipacao = valorTotal * (taxaMensal / 100);
+    }
+
+    const totalDesconto = descontoProcessamento + descontoAntecipacao;
+    const liquido = Math.max(0, valorTotal - totalDesconto);
+
+    const desc = [];
+    if (!overrideRepassarTaxas) desc.push(`processamento (~R$ ${descontoProcessamento.toFixed(2).replace('.', ',')})`);
+    if (overrideAntecipar && !overrideRepassarAntecipacao) desc.push(`antecipação (~R$ ${descontoAntecipacao.toFixed(2).replace('.', ',')})`);
+
+    const detalhe = desc.length > 0
+      ? `Você absorve ${desc.join(' e ')}.`
+      : 'Você absorve as taxas no cartão.';
+
+    return { liquido, detalhe };
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -350,24 +415,41 @@ export function CombinedChargeModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent
-          className="max-w-lg md:max-w-2xl max-h-[92vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
-          overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
+      <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent
+          side="right"
+          className={cn(
+            'w-full sm:max-w-[520px] p-0 gap-0 flex flex-col',
+            'h-dvh max-h-dvh bg-background backdrop-blur-none shadow-2xl',
+          )}
         >
-          <DialogHeader className="px-4 pt-3 pb-2 border-b border-border/50">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Send className="h-4 w-4 text-primary" />
-              {soExtras ? 'Cobrar fotos extras' : 'Cobrar tudo (link único)'}
-              <span className="text-xs text-muted-foreground font-normal ml-1">
-                · {clienteNome}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
+          {/* ============================ CABEÇALHO FIXO ============================ */}
+          <header className="shrink-0 pt-3.5 pb-3 px-4 border-b border-border/60 relative">
+            <div className="flex items-center justify-between pr-6">
+              <SheetTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Send className="h-4 w-4 text-primary" />
+                {soExtras ? 'Cobrar fotos extras' : 'Cobrar tudo (link único)'}
+                {clienteNome && (
+                  <span className="text-sm font-normal text-muted-foreground ml-1">
+                    · {clienteNome}
+                  </span>
+                )}
+              </SheetTitle>
+            </div>
+            {nomeSessao && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Sessão: <strong className="text-foreground">{nomeSessao}</strong>
+              </div>
+            )}
+          </header>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Breakdown enxuto — 1 linha */}
-            <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+          {/* =========================== CONTEÚDO ROLÁVEL =========================== */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-4"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {/* Breakdown enxuto */}
+            <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-2.5 shadow-xs">
               <div className="text-xs text-muted-foreground">
                 {valorSessaoComponente > 0 && (
                   <>
@@ -378,7 +460,7 @@ export function CombinedChargeModal({
                 Extras ({qtdFotosExtras}){' '}
                 <strong className="text-foreground">{currency(valorExtrasComponente)}</strong>
               </div>
-              <div className="text-base font-semibold text-primary">
+              <div className="text-base font-bold text-primary">
                 Total {currency(valorTotal)}
               </div>
             </div>
@@ -386,21 +468,28 @@ export function CombinedChargeModal({
             {/* Descrição */}
             {!result && (
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Descrição
-                </Label>
-                <Textarea
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Descrição (Opcional)
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {descricao.length}/140
+                  </span>
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Ex.: Sessão + Fotos extras"
                   value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  className="resize-none h-14 text-sm"
+                  onChange={(e) => setDescricao(e.target.value.substring(0, 140))}
+                  className="h-10 text-xs bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
                 />
               </div>
             )}
 
-            {/* Meio de pagamento */}
+            {/* Meio de cobrança */}
             {!result && (
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   Meio de cobrança
                 </Label>
                 <ProviderSelector
@@ -410,48 +499,101 @@ export function CombinedChargeModal({
               </div>
             )}
 
-            {/* Overrides Asaas (mesmo bloco do ChargeModal) */}
+            {/* Overrides Asaas */}
             {!result && showAsaas && asaasSettings && asaasMode === 'options' && (
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                  <Settings2 className="h-3 w-3" />
-                  Opções desta cobrança
-                </Label>
-
-                <div className="rounded-md border border-border/60 divide-y divide-border/40">
-                  <div className="flex items-center justify-between px-3 h-11">
-                    <div className="min-w-0">
-                      <Label htmlFor="cc-override-taxas" className="text-sm">Repassar taxas de processamento</Label>
-                      <p className="text-[11px] text-muted-foreground truncate">Cliente paga as taxas de cartão</p>
-                    </div>
-                    <Switch id="cc-override-taxas" checked={overrideRepassarTaxas} onCheckedChange={setOverrideRepassarTaxas} />
-                  </div>
-
-                  <div className="flex items-center justify-between px-3 h-11">
-                    <div className="min-w-0">
-                      <Label htmlFor="cc-override-antecipar" className="text-sm">Antecipar parcelas</Label>
-                      <p className="text-[11px] text-muted-foreground truncate">Solicitar antecipação no Asaas</p>
-                    </div>
-                    <Switch
-                      id="cc-override-antecipar"
-                      checked={overrideAntecipar}
-                      onCheckedChange={(v) => {
-                        setOverrideAntecipar(v);
-                        if (!v) setOverrideRepassarAntecipacao(false);
-                      }}
-                    />
-                  </div>
-
-                  {overrideAntecipar && (
-                    <div className="flex items-center justify-between px-3 h-11 bg-primary/5">
-                      <div className="min-w-0 pl-3 border-l-2 border-primary/40">
-                        <Label htmlFor="cc-override-repassar-antecipacao" className="text-sm">Repassar antecipação</Label>
-                        <p className="text-[11px] text-muted-foreground truncate">Inclui taxa no valor do cliente</p>
-                      </div>
-                      <Switch id="cc-override-repassar-antecipacao" checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
-                    </div>
-                  )}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Configurações do pagamento
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-[11px] text-muted-foreground font-medium hover:text-foreground flex items-center gap-1 transition-colors"
+                  >
+                    {showSettings ? 'Ocultar' : 'Expandir'}
+                    {showSettings ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
                 </div>
+
+                {showSettings && (
+                  <div className="space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Taxas do Cartão */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-medium">Taxas do Cartão</Label>
+                      <RadioGroup
+                        value={overrideRepassarTaxas ? "cliente" : "eu"}
+                        onValueChange={(v) => setOverrideRepassarTaxas(v === 'cliente')}
+                        className="grid grid-cols-1 gap-2"
+                      >
+                        <Label htmlFor="cc-tx-cliente" className={cn("flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors shadow-xs", overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
+                          <RadioGroupItem value="cliente" id="cc-tx-cliente" />
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold">Cliente paga as taxas</span>
+                            <span className="text-[10px] text-muted-foreground font-normal">O valor das taxas será repassado ao cliente.</span>
+                          </div>
+                        </Label>
+                        <Label htmlFor="cc-tx-eu" className={cn("flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors shadow-xs", !overrideRepassarTaxas ? "border-primary bg-primary/5" : "border-border/60 bg-muted/10 hover:bg-muted/30")}>
+                          <RadioGroupItem value="eu" id="cc-tx-eu" />
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold">Eu pago as taxas</span>
+                            <span className="text-[10px] text-muted-foreground font-normal">As taxas serão descontadas do valor recebido.</span>
+                          </div>
+                        </Label>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Antecipação */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-medium">Antecipação</Label>
+                      <div className="p-3 bg-muted/30 border border-border/60 rounded-xl space-y-3 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold">Solicitar antecipação automática</span>
+                            <span className="text-[10px] text-muted-foreground font-normal">Receba o valor das parcelas antecipado</span>
+                          </div>
+                          <Switch checked={overrideAntecipar} onCheckedChange={(v) => {
+                            setOverrideAntecipar(v);
+                            if (!v) setOverrideRepassarAntecipacao(false);
+                          }} />
+                        </div>
+
+                        {overrideAntecipar && (
+                          <div className="pt-2.5 border-t border-border/60 flex items-center justify-between animate-in fade-in">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-semibold text-primary">Repassar custo da antecipação</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">Inclui taxa no valor cobrado do cliente</span>
+                            </div>
+                            <Switch checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Recebimento líquido estimado */}
+                    {(() => {
+                      const est = calcularLiquidoEstimado();
+                      return (
+                        <div className="flex items-center justify-between p-3.5 bg-muted/40 border border-border/60 rounded-xl shadow-xs mt-1">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-lg bg-background border border-border/60 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-muted-foreground">%</span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recebimento líquido estimado</span>
+                              <span className="text-[10px] text-muted-foreground truncate leading-tight">
+                                {est.detalhe}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-base font-bold text-foreground pl-2 whitespace-nowrap">
+                            R$ {est.liquido.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             )}
 
@@ -481,12 +623,33 @@ export function CombinedChargeModal({
 
             {/* Ação — Asaas (mesma UX do ChargeModal) */}
             {!result && showAsaas && asaasSettings && asaasMode === 'options' && (
-              <AsaasChargeOptions
-                valor={valorTotal}
-                selectedMethod={asaasSelectedMethod}
-                onSelectMethod={setAsaasSelectedMethod}
-                hasPix={asaasSettings.habilitarPix}
-              />
+              <>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    Tipo de cobrança
+                  </Label>
+                  <AsaasChargeOptions
+                    valor={valorTotal}
+                    selectedMethod={asaasSelectedMethod}
+                    onSelectMethod={setAsaasSelectedMethod}
+                    hasPix={asaasSettings.habilitarPix}
+                  />
+                </div>
+
+                <div className="pt-1">
+                  {asaasSelectedMethod === 'pix' ? (
+                    <Button onClick={handleAsaasPix} disabled={asaasPixLoading} className="w-full h-12 text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs">
+                      {asaasPixLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Gerar PIX — R$ {valorTotal.toFixed(2).replace('.', ',')}
+                    </Button>
+                  ) : (
+                    <Button onClick={handleAsaasLink} disabled={asaasLinkLoading} className="w-full h-12 text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs">
+                      {asaasLinkLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Gerar Link — R$ {valorTotal.toFixed(2).replace('.', ',')}
+                    </Button>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Resultado */}
@@ -501,7 +664,7 @@ export function CombinedChargeModal({
             )}
 
             {result && !pixPayload && shareLink && (
-              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 space-y-2.5 shadow-xs">
                 <div className="flex items-start gap-2">
                   <ExternalLink className="h-4 w-4 text-primary mt-0.5" />
                   <div className="text-sm min-w-0">
@@ -510,10 +673,10 @@ export function CombinedChargeModal({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="gap-1.5 flex-1" onClick={copyLink}>
+                  <Button size="sm" variant="outline" className="gap-1.5 flex-1 rounded-lg" onClick={copyLink}>
                     <Copy className="h-3.5 w-3.5" /> Copiar
                   </Button>
-                  <Button size="sm" className="gap-1.5 flex-1" onClick={sendWhatsapp}>
+                  <Button size="sm" className="gap-1.5 flex-1 rounded-lg" onClick={sendWhatsapp}>
                     <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                   </Button>
                 </div>
@@ -521,39 +684,18 @@ export function CombinedChargeModal({
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border/50 bg-background/50">
-            <Button variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          {/* ============================= RODAPÉ FIXO ============================== */}
+          <footer className="shrink-0 border-t border-border/60 p-3 px-4 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-3 shadow-lg">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="rounded-xl h-10 px-5 text-xs font-semibold bg-muted/40 hover:bg-muted border-border/60"
+            >
               {result ? 'Fechar' : 'Cancelar'}
             </Button>
-
-            {!result && showAsaas && asaasSettings && asaasMode === 'options' && (
-              <Button
-                type="button"
-                onClick={asaasSelectedMethod === 'link' ? handleAsaasLink : handleAsaasPix}
-                disabled={asaasLinkLoading || asaasPixLoading}
-                className="gap-2 font-medium px-5"
-              >
-                {(asaasLinkLoading || asaasPixLoading) ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Gerando...
-                  </>
-                ) : asaasSelectedMethod === 'link' ? (
-                  <>
-                    <Link2 className="h-4 w-4" />
-                    Gerar Link de Checkout
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="h-4 w-4" />
-                    Gerar PIX Presencial
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </footer>
+        </SheetContent>
+      </Sheet>
 
       {/* Asaas PIX QR modal */}
       <AsaasPixModal
