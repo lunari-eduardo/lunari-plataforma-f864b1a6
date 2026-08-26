@@ -1,7 +1,6 @@
 ﻿-- Migration: 20260826175900_fix_tg_protect_no_overcharge_null_gallery.sql
--- Description: Garante que cobranças de fotos extras SEM galeria vinculada (extras manuais)
--- passem pela trigger sem erro. A trigger ja tinha o guard, mas este deploy
--- garante que a versao em producao esteja atualizada com o guard correto.
+-- Description: Permite cobranças de fotos extras criadas pelo fotógrafo no Workflow/CRM (com session_id ou sem galeria)
+-- sem ser bloqueado pela trava anti-overcharge da galeria pública.
 
 CREATE OR REPLACE FUNCTION public.tg_protect_no_overcharge()
 RETURNS trigger
@@ -17,9 +16,15 @@ DECLARE
   v_check_valor numeric;
   v_base_valor numeric;
 BEGIN
-  -- SEM galeria vinculada -> extras manuais (sem galeria, sem modulo Gallery),
-  -- ou valor zero -> nao ha o que validar, permite o INSERT.
+  -- 1) Sem galeria vinculada OU valor zero -> nada a validar, permite o INSERT
   IF NEW.galeria_id IS NULL OR COALESCE(NEW.valor, 0) <= 0 THEN
+    RETURN NEW;
+  END IF;
+
+  -- 2) Se a cobranca possui session_id (originada do Workflow / CRM / Studio),
+  -- o fotografo tem total autoridade para definir/alterar o valor de extras e negociar com o cliente.
+  -- A trava anti-overcharge aplica-se exclusivamente ao checkout publico da galeria (onde session_id IS NULL).
+  IF NEW.session_id IS NOT NULL THEN
     RETURN NEW;
   END IF;
 
@@ -43,7 +48,7 @@ BEGIN
 
   v_calc := public.calculate_gallery_extra_payment(NEW.galeria_id);
   IF (v_calc->>'success')::boolean IS NOT TRUE THEN
-    -- Galeria sem calculo formal ou RPC falhou -- permite o INSERT (extras manuais com galeria)
+    -- Galeria sem calculo formal ou RPC falhou -- permite o INSERT
     RETURN NEW;
   END IF;
 

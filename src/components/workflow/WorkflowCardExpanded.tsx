@@ -47,7 +47,6 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  const [showExtraManualModal, setShowExtraManualModal] = useState(false);
   /**
    * "Cobrar tudo" usa CombinedChargeModal quando há galeria + sessão com valores.
    * O `combinedIntent` torna a intenção do clique explícita para o modal.
@@ -548,15 +547,7 @@ export function WorkflowCardExpanded({
             session={session}
             onCobrar={() => setShowChargeModal(true)}
             onCobrarExtras={() => {
-              // Se tiver galeria com saldo calculado formalmente pela galeria, usa o modal canônico de galeria
-              if (resolvedGalleryId && extraCalc && extraCalc.valor_a_cobrar > 0) {
-                setShowExtraChargeModal(true);
-              } else {
-                // Extras manuais (sem galeria OU galeria sem cálculo formal):
-                // abre ChargeModal unificado diretamente — SEM galeriaId para evitar
-                // que a trigger anti-overcharge tente validar a galeria com dados inconsistentes.
-                setShowExtraManualModal(true);
-              }
+              setShowExtraChargeModal(true);
             }}
             onCobrarTudo={
               extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
@@ -628,27 +619,14 @@ export function WorkflowCardExpanded({
         valorSugerido={pendenteSessaoSugerido}
       />
 
-      {resolvedGalleryId && (
-        <ExtraChargeModal
-          isOpen={showExtraChargeModal}
-          onClose={() => setShowExtraChargeModal(false)}
-          galeriaId={resolvedGalleryId}
-          clienteId={session.clienteId}
-          clienteNome={session.nome}
-          clienteWhatsapp={session.whatsapp}
-          nomeSessao={session.pacote || session.nome}
-        />
-      )}
-
-      {/* Extras manuais: sem galeria ou galeria sem cálculo formal — usa ChargeModal diretamente
-          Não passa galeriaId para evitar que a trigger anti-overcharge falhe com galeria_id inconsistente */}
       <ChargeModal
-        isOpen={showExtraManualModal}
-        onClose={() => setShowExtraManualModal(false)}
+        isOpen={showExtraChargeModal}
+        onClose={() => setShowExtraChargeModal(false)}
         clienteId={session.clienteId || ""}
         clienteNome={session.nome || "Cliente"}
         clienteWhatsapp={session.whatsapp}
         sessionId={session.sessionId || session.id}
+        galeriaId={resolvedGalleryId || null}
         valorSugerido={extrasPendente}
         finalidade="fotos_extras"
         qtdFotos={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}

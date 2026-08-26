@@ -128,8 +128,9 @@ export async function resolveCobrancaBinding(
     };
   }
 
-  const qtd = Number(raw.qtdFotos ?? 0);
-  if (!Number.isFinite(qtd) || qtd <= 0) {
+  const qtdRaw = Number(raw.qtdFotos ?? 0);
+  const qtd = Number.isFinite(qtdRaw) && qtdRaw > 0 ? Math.trunc(qtdRaw) : (raw.sessionId ? 1 : 0);
+  if (qtd <= 0) {
     return {
       error: {
         code: "INVALID_QTD_FOTOS",

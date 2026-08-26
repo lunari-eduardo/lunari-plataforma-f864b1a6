@@ -38,7 +38,6 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  const [showExtraManualModal, setShowExtraManualModal] = useState(false);
   /** "Cobrar tudo": abre UM único modal (finalidade `sessao_e_extras`, link único). */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
@@ -423,15 +422,7 @@ export function SessionPaymentsManager({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={!canCobrarExtras}
-                      onClick={() => {
-                        // Com galeria formal → ExtraChargeModal (usa RPC da galeria)
-                        // Sem galeria ou extras manuais → ChargeModal direto (sem galeriaId)
-                        if (fin.resolvedGalleryId) {
-                          setShowExtraChargeModal(true);
-                        } else {
-                          setShowExtraManualModal(true);
-                        }
-                      }}
+                      onClick={() => setShowExtraChargeModal(true)}
                     >
                       <Images className="h-3.5 w-3.5 mr-2 text-amber-500" />
                       <div className="flex-1">
@@ -726,28 +717,15 @@ export function SessionPaymentsManager({
         valorSugerido={valorRestanteSessao}
       />
 
-      {/* Extra Charge Modal — galeria com cálculo formal (fotos_extras via galeria) */}
-      {fin.resolvedGalleryId && (
-        <ExtraChargeModal
-          isOpen={showExtraChargeModal}
-          onClose={() => setShowExtraChargeModal(false)}
-          galeriaId={fin.resolvedGalleryId}
-          clienteId={sessionData.clienteId}
-          clienteNome={sessionData.nome}
-          nomeSessao={sessionData.descricao || sessionData.categoria}
-          clienteWhatsapp={sessionData.whatsapp}
-        />
-      )}
-
-      {/* Extras manuais: sem galeria ou galeria sem cálculo formal — usa ChargeModal diretamente.
-          NÃO passa galeriaId para evitar que a trigger anti-overcharge falhe. */}
+      {/* Extra Charge Modal (fotos extras) */}
       <ChargeModal
-        isOpen={showExtraManualModal}
-        onClose={() => setShowExtraManualModal(false)}
+        isOpen={showExtraChargeModal}
+        onClose={() => setShowExtraChargeModal(false)}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
+        galeriaId={fin.resolvedGalleryId || null}
         valorSugerido={fin.extrasPend}
         finalidade="fotos_extras"
         qtdFotos={fin.qtdExtras || 0}
