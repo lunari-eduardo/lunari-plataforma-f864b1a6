@@ -444,7 +444,6 @@ export function ChargeModal({
     if (result.success) {
       const linkUrl = result.checkoutUrl || result.paymentLink;
       if (linkUrl) {
-        window.open(linkUrl, '_blank', 'noopener,noreferrer');
         setCurrentCharge({
           paymentLink: linkUrl,
           checkoutUrl: linkUrl,
@@ -525,7 +524,6 @@ export function ChargeModal({
       if (result.success) {
         const linkUrl = result.checkoutUrl || result.paymentLink;
         if (linkUrl) {
-          window.open(linkUrl, '_blank', 'noopener,noreferrer');
           setCurrentCharge({
             paymentLink: linkUrl,
             checkoutUrl: linkUrl,
