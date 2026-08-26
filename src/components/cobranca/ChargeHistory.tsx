@@ -136,15 +136,25 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
   }
 
   return (
-    <div className="-mx-2 px-2 overflow-x-auto">
-      <Table>
+    <div className="w-full overflow-hidden">
+      <Table className="w-full table-fixed text-xs">
         <TableHeader>
-          <TableRow>
-            <TableHead className="text-xs">Data</TableHead>
-            <TableHead className="text-xs">Valor</TableHead>
-            <TableHead className="text-xs">Forma</TableHead>
-            <TableHead className="text-xs">Status</TableHead>
-            <TableHead className="text-xs text-right w-[70px]">Ações</TableHead>
+          <TableRow className="hover:bg-transparent border-b border-border/60">
+            <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-2 w-[72px]">
+              Data
+            </TableHead>
+            <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-2 w-[80px]">
+              Valor
+            </TableHead>
+            <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-2">
+              Forma
+            </TableHead>
+            <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-2">
+              Status
+            </TableHead>
+            <TableHead className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-2 text-right w-[64px]">
+              Ações
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -165,27 +175,29 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                     isExpanded ? "bg-muted/40 border-b-0" : "hover:bg-muted/30"
                   )}
                 >
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                  <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap px-2 py-2.5">
                     {formatDateForDisplay(cobranca.createdAt)}
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div>
-                      <span className="font-semibold text-xs text-foreground">{formatCurrency(cobranca.valor)}</span>
+                  <TableCell className="px-2 py-2.5">
+                    <div className="truncate">
+                      <span className="font-semibold text-xs text-foreground block truncate">
+                        {formatCurrency(cobranca.valor)}
+                      </span>
                       {cobranca.valorLiquido != null && cobranca.valorLiquido < cobranca.valor && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Líquido: {formatCurrency(cobranca.valorLiquido)}
+                        <p className="text-[9px] text-muted-foreground truncate">
+                          Liq: {formatCurrency(cobranca.valorLiquido)}
                         </p>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      {tipoConfig.icon}
-                      <span className="text-xs font-medium">{tipoConfig.label}</span>
+                  <TableCell className="px-2 py-2.5">
+                    <div className="flex items-center gap-1 text-muted-foreground truncate min-w-0">
+                      <span className="shrink-0">{tipoConfig.icon}</span>
+                      <span className="text-[11px] font-medium truncate">{tipoConfig.label}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3">
-                    <Badge variant={statusConfig.variant} className={`text-[10px] font-medium px-2 py-0.5 ${statusConfig.className || ''}`}>
+                  <TableCell className="px-2 py-2.5">
+                    <Badge variant={statusConfig.variant} className={`text-[9px] font-medium px-1.5 py-0.5 truncate max-w-full inline-block ${statusConfig.className || ''}`}>
                       {statusConfig.label}
                       {cobranca.status === 'parcialmente_pago' && cobranca.totalParcelas && cobranca.totalParcelas > 1
                         ? ` (${cobranca.parcelasPagas || 0}/${cobranca.totalParcelas})`
@@ -194,8 +206,8 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                         : ''}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right py-3">
-                    <div className="flex justify-end items-center gap-1">
+                  <TableCell className="text-right px-2 py-2.5">
+                    <div className="flex justify-end items-center gap-0.5">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -204,14 +216,14 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                           toggleExpand(cobranca);
                         }}
                         className={cn(
-                          "h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors",
+                          "h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors shrink-0",
                           isExpanded && "bg-muted text-foreground"
                         )}
                         title={isExpanded ? "Recolher detalhes" : "Expandir detalhes da cobrança"}
                       >
                         <ChevronDown
                           className={cn(
-                            "h-4 w-4 transition-transform duration-200",
+                            "h-3.5 w-3.5 transition-transform duration-200",
                             isExpanded && "rotate-180 text-primary"
                           )}
                         />
@@ -224,35 +236,35 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                             e.stopPropagation();
                             onCancel(cobranca.id);
                           }}
-                          className="h-8 w-8 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                          className="h-7 w-7 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-md shrink-0"
                           title="Cancelar cobrança"
                         >
-                          <XCircle className="h-4 w-4" />
+                          <XCircle className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
                   </TableCell>
                 </TableRow>
 
-                {/* Linha expansível com detalhes inline */}
+                {/* Linha expansível com detalhes inline 100% responsivos */}
                 {isExpanded && (
                   <TableRow className="bg-muted/40 hover:bg-muted/40 border-t-0">
-                    <TableCell colSpan={5} className="p-3 pt-0 pb-3.5">
-                      <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
+                    <TableCell colSpan={5} className="p-2 pt-0 pb-3">
+                      <div className="p-3 rounded-xl bg-background border border-border/60 space-y-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-200 w-full min-w-0">
                         {/* Card Resumo com Valor e Status */}
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-                          <div className="flex items-center justify-between">
+                        <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
                             <div>
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
                                 Valor Total
                               </span>
-                              <span className="text-xl font-bold text-foreground">
+                              <span className="text-lg font-bold text-foreground">
                                 {formatCurrency(cobranca.valor)}
                               </span>
                             </div>
                             <Badge
                               variant={statusConfig.variant}
-                              className={`text-xs font-semibold px-2.5 py-0.5 ${statusConfig.className || ''}`}
+                              className={`text-[10px] font-semibold px-2 py-0.5 ${statusConfig.className || ''}`}
                             >
                               {statusConfig.label}
                             </Badge>
@@ -260,9 +272,9 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
 
                           {/* Discriminação de Taxa e Líquido se aplicável */}
                           {cobranca.valorLiquido != null && cobranca.valorLiquido < cobranca.valor && (
-                            <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs">
+                            <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[11px]">
                               <span className="text-muted-foreground">
-                                Taxas estimadas: -{formatCurrency(cobranca.valor - cobranca.valorLiquido)}
+                                Taxas: -{formatCurrency(cobranca.valor - cobranca.valorLiquido)}
                               </span>
                               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                                 Líquido: {formatCurrency(cobranca.valorLiquido)}
@@ -273,38 +285,38 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
 
                         {/* Informações detalhadas em Grid 2x2 */}
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-0.5">
-                            <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
-                              <Calendar className="h-3 w-3" /> Criada em
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 space-y-0.5 min-w-0">
+                            <span className="text-muted-foreground flex items-center gap-1 text-[9px] font-medium">
+                              <Calendar className="h-3 w-3 shrink-0" /> Criada em
                             </span>
-                            <p className="font-semibold text-foreground text-xs">
+                            <p className="font-semibold text-foreground text-[11px] truncate">
                               {formatDateForDisplay(cobranca.createdAt)}
                             </p>
                           </div>
 
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-0.5">
-                            <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
-                              <CreditCard className="h-3 w-3" /> Gateway
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 space-y-0.5 min-w-0">
+                            <span className="text-muted-foreground flex items-center gap-1 text-[9px] font-medium">
+                              <CreditCard className="h-3 w-3 shrink-0" /> Gateway
                             </span>
-                            <p className="font-semibold text-foreground text-xs">
+                            <p className="font-semibold text-foreground text-[11px] truncate">
                               {getProviderLabel(cobranca.provedor)}
                             </p>
                           </div>
 
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-0.5">
-                            <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
-                              <Clock className="h-3 w-3" /> Forma
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 space-y-0.5 min-w-0">
+                            <span className="text-muted-foreground flex items-center gap-1 text-[9px] font-medium">
+                              <Clock className="h-3 w-3 shrink-0" /> Forma
                             </span>
-                            <p className="font-semibold text-foreground text-xs flex items-center gap-1">
+                            <p className="font-semibold text-foreground text-[11px] truncate">
                               {tipoConfig.label}
                             </p>
                           </div>
 
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-0.5">
-                            <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
-                              <Receipt className="h-3 w-3" /> Parcelamento
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 space-y-0.5 min-w-0">
+                            <span className="text-muted-foreground flex items-center gap-1 text-[9px] font-medium">
+                              <Receipt className="h-3 w-3 shrink-0" /> Parcelamento
                             </span>
-                            <p className="font-semibold text-foreground text-xs">
+                            <p className="font-semibold text-foreground text-[11px] truncate">
                               {cobranca.totalParcelas && cobranca.totalParcelas > 1
                                 ? `${cobranca.parcelasPagas || (cobranca.status === 'pago' ? cobranca.totalParcelas : 0)} de ${cobranca.totalParcelas}x`
                                 : 'À vista'}
@@ -314,28 +326,28 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
 
                         {/* Descrição se houver */}
                         {cobranca.descricao && (
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-0.5">
-                            <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
-                              <FileText className="h-3 w-3" /> Descrição
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 space-y-0.5 min-w-0">
+                            <span className="text-muted-foreground flex items-center gap-1 text-[9px] font-medium">
+                              <FileText className="h-3 w-3 shrink-0" /> Descrição
                             </span>
-                            <p className="text-xs text-foreground">{cobranca.descricao}</p>
+                            <p className="text-[11px] text-foreground break-words">{cobranca.descricao}</p>
                           </div>
                         )}
 
                         {/* ID de Transação */}
                         {(cobranca.mpPaymentId || cobranca.id) && (
-                          <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                              <Hash className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="text-muted-foreground shrink-0 text-[10px] font-medium">ID:</span>
-                              <span className="font-mono text-[11px] truncate text-foreground">
+                          <div className="p-2 rounded-lg bg-muted/20 border border-border/40 flex items-center justify-between text-xs min-w-0 gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground shrink-0 text-[9px] font-medium">ID:</span>
+                              <span className="font-mono text-[10px] truncate text-foreground min-w-0">
                                 {cobranca.mpPaymentId || cobranca.id}
                               </span>
                             </div>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 px-2 text-xs shrink-0 rounded-md"
+                              className="h-6 px-2 text-[10px] shrink-0 rounded-md"
                               onClick={() => handleCopy(cobranca.mpPaymentId || cobranca.id, `id-${cobranca.id}`, 'ID da cobrança')}
                             >
                               {copiedKey === `id-${cobranca.id}` ? (
@@ -349,62 +361,64 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
 
                         {/* Se houver Link de Pagamento */}
                         {paymentLink && (
-                          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
-                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
+                          <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20 space-y-2 min-w-0">
+                            <span className="text-[9px] font-bold text-primary uppercase tracking-wider block">
                               Link de Pagamento
                             </span>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/60 text-xs font-mono truncate text-muted-foreground">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                              <div className="flex-1 min-w-0 bg-background/80 px-2 py-1.5 rounded-lg border border-border/60 text-[10px] font-mono truncate text-muted-foreground">
                                 {paymentLink}
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-2.5 shrink-0 text-xs gap-1 rounded-lg"
-                                onClick={() => handleCopy(paymentLink, `link-${cobranca.id}`, 'Link de pagamento')}
-                              >
-                                {copiedKey === `link-${cobranca.id}` ? (
-                                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                ) : (
-                                  <Copy className="h-3.5 w-3.5" />
-                                )}
-                                Copiar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="h-8 px-2.5 shrink-0 text-xs gap-1 rounded-lg"
-                                asChild
-                              >
-                                <a href={paymentLink} target="_blank" rel="noreferrer">
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  Abrir
-                                </a>
-                              </Button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[11px] gap-1 rounded-md flex-1 sm:flex-initial"
+                                  onClick={() => handleCopy(paymentLink, `link-${cobranca.id}`, 'Link de pagamento')}
+                                >
+                                  {copiedKey === `link-${cobranca.id}` ? (
+                                    <Check className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                  Copiar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="h-7 px-2 text-[11px] gap-1 rounded-md flex-1 sm:flex-initial"
+                                  asChild
+                                >
+                                  <a href={paymentLink} target="_blank" rel="noreferrer">
+                                    <ExternalLink className="h-3 w-3" />
+                                    Abrir
+                                  </a>
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}
 
                         {/* Se houver Código Pix Copia e Cola */}
                         {cobranca.mpPixCopiaCola && (
-                          <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                          <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50 space-y-2 min-w-0">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
                               Pix Copia e Cola
                             </span>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/60 text-xs font-mono truncate text-muted-foreground">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                              <div className="flex-1 min-w-0 bg-background/80 px-2 py-1.5 rounded-lg border border-border/60 text-[10px] font-mono truncate text-muted-foreground">
                                 {cobranca.mpPixCopiaCola}
                               </div>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2.5 shrink-0 text-xs gap-1 rounded-lg"
+                                className="h-7 px-2 text-[11px] gap-1 rounded-md shrink-0 w-full sm:w-auto"
                                 onClick={() => handleCopy(cobranca.mpPixCopiaCola!, `pix-${cobranca.id}`, 'Código Pix')}
                               >
                                 {copiedKey === `pix-${cobranca.id}` ? (
-                                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  <Check className="h-3 w-3 text-emerald-500" />
                                 ) : (
-                                  <Copy className="h-3.5 w-3.5" />
+                                  <Copy className="h-3 w-3" />
                                 )}
                                 Copiar Pix
                               </Button>
