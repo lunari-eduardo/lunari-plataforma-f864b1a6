@@ -235,6 +235,13 @@ export function AsaasCheckout({
   const [cardSuccess, setCardSuccess] = useState(false);
   const [cardProcessing, setCardProcessing] = useState(false);
 
+  const handlePaymentSuccess = useCallback(() => {
+    // Quando embutido em modal de galeria (!data.cobrancaId), fecha o modal após 2s
+    if (!data.cobrancaId) {
+      setTimeout(() => onPaymentConfirmed(), 2000);
+    }
+  }, [data.cobrancaId, onPaymentConfirmed]);
+
   // Atualiza estados reativamente caso os hints cheguem assíncronos após montagem
   useEffect(() => {
     if (payerHints?.fullName && !pixName) setPixName(payerHints.fullName);
@@ -455,7 +462,7 @@ export function AsaasCheckout({
           if (pollData.status === 'pago' || pollData.updated) {
             if (pollRef.current) clearInterval(pollRef.current);
             setPixConfirmed(true);
-            setTimeout(() => onPaymentConfirmed(), 2000);
+            handlePaymentSuccess();
           }
         } catch { /* silently retry */ }
       }, POLL_INTERVAL);
@@ -464,7 +471,7 @@ export function AsaasCheckout({
     } finally {
       setPixLoading(false);
     }
-  }, [data, onPaymentConfirmed, onMissingCpf, showPixContactForm, pixName, pixEmail, pixCpfCnpj, pixPhone]);
+  }, [data, handlePaymentSuccess, onMissingCpf, showPixContactForm, pixName, pixEmail, pixCpfCnpj, pixPhone]);
 
   // ——— Validação do formulário inline de PIX ———
   const pixFormValid = (() => {
@@ -688,7 +695,7 @@ export function AsaasCheckout({
       if (result.paid || result.status === 'pago') {
         // Single payment (à vista) finalized inline by backend
         setCardSuccess(true);
-        setTimeout(() => onPaymentConfirmed(), 2000);
+        handlePaymentSuccess();
       } else if ((result.requiresPolling || result.creditCardStatus === 'AWAITING_RISK_ANALYSIS') && (result.cobrancaId || data.cobrancaId)) {
         // Installment or async payment — poll check-payment-status
         setCardLoading(true);
@@ -709,7 +716,7 @@ export function AsaasCheckout({
             if (pollData.status === 'pago') {
               setCardSuccess(true);
               setCardLoading(false);
-              setTimeout(() => onPaymentConfirmed(), 2000);
+              handlePaymentSuccess();
               return;
             }
 
@@ -734,7 +741,7 @@ export function AsaasCheckout({
       } else if (result.creditCardStatus === 'CONFIRMED' || result.creditCardStatus === 'RECEIVED') {
         // Fallback: backend said confirmed but didn't set paid flag
         setCardSuccess(true);
-        setTimeout(() => onPaymentConfirmed(), 2000);
+        handlePaymentSuccess();
       } else {
         throw new Error('Pagamento não foi aprovado. Tente outro cartão.');
       }
@@ -756,12 +763,19 @@ export function AsaasCheckout({
           <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/30">
             <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
-          <h1 className="text-2xl font-bold">Pagamento confirmado!</h1>
-          <p className="text-muted-foreground">
-            {data.cobrancaId 
-              ? "Obrigado! Seu pagamento foi processado com sucesso." 
-              : "Sua seleção foi finalizada com sucesso."}
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Pagamento confirmado!</h1>
+            <p className="text-muted-foreground">
+              {data.cobrancaId 
+                ? "Obrigado! Seu pagamento foi processado com sucesso." 
+                : "Sua seleção foi finalizada com sucesso."}
+            </p>
+          </div>
+          {studioName && (
+            <p className="text-xs text-muted-foreground pt-4 border-t border-border/40">
+              {studioName}
+            </p>
+          )}
         </div>
       </div>
     );
