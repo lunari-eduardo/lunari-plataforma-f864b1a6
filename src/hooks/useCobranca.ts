@@ -109,7 +109,6 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       const result = response.data as CobrancaResponse;
 
       if (result.success) {
-        toast.success('Pix gerado com sucesso!');
         await fetchCobrancas();
       } else {
         throw new Error(result.error || 'Falha ao gerar Pix');
@@ -172,7 +171,6 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       const result = response.data as CobrancaResponse;
 
       if (result.success) {
-        toast.success('Link de pagamento gerado!');
         await fetchCobrancas();
       } else {
         throw new Error(result.error || 'Falha ao gerar link de pagamento');
@@ -227,7 +225,6 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       const result = response.data as CobrancaResponse;
 
       if (result.success) {
-        toast.success('PIX gerado com sucesso!');
         await fetchCobrancas();
       } else {
         throw new Error(result.error || 'Falha ao gerar PIX Manual');

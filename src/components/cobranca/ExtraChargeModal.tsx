@@ -185,12 +185,6 @@ export function ExtraChargeModal({
       setResult(payload);
       invalidate();
       queryClient.invalidateQueries({ queryKey: ['cobrancas'] });
-
-      // Auto-abrir link em nova aba (checkout externo)
-      const link = payload.checkoutUrl || payload.paymentUrl;
-      if (link && !payload.transparentCheckout) {
-        window.open(link, '_blank', 'noopener,noreferrer');
-      }
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao gerar cobrança.');
     } finally {

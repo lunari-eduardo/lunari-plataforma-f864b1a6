@@ -301,8 +301,6 @@ export function CombinedChargeModal({
     setResult(response);
     if (response.cobranca?.id) setCurrentChargeId(response.cobranca.id);
     queryClient.invalidateQueries({ queryKey: ['cobrancas'] });
-    const link = response.checkoutUrl || response.paymentLink;
-    if (link) window.open(link, '_blank', 'noopener,noreferrer');
   }
 
   async function handleAsaasPix() {
@@ -376,8 +374,6 @@ export function CombinedChargeModal({
       }
       setAsaasMode('link');
       queryClient.invalidateQueries({ queryKey: ['cobrancas'] });
-      const link = response.checkoutUrl || response.paymentLink;
-      if (link) window.open(link, '_blank', 'noopener,noreferrer');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao gerar link Asaas.');
     } finally {
