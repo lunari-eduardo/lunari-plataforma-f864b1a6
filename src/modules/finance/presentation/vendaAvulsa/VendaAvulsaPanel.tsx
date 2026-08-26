@@ -23,7 +23,7 @@ import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 import { SectionHeader } from '@/modules/finance/presentation/shell/fields/SectionHeader';
 import { DisclosureSection } from '@/modules/finance/presentation/shell/fields/DisclosureSection';
 import { Switch } from '@/components/ui/switch';
-import ChargeModal from '@/components/cobranca/ChargeModal';
+import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { SmartSelect, PaidToggle, type SmartSelectOption } from '@/modules/finance/presentation/shell/fields';
 
 const FORMAS_PAGAMENTO: SmartSelectOption[] = [
