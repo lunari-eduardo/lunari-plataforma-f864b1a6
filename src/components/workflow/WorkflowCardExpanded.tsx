@@ -47,12 +47,10 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
+  const [showExtraManualModal, setShowExtraManualModal] = useState(false);
   /**
-   * "Cobrar tudo" e "Cobrar extras (sem galeria)" compartilham o
-   * CombinedChargeModal, mas com breakdown DIFERENTE. O `combinedIntent`
-   * torna a intenção do clique explícita para o modal (sem inferência por
-   * comparação numérica, que somava sessão junto quando só extras foram
-   * pedidos).
+   * "Cobrar tudo" usa CombinedChargeModal quando há galeria + sessão com valores.
+   * O `combinedIntent` torna a intenção do clique explícita para o modal.
    */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [combinedIntent, setCombinedIntent] = useState<
@@ -60,6 +58,7 @@ export function WorkflowCardExpanded({
   >("sessao_e_extras");
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
   
+
   
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
@@ -549,14 +548,14 @@ export function WorkflowCardExpanded({
             session={session}
             onCobrar={() => setShowChargeModal(true)}
             onCobrarExtras={() => {
-              // Se tiver galeria com saldo calculado na própria galeria, usa o modal canônico de galeria
+              // Se tiver galeria com saldo calculado formalmente pela galeria, usa o modal canônico de galeria
               if (resolvedGalleryId && extraCalc && extraCalc.valor_a_cobrar > 0) {
                 setShowExtraChargeModal(true);
               } else {
-                // Sem galeria OU extras inseridos manualmente na sessão do workflow:
-                // usa CombinedChargeModal com intenção "só extras" (sessão = 0, extras = extrasPendente)
-                setCombinedIntent("extras_only");
-                setShowCombinedChargeModal(true);
+                // Extras manuais (sem galeria OU galeria sem cálculo formal):
+                // abre ChargeModal unificado diretamente — SEM galeriaId para evitar
+                // que a trigger anti-overcharge tente validar a galeria com dados inconsistentes.
+                setShowExtraManualModal(true);
               }
             }}
             onCobrarTudo={
@@ -641,6 +640,21 @@ export function WorkflowCardExpanded({
         />
       )}
 
+      {/* Extras manuais: sem galeria ou galeria sem cálculo formal — usa ChargeModal diretamente
+          Não passa galeriaId para evitar que a trigger anti-overcharge falhe com galeria_id inconsistente */}
+      <ChargeModal
+        isOpen={showExtraManualModal}
+        onClose={() => setShowExtraManualModal(false)}
+        clienteId={session.clienteId || ""}
+        clienteNome={session.nome || "Cliente"}
+        clienteWhatsapp={session.whatsapp}
+        sessionId={session.sessionId || session.id}
+        valorSugerido={extrasPendente}
+        finalidade="fotos_extras"
+        qtdFotos={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
+        nomeSessao={session.pacote || session.nome}
+      />
+
       {showCombinedChargeModal && (
         <CombinedChargeModal
           isOpen={showCombinedChargeModal}
@@ -651,9 +665,7 @@ export function WorkflowCardExpanded({
           sessionId={session.sessionId || session.id}
           galeriaId={resolvedGalleryId ?? null}
           valorSessaoComponente={
-            // Intenção EXPLÍCITA do clique — nunca inferir por comparação
-            // numérica. "extras_only" força sessão = 0; "sessao_e_extras"
-            // usa o pendente da sessão.
+            // Intenção EXPLÍCITA do clique — nunca inferir por comparação numérica.
             combinedIntent === "extras_only" ? 0 : pendenteSessaoSugerido
           }
           valorExtrasComponente={extrasPendente}

@@ -329,10 +329,16 @@ export function ChargeModal({
   > => {
     const { toast } = await import('sonner');
     if (finalidade === 'fotos_extras') {
+      // qtdFotos deve ser >= 1 — extras manuais sem quantidade definida são bloqueadas
+      const qtd = Number(qtdFotos ?? 0);
+      if (!qtd || qtd <= 0) {
+        toast.error('Defina a quantidade de fotos extras antes de gerar a cobrança.');
+        return null;
+      }
       return {
         finalidade: 'fotos_extras',
         galeriaId: galeriaId || null,
-        qtdFotos: qtdFotos || null,
+        qtdFotos: Math.trunc(qtd),
         snapshotFotosIncluidas: snapshotFotosIncluidas || null,
       };
     }
