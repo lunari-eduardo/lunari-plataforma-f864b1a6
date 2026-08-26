@@ -152,29 +152,26 @@ export function ExpandedActions({
       <div className="w-full border-t border-border/15 my-1" />
 
       <span className={LABEL_CLS}>Atalhos</span>
-      <div className="flex items-center gap-2">
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onAbrirPagamentos}
-                className="h-8 w-8 flex items-center justify-center rounded-md border border-border/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
-                aria-label="Pagamentos"
-              >
-                <CreditCard className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">Pagamentos</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onAbrirPagamentos}
+          className="gap-2 w-full border-border/30"
+          aria-label="Pagamentos"
+        >
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <span>Pagamentos</span>
+        </Button>
 
         {session.clienteId && (
           <SessaoContratoButton
             sessionId={session.sessionId || session.id}
             clienteId={session.clienteId}
             clienteNome={session.nome}
-            iconOnly
+            iconOnly={false}
+            className="border-border/30"
           />
         )}
       </div>

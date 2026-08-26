@@ -123,19 +123,19 @@ export function SessaoContratoButton({
               className={cn('gap-2 w-full', className)}
               aria-label="Contratos da sessão"
             >
-              <FileSignature className="h-4 w-4" />
-              <span className="flex-1 text-center">
+              <FileSignature className="h-4 w-4 text-muted-foreground" />
+              <span>
                 {algumPendenteParaMim ? 'Assinar contrato' : label}
               </span>
               {algumPendenteParaMim ? (
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 ml-0.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                 </span>
               ) : (
                 statusPrincipal && (
                   <span
-                    className={cn('h-2 w-2 rounded-full', dotColor[statusPrincipal])}
+                    className={cn('h-2 w-2 rounded-full ml-0.5', dotColor[statusPrincipal])}
                     title={CONTRATO_STATUS_LABELS[statusPrincipal]}
                   />
                 )

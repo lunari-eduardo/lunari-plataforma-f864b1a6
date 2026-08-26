@@ -389,7 +389,12 @@ export function AsaasCheckout({
             finalidade: data.finalidade || 'fotos_extras',
             provedor: 'asaas',
             billingType: 'PIX',
-            payerContact: payerContactData
+            payerContact: payerContactData,
+            dadosExtras: {
+              valorBase: data.valorTotal,
+              repassarTaxasProcessamento: false,
+              repassarTaxaAntecipacao: false,
+            },
           }),
         });
         result = await res.json();
@@ -683,6 +688,8 @@ export function AsaasCheckout({
             creditCardHolderInfo: creditCardHolderInfoPayload,
             dadosExtras: {
               valorBase: data.valorTotal,
+              repassarTaxasProcessamento: !data.absorverTaxa,
+              repassarTaxaAntecipacao: repassarAntecipacao,
             },
           }),
         });

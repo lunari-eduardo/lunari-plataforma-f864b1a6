@@ -19,7 +19,7 @@ import { ExpandedActions } from "./details/ExpandedActions";
 import { SectionHeader } from "./details/SectionHeader";
 import { FieldRow } from "./details/FieldRow";
 import { ProdutosSummaryBlock } from "./details/ProdutosSummaryBlock";
-import { INPUT_GHOST, VALUE_STRONG } from "./details/cardTokens";
+import { INPUT_EDITABLE, VALUE_STRONG } from "./details/cardTokens";
 import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
@@ -295,7 +295,7 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className={INPUT_GHOST + " w-24 text-right"}
+                className={INPUT_EDITABLE + " w-24"}
               />
             </FieldRow>
             <FieldRow
@@ -343,7 +343,7 @@ export function WorkflowCardExpanded({
                   onKeyDown={handleEnterBlur}
                   onFocus={handleValueFocus}
                   placeholder="R$ 0,00"
-                  className={INPUT_GHOST + " w-24 text-right"}
+                  className={INPUT_EDITABLE + " w-24"}
                 />
                 {session.extrasOverridden && hasDescontoProgressivo && !galeriaHasSales && (
                   <TooltipProvider delayDuration={200}>
@@ -405,7 +405,7 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="0"
-                className={INPUT_GHOST + " w-20 text-right"}
+                className={INPUT_EDITABLE + " w-20"}
               />
             </FieldRow>
             <FieldRow label="Total fotos extras">
@@ -475,7 +475,7 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className={INPUT_GHOST + " w-24 text-right"}
+                className={INPUT_EDITABLE + " w-24"}
               />
             </FieldRow>
             <FieldRow label="Obs" align="col">
@@ -484,7 +484,7 @@ export function WorkflowCardExpanded({
                 onChange={(e) => setObsValue(e.target.value)}
                 onBlur={handleObsBlur}
                 placeholder="Observações..."
-                className="text-[12px] min-h-[56px] bg-transparent border-0 border-b border-border/20 focus:border-primary/40 focus-visible:ring-0 rounded-none resize-none px-0"
+                className="text-[12px] min-h-[58px] bg-muted/25 dark:bg-muted/35 hover:bg-muted/50 focus:bg-background border border-border/40 hover:border-border/70 focus:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md p-2.5 resize-none transition-all placeholder:text-muted-foreground/45 shadow-2xs leading-relaxed"
               />
             </FieldRow>
           </div>

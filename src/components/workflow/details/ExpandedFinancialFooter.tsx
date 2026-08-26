@@ -61,31 +61,35 @@ export function ExpandedFinancialFooter({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1 items-end">
+        <div className="flex flex-col gap-1.5 items-end">
           <span className={LABEL_CLS}>Pagamento rápido</span>
           <div className="flex items-center gap-2">
             {creditSlot}
-            <div className="flex items-center gap-1">
-              <span className="text-[12px] text-muted-foreground">R$</span>
+            <div className="flex items-center rounded-lg border border-border/50 bg-muted/25 dark:bg-muted/35 hover:border-border/80 focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:bg-background transition-all shadow-2xs p-0.5">
+              <span className="px-2.5 py-1 text-xs font-semibold text-muted-foreground select-none">
+                R$
+              </span>
               <Input
                 type="number"
+                step="0.01"
                 placeholder="0,00"
                 value={paymentInput}
                 onChange={(e) => setPaymentInput(e.target.value)}
                 onKeyDown={onPaymentKeyDown}
-                className="h-8 text-[13px] w-24 bg-transparent border-0 border-b border-border/25 hover:border-border/50 focus:border-primary/50 focus-visible:ring-0 rounded-none px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-7 w-24 bg-transparent border-0 text-xs font-semibold text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-0 focus:outline-none px-1 tabular-nums [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-none"
                 autoComplete="off"
               />
+              <Button
+                type="button"
+                size="sm"
+                onClick={onPaymentAdd}
+                className="h-7 px-2.5 rounded-[5px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white gap-1 text-xs font-medium shadow-none transition-all"
+                aria-label="Adicionar pagamento rápido"
+              >
+                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                <span>Adicionar</span>
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPaymentAdd}
-              className="h-8 w-8 p-0 rounded-md border-border/25 hover:bg-emerald-500/10 hover:border-emerald-500/40 hover:text-emerald-600"
-              aria-label="Adicionar pagamento"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
