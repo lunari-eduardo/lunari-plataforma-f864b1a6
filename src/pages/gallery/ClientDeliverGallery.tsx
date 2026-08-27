@@ -366,7 +366,7 @@ function ClientDeliverGalleryContent({
           isDownloading={isDownloading} 
           isDark={isDark} 
           primaryColor={primaryColor}
-          isVisible={headerVisible}
+          isVisible={headerVisible && lightboxIndex === null}
         />
 
         {hasFolders && (

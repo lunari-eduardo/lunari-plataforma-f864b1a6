@@ -2637,25 +2637,27 @@ export default function ClientGallery() {
         </MasonryGrid>
       </main>
 
-      {/* Bottom Bar Summary (with integrated discount tiers) */}
-      <SelectionSummary 
-        gallery={{
-          ...gallery,
-          selectedCount,
-          extraCount,
-          extraTotal,
-          selectionStatus: isConfirmed ? 'confirmed' : 'in_progress',
-        }}
-        onConfirm={handleStartConfirmation}
-        isClient
-        variant="bottom-bar"
-        regrasCongeladas={regrasCongeladas}
-        extrasPagasTotal={extrasPagasTotal}
-        extrasACobrar={extrasACobrar}
-        valorJaPago={valorJaPago}
-        saleSettings={gallery.saleSettings}
-        hasPayment={gallery.saleSettings?.mode === 'sale_with_payment' && (extrasACobrar ?? 0) > 0}
-      />
+      {/* Bottom Bar Summary (with integrated discount tiers) - hidden when lightbox is open */}
+      {lightboxIndex === null && (
+        <SelectionSummary 
+          gallery={{
+            ...gallery,
+            selectedCount,
+            extraCount,
+            extraTotal,
+            selectionStatus: isConfirmed ? 'confirmed' : 'in_progress',
+          }}
+          onConfirm={handleStartConfirmation}
+          isClient
+          variant="bottom-bar"
+          regrasCongeladas={regrasCongeladas}
+          extrasPagasTotal={extrasPagasTotal}
+          extrasACobrar={extrasACobrar}
+          valorJaPago={valorJaPago}
+          saleSettings={gallery.saleSettings}
+          hasPayment={gallery.saleSettings?.mode === 'sale_with_payment' && (extrasACobrar ?? 0) > 0}
+        />
+      )}
 
       {lightboxIndex !== null && (() => {
         const lightboxPhotos = (hasFolders && activeFolderId) ? displayPhotos : localPhotos;
