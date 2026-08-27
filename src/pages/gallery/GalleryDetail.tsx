@@ -62,6 +62,13 @@ import { toast } from 'sonner';
 import { calcularPrecoProgressivoComCredito, RegrasCongeladas } from '@/lib/pricingUtils';
 import { getEffectiveGalleryStatus, getBillingModeLabel } from '@/lib/galleryStatus';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MasonryGrid, MasonryItem } from '@/components/MasonryGrid';
@@ -87,17 +94,52 @@ import { supabase } from '@/integrations/supabase/client';
 import { getGalleryUrl } from '@/lib/galleryUrl';
 import { cn } from '@/lib/utils';
 
+// Types and helpers for photo search codes
+export type CodeFormat = 'windows' | 'lightroom' | 'mac' | 'txt';
+
+export const codeFormatLabels: Record<CodeFormat, string> = {
+  windows: 'Windows Explorer',
+  lightroom: 'Adobe Lightroom',
+  mac: 'Finder (Mac)',
+  txt: 'Lista simples (TXT)',
+};
+
+export const codeFormatDescriptions: Record<CodeFormat, string> = {
+  windows: 'Cole o código na barra de pesquisa do Windows Explorer para filtrar as fotos selecionadas.',
+  lightroom: 'Cole o código no filtro de texto da Biblioteca do Lightroom (Filtro da Grade > Texto > Contém).',
+  mac: 'Cole o código na barra de pesquisa do Finder no macOS para filtrar as fotos do ensaio.',
+  txt: 'Lista simples com quebra de linha por foto, ideal para planilhas ou blocos de notas.',
+};
+
+export const codeFormatHints: Record<CodeFormat, string> = {
+  windows: 'Dica: Cole este código na barra de pesquisa do Windows Explorer para mostrar apenas as fotos selecionadas.',
+  lightroom: 'Dica: No Lightroom, abra a pasta, pressione "\\" para abrir o filtro da grade, escolha "Texto" > "Contém" e cole o código.',
+  mac: 'Dica: No Finder, acesse a pasta do ensaio e cole o código no campo de busca.',
+  txt: 'Dica: Lista limpa com os nomes dos arquivos (sem extensões) para fácil conferência.',
+};
+
 // Helper to remove extension from filename
 function removeExtension(filename: string): string {
   const lastDot = filename.lastIndexOf('.');
   return lastDot > 0 ? filename.slice(0, lastDot) : filename;
 }
 
-// Generate Windows Explorer search string
-function generateWindowsSearchCode(photos: GalleryPhoto[]): string {
+// Generate formatted search code
+function generateSearchCode(photos: GalleryPhoto[], format: CodeFormat): string {
   if (photos.length === 0) return '';
   const filenames = photos.map(p => removeExtension(p.originalFilename || p.filename));
-  return filenames.map(f => `"${f}"`).join(' OR ');
+  switch (format) {
+    case 'windows':
+      return filenames.map(f => `"${f}"`).join(' OR ');
+    case 'lightroom':
+      return filenames.join(', ');
+    case 'mac':
+      return filenames.join(' OR ');
+    case 'txt':
+      return filenames.join('\n');
+    default:
+      return filenames.join(' OR ');
+  }
 }
 
 // Polling interval for pending payments (30 seconds)
@@ -117,6 +159,8 @@ export default function GalleryDetail() {
   const [activePhotoFilter, setActivePhotoFilter] = useState<string>('all');
   const [isCodesCollapsed, setIsCodesCollapsed] = useState(false);
   const [isCodeCopied, setIsCodeCopied] = useState(false);
+  const [codeFormat, setCodeFormat] = useState<CodeFormat>('windows');
+  const [codeScopeFilter, setCodeScopeFilter] = useState<'all' | 'favorites'>('all');
   const [codesFilter, setCodesFilter] = useState<'all' | 'favorites'>('all');
   const [activeDetailFolderId, setActiveDetailFolderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('selection');
@@ -467,6 +511,19 @@ export default function GalleryDetail() {
     }
     return transformedPhotos;
   }, [transformedPhotos, activePhotoFilter]);
+
+  // Selected photos for code generation based on scope filter (all vs favorites)
+  const photosForCode = useMemo(() => {
+    if (codeScopeFilter === 'favorites') {
+      return favoritePhotos;
+    }
+    return selectedPhotos;
+  }, [selectedPhotos, favoritePhotos, codeScopeFilter]);
+
+  // Formatted search code string
+  const generatedCode = useMemo(() => {
+    return generateSearchCode(photosForCode, codeFormat);
+  }, [photosForCode, codeFormat]);
 
   const handleCopyCode = useCallback((code: string) => {
     if (!code) return;
@@ -1288,32 +1345,82 @@ export default function GalleryDetail() {
                   {!isCodesCollapsed && (
                     selectedPhotos.length > 0 ? (
                       <div className="space-y-4 animate-fade-in">
-                        <p className="text-xs text-muted-foreground">
-                          Cole o código na barra de pesquisa do Windows Explorer para filtrar as fotos selecionadas.
+                        {/* Seletor de Tipo/Formato de Código e Filtro de Favoritas */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-xs text-muted-foreground font-medium shrink-0">Formato:</span>
+                            <Select value={codeFormat} onValueChange={(v) => setCodeFormat(v as CodeFormat)}>
+                              <SelectTrigger className="h-8 text-xs bg-muted/30 border-border/60 w-full sm:w-[190px]">
+                                <SelectValue placeholder="Selecione o formato" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="windows" className="text-xs">{codeFormatLabels.windows}</SelectItem>
+                                <SelectItem value="lightroom" className="text-xs">{codeFormatLabels.lightroom}</SelectItem>
+                                <SelectItem value="mac" className="text-xs">{codeFormatLabels.mac}</SelectItem>
+                                <SelectItem value="txt" className="text-xs">{codeFormatLabels.txt}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Alternador Todas vs Favoritas */}
+                          {favoritePhotos.length > 0 && (
+                            <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-lg border border-border/50 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setCodeScopeFilter('all')}
+                                className={cn(
+                                  'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                                  codeScopeFilter === 'all'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                )}
+                              >
+                                Todas ({selectedPhotos.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCodeScopeFilter('favorites')}
+                                className={cn(
+                                  'px-2.5 py-1 rounded-md text-xs font-medium transition-colors inline-flex items-center gap-1',
+                                  codeScopeFilter === 'favorites'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                )}
+                              >
+                                <Heart className="h-3 w-3 text-red-500 fill-current" />
+                                Favoritas ({favoritePhotos.length})
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {codeFormatDescriptions[codeFormat]}
                         </p>
 
                         {/* Bloco de Código Mono */}
                         <div className="p-4 rounded-xl bg-muted/40 border border-border/60 font-mono text-xs text-foreground/90 max-h-56 overflow-y-auto leading-relaxed select-all">
-                          {generateWindowsSearchCode(selectedPhotos)}
+                          {generatedCode || 'Nenhuma foto encontrada para este filtro.'}
                         </div>
 
                         {/* Botão Copiar */}
                         <Button
                           variant="terracotta"
                           className="w-auto px-5 font-medium gap-2 shadow-sm"
-                          onClick={() => handleCopyCode(generateWindowsSearchCode(selectedPhotos))}
+                          disabled={!generatedCode}
+                          onClick={() => handleCopyCode(generatedCode)}
                         >
                           {isCodeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          {isCodeCopied ? 'Código copiado!' : 'Copiar código'}
+                          {isCodeCopied ? 'Código copiado!' : `Copiar código (${codeFormatLabels[codeFormat]})`}
                         </Button>
 
-                        <p className="text-[11px] text-muted-foreground">
-                          Dica: Cole este código na barra de pesquisa do Windows Explorer para mostrar apenas as fotos selecionadas.
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          {codeFormatHints[codeFormat]}
                         </p>
                       </div>
                     ) : (
                       <div className="text-center py-12 text-muted-foreground text-xs">
-                        Nenhuma foto selecionada ainda. O código para Windows Explorer aparecerá aqui assim que houver fotos selecionadas.
+                        Nenhuma foto selecionada ainda. Os códigos de pesquisa aparecerão aqui assim que houver fotos selecionadas.
                       </div>
                     )
                   )}
