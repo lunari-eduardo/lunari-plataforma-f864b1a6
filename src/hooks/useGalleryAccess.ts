@@ -63,7 +63,7 @@ export function useGalleryAccess(user: User | null, session: Session | null): Ga
         const { data: allowedEmail } = await supabase
           .from('allowed_emails')
           .select('plan_code')
-          .eq('email', user.email!)
+          .ilike('email', (user.email || '').trim())
           .maybeSingle();
 
         if (allowedEmail) {

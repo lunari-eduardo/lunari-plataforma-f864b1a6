@@ -132,7 +132,7 @@ export function PaymentConfigDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto bg-card">
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-3">
             <img src={providerLogos[provider]} alt={getProviderLabel(provider)} className="h-7 w-7 object-contain" />

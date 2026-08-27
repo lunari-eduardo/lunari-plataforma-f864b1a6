@@ -87,11 +87,22 @@ export default function Pacotes({
     <Button
       onClick={() => !semCategorias && setNovoPacoteAberto(v => !v)}
       size="sm"
+      variant={novoPacoteAberto ? "outline" : "default"}
       disabled={semCategorias}
       aria-disabled={semCategorias}
+      className="h-9 px-3.5 text-xs font-medium"
     >
-      <Plus className="h-4 w-4 mr-2" />
-      {novoPacoteAberto ? 'Cancelar' : 'Novo Pacote'}
+      {novoPacoteAberto ? (
+        <>
+          <X className="h-3.5 w-3.5 mr-1.5" />
+          Cancelar
+        </>
+      ) : (
+        <>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Novo Pacote
+        </>
+      )}
     </Button>
   );
 
@@ -150,7 +161,7 @@ export default function Pacotes({
       {/* Formulário Novo Pacote */}
       <Collapsible open={novoPacoteAberto && !semCategorias} onOpenChange={setNovoPacoteAberto}>
         <CollapsibleContent>
-          <div className="p-4 border border-border rounded-lg bg-card">
+          <div className="p-3 sm:p-4 border border-border rounded-lg bg-card shadow-sm">
             <PacoteForm
               categorias={categorias}
               produtos={produtos}
@@ -163,10 +174,10 @@ export default function Pacotes({
       </Collapsible>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-3 items-center p-3 border border-border rounded-lg bg-muted/30">
-        <div className="flex-1 min-w-[180px] max-w-[220px]">
+      <div className="flex flex-wrap gap-2.5 items-center p-2.5 sm:p-3 border border-border rounded-lg bg-muted/30">
+        <div className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[240px]">
           <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-9 text-sm w-full">
               <SelectValue placeholder="Todas as categorias" />
             </SelectTrigger>
             <SelectContent>
@@ -185,10 +196,10 @@ export default function Pacotes({
             variant="ghost"
             size="sm"
             onClick={() => setFiltroCategoria('all')}
-            className="h-8"
+            className="h-9 px-3 text-xs"
           >
-            <X className="h-3 w-3 mr-1" />
-            Limpar
+            <X className="h-3.5 w-3.5 mr-1" />
+            Limpar filtro
           </Button>
         )}
       </div>

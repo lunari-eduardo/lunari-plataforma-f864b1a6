@@ -52,37 +52,39 @@ export default function PacoteCard({
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {categoria && (
-                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                <Badge variant="outline" className="text-2xs px-2 py-0.5 font-normal">
                   {categoria.nome}
                 </Badge>
               )}
               {pacote.duracao_minutos && pacote.duracao_minutos > 0 ? (
-                <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
-                  ⏱️ {pacote.duracao_minutos} min
+                <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
+                  ⏱️ {pacote.duracao_minutos} min {pacote.duracao_minutos >= 60 && `(${pacote.duracao_minutos % 60 === 0 ? `${pacote.duracao_minutos / 60}h` : `${Math.floor(pacote.duracao_minutos / 60)}h ${pacote.duracao_minutos % 60}m`})`}
                 </Badge>
               ) : null}
             </div>
           </div>
           
-          {/* Actions */}
-          <div className={`flex gap-1 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+          {/* Actions - Sempre visíveis no mobile / hover no desktop */}
+          <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8"
               onClick={() => onEdit(pacote)}
               disabled={isDeleting}
+              aria-label={`Editar ${pacote.nome}`}
             >
-              <Edit3 className="h-3.5 w-3.5" />
+              <Edit3 className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => onDelete(pacote.id)}
               disabled={isDeleting}
+              aria-label={`Excluir ${pacote.nome}`}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>

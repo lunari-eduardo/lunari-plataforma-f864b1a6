@@ -54,8 +54,6 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
 
   const creditosGerados = Number(financials.creditosGerados) || 0;
   const creditosUtilizados = Number(financials.creditosUtilizados) || 0;
-  const caixaRecebido = Number(financials.caixaRecebido) || 0;
-  const showCaixaChip = !isLoading && caixaRecebido > 0 && Math.abs(caixaRecebido - financials.paidMonth) > 0.005;
 
   return (
     <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-card/30 backdrop-blur-lg dark:bg-card/[0.04] border border-white/50 dark:border-white/10 rounded-lg px-4 py-2.5">
@@ -94,14 +92,6 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
           <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
           <span className="text-[11px] text-muted-foreground">Créd. utilizados</span>
           <span className="text-sm font-bold text-indigo-500">{formatCurrency(creditosUtilizados)}</span>
-        </div>
-      )}
-
-      {showCaixaChip && (
-        <div className="flex items-center gap-1.5" title="Pagamentos reais em caixa neste mês (exclui créditos aplicados)">
-          <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
-          <span className="text-[11px] text-muted-foreground">Caixa</span>
-          <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(caixaRecebido)}</span>
         </div>
       )}
 

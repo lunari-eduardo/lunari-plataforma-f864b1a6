@@ -165,22 +165,7 @@ serve(async (req) => {
       return errorResponse("Não foi possível identificar o fotógrafo", 404);
     }
 
-    // 2. Gate de autorização Gallery server-side
-    const { data: accessData, error: accessError } = await supabase.rpc("user_has_gallery_access", {
-      _user_id: photographerId,
-    });
-
-    if (accessError || !accessData) {
-      console.warn("[gallery-create-payment] Fotógrafo sem acesso à Gallery:", photographerId);
-      return jsonResponse({
-        success: false,
-        version: GCP_VERSION,
-        error: "O fotógrafo não possui plano ativo com integração Gallery.",
-        errorCode: "NO_GALLERY_ACCESS",
-      }, 403);
-    }
-
-    // 3. Identificar provedor com precedência canônica:
+    // 2. Identificar provedor com precedência canônica:
     // (1) Explícito no body / preloaded (provedor ou provider)
     // (2) Configurado na galeria (venda_pagamento_provedor ou configuracoes.saleSettings.paymentMethod)
     // (3) Fallback: Provedor padrão do fotógrafo (is_default) em usuarios_integracoes

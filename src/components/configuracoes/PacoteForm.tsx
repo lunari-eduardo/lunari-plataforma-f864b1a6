@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { ProductSearchCombobox } from '@/components/ui/product-search-combobox';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, ChevronUp, AlertTriangle, Info, Tag } from 'lucide-react';
+import { X, Plus, ChevronUp, AlertTriangle, Info, Tag, Clock } from 'lucide-react';
 import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { 
@@ -19,6 +19,13 @@ import {
   PacoteFormProps
 } from '@/types/configuration';
 import type { TabelaPrecos } from '@/types/pricing';
+
+const formatarTempoResumido = (minutos: number) => {
+  if (minutos < 60) return `${minutos}m`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto > 0 ? `${horas}h ${resto}m` : `${horas}h`;
+};
 
 export default function PacoteForm({
   initialData,
@@ -325,10 +332,10 @@ export default function PacoteForm({
         </div>
       </div>
 
-      {/* Bloco 2 — Precificação (Compacto, Funcional) */}
-      <div className="flex flex-wrap gap-3">
+      {/* Bloco 2 — Precificação (Grid Responsivo) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Valor Base */}
-        <div className="flex-1 min-w-[140px] max-w-[180px]">
+        <div>
           <Label htmlFor="valor_base" className="text-2xs font-medium text-muted-foreground mb-1 block">
             Valor Base
           </Label>
@@ -341,7 +348,7 @@ export default function PacoteForm({
               {...valorBaseInput.inputProps}
               placeholder="0,00"
               className={cn(
-                "h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                "h-9 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                 errors.valor_base && "border-destructive focus:border-destructive"
               )}
             />
@@ -349,7 +356,7 @@ export default function PacoteForm({
         </div>
 
         {/* Valor Foto Extra - SEMPRE editável para sistema híbrido */}
-        <div className="flex-1 min-w-[140px] max-w-[180px]">
+        <div>
           <Label htmlFor="valor_foto_extra" className="text-2xs font-medium text-muted-foreground mb-1 block">
             Foto Extra {isFotoExtraObrigatoria ? <span className="text-destructive">*</span> : <span className="text-muted-foreground font-normal">(opcional)</span>}
           </Label>
@@ -362,7 +369,7 @@ export default function PacoteForm({
               {...valorFotoExtraInput.inputProps}
               placeholder="0,00"
               className={cn(
-                "h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                "h-9 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                 errors.valor_foto_extra && "border-destructive focus:border-destructive"
               )}
             />
@@ -372,8 +379,8 @@ export default function PacoteForm({
           )}
         </div>
 
-        {/* Fotos Incluídas - NOVO CAMPO */}
-        <div className="flex-1 min-w-[140px] max-w-[180px]">
+        {/* Fotos Incluídas */}
+        <div>
           <Label htmlFor="fotos_incluidas" className="text-2xs font-medium text-muted-foreground mb-1 block">
             Fotos Incluídas *
           </Label>
@@ -387,12 +394,12 @@ export default function PacoteForm({
             onFocus={fotosIncluidasInput.handleFocus}
             placeholder="Ex: 50"
             className={cn(
-              "h-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+              "h-9 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
               errors.fotos_incluidas && "border-destructive focus:border-destructive"
             )}
           />
           {errors.fotos_incluidas && (
-            <span className="text-2xs text-destructive">{errors.fotos_incluidas}</span>
+            <span className="text-2xs text-destructive mt-0.5 block">{errors.fotos_incluidas}</span>
           )}
         </div>
       </div>
@@ -413,44 +420,60 @@ export default function PacoteForm({
       )}
 
       {/* Bloco 2.5 — Duração / Tempo de Sessão na Agenda */}
-      <div className="bg-card/40 border border-border/60 rounded-lg p-3 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label htmlFor="duracao_minutos" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <span>Tempo de sessão na agenda</span>
-              {(formData.duracao_minutos ?? 0) > 0 ? (
-                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 text-emerald-500 border-emerald-500/30">
-                  {formData.duracao_minutos} min
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 text-muted-foreground border-border">
-                  Desativado (0 min)
-                </Badge>
-              )}
+      <div className="bg-card/40 border border-border/60 rounded-lg p-3.5 space-y-3">
+        {/* Cabeçalho com Título e Badge Informativo */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary shrink-0" />
+            <Label htmlFor="duracao_minutos" className="text-xs font-semibold text-foreground">
+              Tempo de sessão na agenda
             </Label>
           </div>
-          <div className="flex items-center gap-1">
-            {[0, 30, 45, 60, 90, 120].map((dur) => (
-              <button
-                key={dur}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, duracao_minutos: dur }))}
-                className={cn(
-                  "px-2 py-0.5 text-2xs rounded border transition-colors",
-                  (formData.duracao_minutos ?? 0) === dur
-                    ? "bg-primary text-primary-foreground border-primary font-medium"
-                    : "bg-muted/30 text-muted-foreground hover:text-foreground border-border/40 hover:bg-muted/60"
-                )}
-              >
-                {dur === 0 ? "Sem tempo" : dur >= 60 && dur % 60 === 0 ? `${dur / 60}h` : `${dur}m`}
-              </button>
-            ))}
-          </div>
+
+          {(formData.duracao_minutos ?? 0) > 0 ? (
+            <Badge variant="outline" className="w-fit text-xs py-0.5 px-2 font-medium text-emerald-500 border-emerald-500/30 bg-emerald-500/10">
+              {formData.duracao_minutos} min {formData.duracao_minutos! >= 60 && `(${formatarTempoResumido(formData.duracao_minutos!)})`}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="w-fit text-xs py-0.5 px-2 font-normal text-muted-foreground border-border bg-muted/20">
+              Sem bloqueio (Livre)
+            </Badge>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="w-32">
-            <div className="relative">
+        {/* Presets em Grid fluido com excelente área de toque */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {[
+            { label: 'Sem tempo', value: 0 },
+            { label: '30 min', value: 30 },
+            { label: '45 min', value: 45 },
+            { label: '1h', value: 60 },
+            { label: '1h 30m', value: 90 },
+            { label: '2h', value: 120 },
+          ].map((preset) => {
+            const isSelected = (formData.duracao_minutos ?? 0) === preset.value;
+            return (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, duracao_minutos: preset.value }))}
+                className={cn(
+                  "h-9 px-2 rounded-md text-xs font-medium border transition-all flex items-center justify-center text-center",
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
+                    : "bg-background/70 hover:bg-muted text-muted-foreground hover:text-foreground border-border/60"
+                )}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Input Numérico Personalizado + Texto Informativo */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-3 pt-1 border-t border-border/30">
+          <div className="w-full sm:w-36 shrink-0">
+            <div className="relative flex items-center">
               <Input
                 id="duracao_minutos"
                 type="number"
@@ -460,15 +483,15 @@ export default function PacoteForm({
                 onChange={duracaoMinutosInput.handleChange}
                 onFocus={duracaoMinutosInput.handleFocus}
                 placeholder="0"
-                className="h-8 text-sm pr-10"
+                className="h-9 text-sm pr-12 text-center sm:text-left [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-2xs text-muted-foreground pointer-events-none">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                 min
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed flex-1">
-            Serve apenas para controle de horários na agenda. Se zerado ou desativado, o agendamento ocupará apenas o horário exato registrado na agenda, dando liberdade ao fotógrafo agendar de 10 em 10 min se quiser.
+          <p className="text-2xs sm:text-[11px] text-muted-foreground leading-relaxed">
+            Duração padrão reservada na agenda para este ensaio. Ao selecionar <strong>"Sem tempo"</strong>, o agendamento ocupará apenas o horário de início sem bloquear a agenda.
           </p>
         </div>
       </div>
@@ -479,14 +502,14 @@ export default function PacoteForm({
         <button 
           type="button"
           onClick={() => setProdutosExpanded(true)}
-          className="w-full h-8 flex items-center justify-center gap-2 text-xs text-muted-foreground rounded-md bg-muted/30 hover:bg-muted/50 hover:text-foreground transition-colors bg-transparent"
+          className="w-full h-9 flex items-center justify-center gap-2 text-xs text-muted-foreground rounded-md bg-muted/30 hover:bg-muted/50 hover:text-foreground transition-colors border border-dashed border-border/60"
         >
           <Plus className="h-3.5 w-3.5" />
           Adicionar produtos ao pacote
         </button>
       ) : (
         // Expandido ou com produtos: mostra busca + lista
-        <div className="space-y-2 p-3 bg-muted/20 rounded-lg">
+        <div className="space-y-2.5 p-3 bg-muted/20 rounded-lg border border-border/50">
           <div className="flex items-center justify-between">
             <Label className="text-2xs font-medium text-muted-foreground">
               Produtos Incluídos {hasProdutos && `(${formData.produtosIncluidos.length})`}
@@ -507,7 +530,7 @@ export default function PacoteForm({
             products={produtosDisponiveis}
             onSelect={adicionarProduto}
             placeholder="Buscar e adicionar produto..."
-            className="h-8"
+            className="h-9"
           />
           
           {/* Lista de produtos como badges compactos */}
@@ -517,18 +540,19 @@ export default function PacoteForm({
                 <Badge 
                   key={item.produtoId} 
                   variant="secondary" 
-                  className="text-2xs gap-1 pr-1 py-0.5 font-normal"
+                  className="text-xs gap-1.5 pl-2.5 pr-1.5 py-1 font-normal"
                 >
-                  {getProdutoNome(item.produtoId)}
-                  <span className="text-muted-foreground ml-0.5">
+                  <span>{getProdutoNome(item.produtoId)}</span>
+                  <span className="text-muted-foreground font-medium">
                     R$ {getProdutoPreco(item.produtoId).toFixed(0)}
                   </span>
                   <button 
                     type="button"
                     onClick={() => removerProdutoIncluido(item.produtoId)}
-                    className="ml-0.5 hover:text-destructive transition-colors"
+                    className="ml-1 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    aria-label={`Remover ${getProdutoNome(item.produtoId)}`}
                   >
-                    <X className="h-2.5 w-2.5" />
+                    <X className="h-3 w-3" />
                   </button>
                 </Badge>
               ))}
@@ -537,22 +561,22 @@ export default function PacoteForm({
         </div>
       )}
 
-      {/* Bloco 4 — Botões de Ação (CTA Claro) */}
-      <div className="flex items-center justify-end gap-3 pt-3 mt-1 border-t border-border/50">
+      {/* Bloco 4 — Botões de Ação (CTA Claro e Responsivo) */}
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-3 mt-1 border-t border-border/50">
         {onCancel && (
-          <button 
+          <Button 
             type="button" 
+            variant="ghost"
             onClick={onCancel}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            className="h-9 px-4 text-xs text-muted-foreground hover:text-foreground"
           >
             Cancelar
-          </button>
+          </Button>
         )}
         <Button 
           type="submit" 
           onClick={handleSubmit}
-          size="sm"
-          className="px-6 text-xs font-medium"
+          className="h-9 px-6 text-xs font-medium"
         >
           {submitLabel}
         </Button>

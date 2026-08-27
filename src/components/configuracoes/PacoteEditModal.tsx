@@ -42,14 +42,15 @@ export default function PacoteEditModal({
     valor_base: pacote.valor_base,
     valor_foto_extra: pacote.valor_foto_extra || 0,
     fotos_incluidas: pacote.fotos_incluidas || 0,
+    duracao_minutos: pacote.duracao_minutos ?? 0,
     produtosIncluidos: pacote.produtosIncluidos
   };
 
   return (
     <Dialog open={!!pacote} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-lunar-border">
-          <DialogTitle className="text-lg font-medium text-foreground">
+      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border">
+          <DialogTitle className="text-base sm:text-lg font-semibold text-foreground">
             Editar Pacote
           </DialogTitle>
           <Button
