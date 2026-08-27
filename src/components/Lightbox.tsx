@@ -378,9 +378,9 @@ export function Lightbox({
   const isGestureActive = isPinchingRef.current || isPanningRef.current;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-2xl supports-[backdrop-filter]:bg-black/80 flex flex-col animate-fade-in select-none">
+    <div className="fixed inset-0 z-[99999] bg-black/35 backdrop-blur-2xl supports-[backdrop-filter]:bg-black/30 flex flex-col animate-fade-in select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/80 via-black/40 to-transparent z-10">
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/40 via-black/15 to-transparent z-10">
         <div className="flex items-center gap-3 md:gap-4">
           <span className="text-white/90 text-sm font-medium tracking-wide bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 shadow-sm">
             {currentIndex + 1} <span className="text-white/40 font-normal">/</span> {photos.length}
@@ -500,7 +500,7 @@ export function Lightbox({
       </div>
 
       {/* Footer */}
-      <div className="p-4 md:p-5 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10">
+      <div className="p-4 md:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/40 via-black/15 to-transparent z-10">
         <div className="flex items-center justify-center gap-2.5 md:gap-3 flex-wrap">
           <Button
             onClick={() => !disabled && onSelect(currentPhoto.id)}
