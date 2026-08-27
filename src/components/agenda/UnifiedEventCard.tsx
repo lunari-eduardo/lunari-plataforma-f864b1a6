@@ -64,6 +64,13 @@ export default function UnifiedEventCard({
   };
 
   const { packageName, category, description } = getPackageInfo();
+  const itemDescription = (
+    description ||
+    event.description ||
+    (event.originalData as any)?.description ||
+    (event.originalData as any)?.descricao ||
+    ''
+  ).trim();
 
   // Style: use semantic tokens via inline style for flexibility
   const getCardStyle = (): React.CSSProperties => {
@@ -143,11 +150,23 @@ export default function UnifiedEventCard({
     ? (duration % 60 === 0 ? `${duration / 60}h` : `${Math.floor(duration / 60)}h${duration % 60}m`)
     : `${duration}m`;
 
+  const mainTitle = agendaType === 'personal' ? event.title : (event.client || event.title);
+  const subLabel =
+    agendaType === 'personal'
+      ? (itemDescription || 'Evento pessoal')
+      : agendaType === 'meeting'
+      ? (event.originalData?.location ? `Reunião • ${event.originalData.location}` : 'Reunião')
+      : category && packageName && category !== packageName
+      ? `${category} · ${packageName}`
+      : packageName || category || (itemDescription ? itemDescription : 'Sessão');
+
+  const showDescription = Boolean(itemDescription && itemDescription !== subLabel);
+
   const tooltipContent = (
     <div className="space-y-1 text-xs">
       <div className="font-semibold flex items-center gap-1.5">
         {renderTypeIcon('xs')}
-        <span>{event.title || event.client}</span>
+        <span>{mainTitle}</span>
         {hasCustomDuration && (
           <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-muted-foreground/20 shrink-0">
             {durationBadge}
@@ -158,26 +177,21 @@ export default function UnifiedEventCard({
         {event.time} {hasCustomDuration ? `(${durationBadge})` : ''} · {
           agendaType === 'personal' ? 'Evento pessoal' :
           agendaType === 'meeting' ? (event.originalData?.location ? `Reunião (${event.originalData.location})` : 'Reunião') :
-          description || packageName || category || 'Sessão'
+          packageName || category || 'Sessão'
         }
       </div>
+      {showDescription && (
+        <div className="text-muted-foreground/80 italic text-[11px]">
+          {itemDescription}
+        </div>
+      )}
     </div>
   );
 
   const renderCardContent = () => {
-    const mainTitle = agendaType === 'personal' ? event.title : (event.client || event.title);
-    const subLabel =
-      agendaType === 'personal'
-        ? (description || 'Evento pessoal')
-        : agendaType === 'meeting'
-        ? (event.originalData?.location ? `Reunião • ${event.originalData.location}` : 'Reunião')
-        : category && packageName && category !== packageName
-        ? `${category} · ${packageName}`
-        : packageName || category || (description ? description : 'Sessão');
-
     if (variant === 'daily') {
       return (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {renderTypeIcon('sm')}
@@ -193,6 +207,9 @@ export default function UnifiedEventCard({
             )}
           </div>
           {subLabel && <div className="text-xs opacity-75 truncate">{subLabel}</div>}
+          {showDescription && (
+            <div className="text-xs opacity-65 truncate">{itemDescription}</div>
+          )}
         </div>
       );
     }
@@ -239,12 +256,13 @@ export default function UnifiedEventCard({
       );
     }
     return (
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         <div className="flex items-center gap-1.5">
           {renderTypeIcon('sm')}
           <span className="font-semibold text-sm truncate">{mainTitle}</span>
         </div>
         {subLabel && <div className="text-xs opacity-80 truncate">{subLabel}</div>}
+        {showDescription && <div className="text-xs opacity-65 truncate">{itemDescription}</div>}
       </div>
     );
   };
