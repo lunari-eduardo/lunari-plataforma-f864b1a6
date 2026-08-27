@@ -448,6 +448,34 @@ export default function GalleryDetail() {
         description: action.descricao || action.tipo,
       }));
   }, [galleryActions]);
+
+  // Derived photos lists (ALL HOOKS MUST BE DECLARED ABOVE EARLY RETURNS)
+  const selectedPhotos = useMemo(() => transformedPhotos.filter(p => p.isSelected), [transformedPhotos]);
+  const favoritePhotos = useMemo(() => selectedPhotos.filter(p => p.isFavorite), [selectedPhotos]);
+  const photosWithComments = useMemo(() => selectedPhotos.filter(p => p.comment), [selectedPhotos]);
+
+  const currentPhotosList = useMemo(() => {
+    if (activePhotoFilter === 'selected') {
+      return transformedPhotos.filter(p => p.isSelected);
+    }
+    if (activePhotoFilter === 'favorites') {
+      return transformedPhotos.filter(p => p.isSelected && p.isFavorite);
+    }
+    if (activePhotoFilter.startsWith('folder:')) {
+      const folderId = activePhotoFilter.replace('folder:', '');
+      return transformedPhotos.filter(p => p.folderId === folderId);
+    }
+    return transformedPhotos;
+  }, [transformedPhotos, activePhotoFilter]);
+
+  const handleCopyCode = useCallback((code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setIsCodeCopied(true);
+    toast.success('Código copiado para a área de transferência!');
+    setTimeout(() => setIsCodeCopied(false), 2500);
+  }, []);
+
   // Combined loading state
   const isLoadingData = isSupabaseLoading || isLoadingPhotos;
 
@@ -481,33 +509,6 @@ export default function GalleryDetail() {
     );
   }
 
-  const selectedPhotos = transformedPhotos.filter(p => p.isSelected);
-  const favoritePhotos = selectedPhotos.filter(p => p.isFavorite);
-  const photosWithComments = selectedPhotos.filter(p => p.comment);
-
-  // Filtered photos based on activePhotoFilter tab
-  const currentPhotosList = useMemo(() => {
-    if (activePhotoFilter === 'selected') {
-      return transformedPhotos.filter(p => p.isSelected);
-    }
-    if (activePhotoFilter === 'favorites') {
-      return transformedPhotos.filter(p => p.isSelected && p.isFavorite);
-    }
-    if (activePhotoFilter.startsWith('folder:')) {
-      const folderId = activePhotoFilter.replace('folder:', '');
-      return transformedPhotos.filter(p => p.folderId === folderId);
-    }
-    return transformedPhotos;
-  }, [transformedPhotos, activePhotoFilter]);
-
-  const handleCopyCode = (code: string) => {
-    if (!code) return;
-    navigator.clipboard.writeText(code);
-    setIsCodeCopied(true);
-    toast.success('Código copiado para a área de transferência!');
-    setTimeout(() => setIsCodeCopied(false), 2500);
-  };
-  
   // Use public_token for client link if available, otherwise show warning
   const hasPublicToken = !!supabaseGallery.publicToken;
   const clientLink = hasPublicToken
