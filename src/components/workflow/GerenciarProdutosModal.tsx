@@ -14,6 +14,7 @@ import { ProducaoProdutoCard } from "./produtos/ProducaoProdutoCard";
 import { useWorkflowPreferences } from "@/hooks/useWorkflowPreferences";
 import {
   buildEtapasPadrao,
+  deterministicProductId,
   etapasHash,
   hydrateProduto,
   switchFluxo,
@@ -53,11 +54,11 @@ const RETRY_MS = 1500;
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
-const normalizeForSave = (list: ProdutoWorkflowFlow[]): ProdutoWorkflowFlow[] =>
-  list.map((p) =>
+const normalizeForSave = (list: ProdutoWorkflowFlow[], sessionId: string): ProdutoWorkflowFlow[] =>
+  list.map((p, i) =>
     syncLegacyFlags({
       ...p,
-      id: p.id ?? genId(),
+      id: p.id || deterministicProductId(sessionId, p.nome || "produto", i),
       fluxo: p.fluxo ?? "padrao",
       etapas: p.etapas && p.etapas.length > 0 ? p.etapas : buildEtapasPadrao(),
       valorUnitario: p.tipo === "incluso" ? 0 : p.valorUnitario,
@@ -70,6 +71,8 @@ const produtoHash = (p: ProdutoWorkflowFlow): string =>
 export function GerenciarProdutosModal({
   open,
   onOpenChange,
+  sessionId,
+  clienteName,
   produtos,
   productOptions,
   onSave,
@@ -115,7 +118,7 @@ export function GerenciarProdutosModal({
     const pending = pendingCommitRef.current;
     if (!pending || isFlushingRef.current) return;
 
-    const payload = normalizeForSave(pending);
+    const payload = normalizeForSave(pending, sessionId);
     const sentHashes = new Map(payload.map((p) => [p.id ?? "", produtoHash(p)]));
     pendingCommitRef.current = null;
     isFlushingRef.current = true;
@@ -157,7 +160,7 @@ export function GerenciarProdutosModal({
     } finally {
       isFlushingRef.current = false;
     }
-  }, []);
+  }, [sessionId]);
 
   const scheduleAutosave = useCallback(
     (next: ProdutoWorkflowFlow[], opts?: { immediate?: boolean }) => {
@@ -198,7 +201,7 @@ export function GerenciarProdutosModal({
 
   useEffect(() => {
     if (!open) return;
-    const hydratedProps = produtos.map((produto) => {
+    const hydratedProps = produtos.map((produto, i) => {
       let nomeProduto = produto.nome;
       if (!nomeProduto || nomeProduto.startsWith("Produto ID:")) {
         const produtoEncontrado =
@@ -215,7 +218,10 @@ export function GerenciarProdutosModal({
         nome: nomeProduto,
         valorUnitario: produto.tipo === "incluso" ? 0 : produto.valorUnitario,
       });
-      return { ...hydrated, id: hydrated.id ?? genId() };
+      return {
+        ...hydrated,
+        id: hydrated.id || deterministicProductId(sessionId, nomeProduto || "produto", i),
+      };
     });
 
     setLocalProdutos((prev) => {
@@ -245,7 +251,7 @@ export function GerenciarProdutosModal({
       }
       return merged;
     });
-  }, [open, produtos, produtosConfig, productOptions]);
+  }, [open, produtos, produtosConfig, productOptions, sessionId]);
 
   const totais = useMemo(() => {
     const manuais = localProdutos.filter((p) => p.tipo === "manual");
@@ -449,16 +455,39 @@ export function GerenciarProdutosModal({
           }
         }}
       >
-        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border/40">
-          <DialogTitle className="flex items-center gap-2.5 text-[16px]">
-            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-              <Package className="h-4 w-4 text-primary" />
-            </div>
-            Produção da sessão
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-[12px] ml-[42px]">
-            Acompanhe o andamento dos produtos e o que ainda precisa ser feito.
-          </DialogDescription>
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border/40 flex flex-row items-center justify-between gap-4">
+          <div className="flex flex-col gap-1 min-w-0">
+            <DialogTitle className="flex items-center gap-2.5 text-[16px]">
+              <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
+              Produção da sessão
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-[12px] ml-[42px]">
+              Acompanhe o andamento dos produtos e o que ainda precisa ser feito.
+            </DialogDescription>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 pr-8">
+            <Button
+              type="button"
+              onClick={() => setAddOpen((v) => !v)}
+              className="h-8 gap-1.5 text-[12px]"
+              variant={addOpen ? "outline" : "default"}
+              size="sm"
+            >
+              {addOpen ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  Fechar
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar produto
+                </>
+              )}
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* Header executivo */}
@@ -484,29 +513,10 @@ export function GerenciarProdutosModal({
               </div>
               <div className="text-[11px] text-muted-foreground">valor dos produtos</div>
             </div>
-            <div className="flex-1" />
-            <Button
-              type="button"
-              onClick={() => setAddOpen((v) => !v)}
-              className="h-9 gap-2 text-[13px]"
-              variant={addOpen ? "outline" : "default"}
-            >
-              {addOpen ? (
-                <>
-                  <X className="h-3.5 w-3.5" />
-                  Fechar
-                </>
-              ) : (
-                <>
-                  <Plus className="h-3.5 w-3.5" />
-                  Adicionar produto
-                </>
-              )}
-            </Button>
           </div>
 
           {addOpen && (
-            <div className="mt-3 rounded-lg border border-border/60 bg-background p-3">
+            <div className="mt-3 rounded-lg border border-border/60 bg-background p-3 animate-in fade-in-50 slide-in-from-top-2 duration-200">
               <div className="text-[11px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
                 Buscar produto
               </div>
@@ -525,7 +535,6 @@ export function GerenciarProdutosModal({
             localProdutos.map((produto, index) => (
               <ProducaoProdutoCard
                 key={produto.id ?? index}
-                ordinal={index + 1}
                 produto={produto}
                 index={index}
                 onQuantidadeChange={handleQuantidadeChange}

@@ -106,7 +106,6 @@ function useWorkflowVersion(): number {
 export function useProductTaskMirror(): void {
   const { user } = useAuth();
   const runCapability = useRunCapability();
-  const tasks = useTasks();
   const { deleteTask: deleteTaskLocal } = useSupabaseTasks();
   const version = useWorkflowVersion();
   const { getDefaultOpenKey, isTerminalKey, statuses } = useSupabaseTaskStatuses();
@@ -129,9 +128,10 @@ export function useProductTaskMirror(): void {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, tasks, version, statuses]);
+  }, [user?.id, version, statuses]);
 
   async function reconcile() {
+    const currentTasks = tasksStore.getAll();
     const sessions = workflowStore.getAll();
     const sessionsById = new Map(sessions.map((s) => [s.id, s]));
 
@@ -179,13 +179,13 @@ export function useProductTaskMirror(): void {
     for (const [sessionId, specs] of specsBySession) {
       const session = sessionsById.get(sessionId);
       if (!session) continue;
-      const sessionMirrors = listMirrorTasksForSession(tasks, sessionId);
+      const sessionMirrors = listMirrorTasksForSession(currentTasks, sessionId);
       const seenProductIds = new Set<string>();
       const memoizedProductIds = memoizedBySession.get(sessionId) ?? new Set<string>();
 
       for (const spec of specs) {
         seenProductIds.add(spec.produtoId);
-        const existing = findMirrorTask(tasks, sessionId, spec.produtoId);
+        const existing = findMirrorTask(currentTasks, sessionId, spec.produtoId);
         await applySpec(spec, existing);
       }
 
@@ -194,9 +194,18 @@ export function useProductTaskMirror(): void {
       for (const t of sessionMirrors) {
         const pid = extractProdutoIdFromTask(t);
         if (!pid || seenProductIds.has(pid) || memoizedProductIds.has(pid)) continue;
+
+        // Checagem defensiva adicional: não apagar se o produto ainda existe na sessão com outro formato de id
+        const produtosAtuais = normalizeProdutos(session.produtos_incluidos);
+        const existeCorrespondente = produtosAtuais.some((p, i) => {
+          const detId = deterministicProductId(session.id, p?.nome || "produto", i);
+          return p?.id === pid || detId === pid;
+        });
+        if (existeCorrespondente) continue;
+
         // Trava extra: se houve write recente para essa task, não apagar.
         const lastWrite = lastWriteByTaskRef.current.get(t.id);
-        if (lastWrite && Date.now() - lastWrite.at < 1500) continue;
+        if (lastWrite && Date.now() - lastWrite.at < 3000) continue;
         await removeTask(t);
       }
     }

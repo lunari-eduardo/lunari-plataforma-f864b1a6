@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Minus, Plus, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ import { ProdutoContextMenu } from "./ProdutoContextMenu";
 import { ProdutoFlowEditPopover } from "./ProdutoFlowEditPopover";
 
 interface Props {
-  ordinal: number;
   produto: ProdutoWorkflowFlow;
   index: number;
   onQuantidadeChange: (index: number, q: number) => void;
@@ -42,7 +42,6 @@ interface Props {
 }
 
 export function ProducaoProdutoCard({
-  ordinal,
   produto,
   index,
   onQuantidadeChange,
@@ -56,6 +55,32 @@ export function ProducaoProdutoCard({
   onStartedChange,
   formatCurrency,
 }: Props) {
+  const [qtdStr, setQtdStr] = useState<string>(String(produto.quantidade || 1));
+
+  useEffect(() => {
+    setQtdStr(String(produto.quantidade || 1));
+  }, [produto.quantidade]);
+
+  const handleQtdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQtdStr(val);
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num >= 0) {
+      onQuantidadeChange(index, num);
+    }
+  };
+
+  const handleQtdBlur = () => {
+    const num = parseInt(qtdStr, 10);
+    if (isNaN(num) || num < 1) {
+      setQtdStr("1");
+      onQuantidadeChange(index, 1);
+    } else {
+      setQtdStr(String(num));
+      onQuantidadeChange(index, num);
+    }
+  };
+
   const etapas = produto.etapas ?? [];
   const fluxo = produto.fluxo ?? "padrao";
   const isIncluso = produto.tipo === "incluso";
@@ -78,51 +103,71 @@ export function ProducaoProdutoCard({
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm hover:border-border transition-colors">
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_180px] gap-4 p-4">
-        {/* COL 1 — Identidade + preço */}
-        <div className="flex gap-3 min-w-0">
-          <div className="shrink-0">
-            <div className="h-10 w-10 rounded-md border border-border/60 bg-muted/40 flex items-center justify-center text-[13px] font-semibold tabular-nums text-muted-foreground">
-              {String(ordinal).padStart(2, "0")}
+      <div className="grid grid-cols-1 lg:grid-cols-[230px_1fr_180px] gap-4 p-4">
+        {/* COL 1 — Identidade + quantidade + preço */}
+        <div className="flex flex-col gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="text-[14px] font-semibold text-foreground truncate"
+              title={produto.nome}
+            >
+              {produto.nome}
+            </span>
+          </div>
+          {isIncluso && (
+            <Badge variant="secondary" className="text-[9px] w-fit">
+              Incluso no pacote
+            </Badge>
+          )}
+
+          {/* Stepper de quantidade com digitação direta */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-muted-foreground font-medium">Qtd:</span>
+            <div className="inline-flex items-center border border-border/60 rounded-md overflow-hidden bg-background">
+              <button
+                type="button"
+                onClick={() => {
+                  const cur = produto.quantidade || 1;
+                  const next = Math.max(1, cur - 1);
+                  onQuantidadeChange(index, next);
+                }}
+                className="h-7 w-7 flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors shrink-0"
+                aria-label="Diminuir quantidade"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <input
+                type="number"
+                min="1"
+                value={qtdStr}
+                onChange={handleQtdChange}
+                onBlur={handleQtdBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="h-7 w-12 text-center text-[13px] font-medium tabular-nums bg-transparent border-x border-border/60 focus:outline-none focus:bg-muted/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                aria-label="Quantidade do produto"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const cur = produto.quantidade || 0;
+                  onQuantidadeChange(index, cur + 1);
+                }}
+                className="h-7 w-7 flex items-center justify-center hover:bg-muted text-muted-foreground transition-colors shrink-0"
+                aria-label="Aumentar quantidade"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
             </div>
           </div>
-          <div className="flex flex-col gap-2 min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="text-[14px] font-semibold text-foreground truncate"
-                title={produto.nome}
-              >
-                {produto.nome}
-              </span>
-            </div>
-            {isIncluso && (
-              <Badge variant="secondary" className="text-[9px] w-fit">
-                Incluso no pacote
-              </Badge>
-            )}
-            {/* Stepper qtd + preço */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="inline-flex items-center border border-border/60 rounded-md overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => onQuantidadeChange(index, Math.max(0, (produto.quantidade || 0) - 1))}
-                  className="h-7 w-7 flex items-center justify-center hover:bg-muted text-muted-foreground"
-                  aria-label="Diminuir quantidade"
-                >
-                  <Minus className="h-3 w-3" />
-                </button>
-                <span className="h-7 min-w-[32px] px-1 flex items-center justify-center text-[13px] font-medium tabular-nums bg-background">
-                  {produto.quantidade || 0}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onQuantidadeChange(index, (produto.quantidade || 0) + 1)}
-                  className="h-7 w-7 flex items-center justify-center hover:bg-muted text-muted-foreground"
-                  aria-label="Aumentar quantidade"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
+
+          {/* Preço unitário e subtotal alinhados abaixo */}
+          <div className="pt-2 border-t border-border/40 space-y-1.5 mt-0.5">
+            <div className="flex items-center justify-between gap-2 text-[12px] text-muted-foreground">
+              <span>Unitário:</span>
               <ProdutoPriceEditor
                 value={produto.valorUnitario || 0}
                 disabled={isIncluso}
@@ -130,11 +175,11 @@ export function ProducaoProdutoCard({
                 formatCurrency={formatCurrency}
               />
             </div>
-            <div className="text-[11px] text-muted-foreground leading-tight">
-              Subtotal
-              <div className="text-[13px] font-semibold tabular-nums text-foreground">
+            <div className="flex items-center justify-between gap-2 text-[12px]">
+              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="text-[13px] font-semibold tabular-nums text-foreground">
                 {isIncluso ? "R$ 0,00" : formatCurrency(subtotal)}
-              </div>
+              </span>
             </div>
           </div>
         </div>
