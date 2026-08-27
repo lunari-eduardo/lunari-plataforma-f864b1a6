@@ -8,6 +8,7 @@ interface PhotoCardProps {
   isSelected: boolean;
   allowComments: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   onSelect: () => void;
   onViewFullscreen: () => void;
   onComment?: () => void;
@@ -19,6 +20,7 @@ export function PhotoCard({
   isSelected, 
   allowComments,
   disabled,
+  readOnly = false,
   onSelect, 
   onViewFullscreen,
   onComment,
@@ -27,18 +29,16 @@ export function PhotoCard({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // Only open fullscreen if clicking on the image area, not on action buttons
-    if (!disabled) {
-      onViewFullscreen();
-    }
+  const handleContainerClick = () => {
+    // Abre fullscreen ao clicar na foto (mesmo em modo de visualização fotógrafo)
+    onViewFullscreen();
   };
 
   return (
     <div 
       className={cn(
         'group relative overflow-hidden bg-muted cursor-pointer transition-all duration-700 w-full rounded-sm',
-        disabled && 'opacity-60 cursor-not-allowed'
+        disabled && !readOnly && 'opacity-60 cursor-not-allowed'
       )}
       onClick={handleContainerClick}
     >
@@ -88,14 +88,14 @@ export function PhotoCard({
 
       {/* Selection button - always visible when selected, otherwise on hover only */}
       <button
-        onClick={(e) => { e.stopPropagation(); if (!disabled) onSelect(); }}
-        disabled={disabled}
+        onClick={(e) => { e.stopPropagation(); if (!disabled && !readOnly) onSelect(); }}
+        disabled={disabled || readOnly}
         className={cn(
           'absolute top-3 left-3 h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 z-10',
           isSelected 
             ? 'bg-primary border-primary text-primary-foreground' 
             : 'border-white/80 bg-black/30 hover:border-white hover:bg-black/50',
-          disabled && 'pointer-events-none'
+          (disabled || readOnly) && 'pointer-events-none'
         )}
       >
         {isSelected && <Check className="h-4 w-4" />}

@@ -45,7 +45,29 @@ export const MEIO_PAGAMENTO_LABELS: Record<string, string> = {
   asaas: 'Asaas',
   mercadopago: 'MercadoPago',
   infinitepay: 'InfinitePay',
-  manual: 'Manual'
+  manual: 'Manual',
+  pix_manual: 'PIX Manual',
+  dinheiro: 'Dinheiro',
+  pix: 'PIX',
+  cartao: 'Cartão',
+  transferencia: 'Transferência',
+  estorno: 'Estorno'
+} as const;
+
+export const ESCOPO_LABELS: Record<string, string> = {
+  sinal: 'Sinal',
+  sessao: 'Sessão',
+  fotos_extras: 'Extras',
+  sessao_e_extras: 'Sessão + Extras',
+  avulso: 'Venda Avulsa'
+} as const;
+
+export const ESCOPO_COLORS: Record<string, string> = {
+  sinal: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+  sessao: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
+  fotos_extras: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
+  sessao_e_extras: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
+  avulso: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
 } as const;
 
 export const TIPO_LABELS = {

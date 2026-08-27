@@ -24,6 +24,8 @@ export interface SessionPaymentExtended {
   parcelaId?: string;
   /** Pagamento originado em ambiente de teste (sandbox) do gateway. */
   sandbox?: boolean;
+  /** Finalidade ou origem do pagamento (sinal, sessão, extras, etc.) */
+  finalidade?: 'sinal' | 'sessao' | 'fotos_extras' | 'sessao_e_extras' | 'avulso' | 'credito' | 'estorno' | string;
 }
 
 

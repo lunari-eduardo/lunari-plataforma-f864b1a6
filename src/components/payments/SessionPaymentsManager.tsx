@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown, Camera, Layers, ShoppingBag, Wallet } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
@@ -69,6 +69,18 @@ export function SessionPaymentsManager({
         origem = 'parcelado';
       }
 
+      let finalidade: SessionPaymentExtended['finalidade'] = p.finalidade;
+      const obs = (p.observacoes || '').toLowerCase();
+      if (!finalidade) {
+        if (tipo === 'estorno' || statusPagamento === 'estornado') finalidade = 'estorno';
+        else if (origem === 'credito' || obs.includes('crédito do cliente')) finalidade = 'credito';
+        else if (/(foto[s]?\s+extra|\[extras)/i.test(obs)) finalidade = 'fotos_extras';
+        else if (/(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) finalidade = 'sessao_e_extras';
+        else if (/(sinal|entrada|arras|reserva)/i.test(obs)) finalidade = 'sinal';
+        else if (/(venda\s+avulsa|avulso)/i.test(obs)) finalidade = 'avulso';
+        else finalidade = 'sessao';
+      }
+
       return {
         id: p.id || `legacy-${Date.now()}-${Math.random()}`,
         valor: typeof p.valor === 'number' ? p.valor : parseFloat(String(p.valor || '0')),
@@ -79,6 +91,7 @@ export function SessionPaymentsManager({
         numeroParcela: p.numeroParcela,
         totalParcelas: p.totalParcelas,
         origem: origem as 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado',
+        finalidade,
         editavel: p.origem !== 'agenda' && p.editavel !== false,
         forma_pagamento: p.forma_pagamento,
         observacoes: p.observacoes
@@ -213,80 +226,107 @@ export function SessionPaymentsManager({
   };
 
 
-  const getOriginIcon = (origem: string, observacoes?: string) => {
-    // Crédito do cliente
-    if (origem === 'credito' || observacoes?.toLowerCase().includes('crédito do cliente')) {
-      return <CreditCard className="h-3 w-3 text-emerald-600" />;
+  // Helper para obter a finalidade/motivo funcional do pagamento (Sinal, Sessão, Extras, etc.)
+  const getPaymentOriginInfo = (payment: SessionPaymentExtended) => {
+    const finalidade = payment.finalidade;
+    const obs = payment.observacoes || '';
+    const isEstorno = payment.tipo === 'estorno' || payment.statusPagamento === 'estornado' || finalidade === 'estorno';
+    const isCredito = payment.origem === 'credito' || finalidade === 'credito' || obs.toLowerCase().includes('crédito do cliente');
+
+    if (isEstorno) {
+      return {
+        label: 'Estorno',
+        badgeClass: 'bg-destructive/10 text-destructive border-destructive/20',
+        icon: <RotateCcw className="h-3 w-3 text-destructive" />
+      };
     }
-    // Detectar InfinitePay
-    if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
-      return <Link2 className="h-3 w-3 text-green-600" />;
+    if (isCredito) {
+      return {
+        label: 'Crédito',
+        badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+        icon: <CreditCard className="h-3 w-3 text-emerald-600" />
+      };
     }
-    // Detectar Asaas
-    if (origem === 'asaas' || observacoes?.toLowerCase().includes('asaas')) {
-      return <CreditCard className="h-3 w-3 text-blue-600" />;
+    if (finalidade === 'fotos_extras' || /(foto[s]?\s+extra|\[extras)/i.test(obs)) {
+      return {
+        label: 'Extras',
+        badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
+        icon: <Images className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+      };
     }
-    // Detectar Mercado Pago pela origem ou observações
-    if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
-      if (observacoes?.toLowerCase().includes('pix')) {
-        return <QrCode className="h-3 w-3 text-primary" />;
-      }
-      return <Link2 className="h-3 w-3 text-primary" />;
+    if (finalidade === 'sessao_e_extras' || /(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) {
+      return {
+        label: 'Sessão + Extras',
+        badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
+        icon: <Layers className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+      };
     }
-    if (observacoes && observacoes.toLowerCase().includes('entrada')) {
-      return <DollarSign className="h-3 w-3" />;
+    if (
+      finalidade === 'sinal' ||
+      obs.toLowerCase().includes('entrada') ||
+      obs.toLowerCase().includes('sinal') ||
+      obs.toLowerCase().includes('reserva') ||
+      obs.toLowerCase().includes('arras')
+    ) {
+      return {
+        label: 'Sinal',
+        badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+        icon: <Calendar className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+      };
     }
-    switch (origem) {
-      case 'agenda':
-        return <Calendar className="h-3 w-3" />;
-      case 'workflow_rapido':
-        return <CreditCard className="h-3 w-3" />;
-      case 'parcelado':
-        return <Package className="h-3 w-3" />;
-      case 'supabase':
-        return <DollarSign className="h-3 w-3" />;
-      default:
-        return <DollarSign className="h-3 w-3" />;
+    if (finalidade === 'avulso' || /(venda\s+avulsa|avulso)/i.test(obs)) {
+      return {
+        label: 'Venda Avulsa',
+        badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+        icon: <ShoppingBag className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+      };
     }
+    // Padrão: Sessão / Pacote
+    return {
+      label: 'Sessão',
+      badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
+      icon: <Camera className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+    };
   };
 
-  const getOriginLabel = (origem: string, observacoes?: string) => {
-    // Crédito do cliente
-    if (origem === 'credito' || observacoes?.toLowerCase().includes('crédito do cliente')) {
-      return 'Crédito do cliente';
+  // Helper para obter o provedor/meio de pagamento (Asaas, Mercado Pago, InfinitePay, Manual, PIX, etc.)
+  const getProviderInfo = (payment: SessionPaymentExtended) => {
+    const { origem, observacoes, forma_pagamento } = payment;
+    const obs = observacoes || '';
+    const forma = forma_pagamento || '';
+
+    if (origem === 'credito' || obs.toLowerCase().includes('crédito do cliente')) {
+      return { label: 'Crédito do cliente', icon: <CreditCard className="h-3 w-3 text-emerald-600" /> };
     }
-    // Detectar InfinitePay
-    if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
-      return 'InfinitePay';
+    if (origem === 'infinitepay' || obs.toLowerCase().includes('infinitepay')) {
+      return { label: 'InfinitePay', icon: <Link2 className="h-3 w-3 text-green-600" /> };
     }
-    // Detectar Asaas
-    if (origem === 'asaas' || observacoes?.toLowerCase().includes('asaas')) {
-      if (observacoes?.toLowerCase().includes('pix')) {
-        return 'Pix Asaas';
+    if (origem === 'asaas' || obs.toLowerCase().includes('asaas')) {
+      if (obs.toLowerCase().includes('pix')) {
+        return { label: 'Pix Asaas', icon: <QrCode className="h-3 w-3 text-blue-600" /> };
       }
-      return 'Link Asaas';
+      return { label: 'Link Asaas', icon: <CreditCard className="h-3 w-3 text-blue-600" /> };
     }
-    // Detectar Mercado Pago pela origem ou observações
-    if (origem === 'mercadopago' || observacoes?.toLowerCase().includes('mercado pago')) {
-      if (observacoes?.toLowerCase().includes('pix')) {
-        return 'Pix MP';
+    if (origem === 'mercadopago' || obs.toLowerCase().includes('mercado pago') || obs.toLowerCase().includes('mp #')) {
+      if (obs.toLowerCase().includes('pix')) {
+        return { label: 'Pix MP', icon: <QrCode className="h-3 w-3 text-primary" /> };
       }
-      return 'Link MP';
+      return { label: 'Link MP', icon: <Link2 className="h-3 w-3 text-primary" /> };
     }
-    if (observacoes && observacoes.toLowerCase().includes('entrada')) {
-      return 'Entrada';
+
+    // Manual / outros
+    if (forma) {
+      return { label: forma, icon: <Wallet className="h-3 w-3 text-muted-foreground" /> };
     }
     switch (origem) {
       case 'agenda':
-        return 'Agenda';
+        return { label: 'Agenda', icon: <Calendar className="h-3 w-3 text-muted-foreground" /> };
       case 'workflow_rapido':
-        return 'Workflow';
+        return { label: 'Studio', icon: <Camera className="h-3 w-3 text-muted-foreground" /> };
       case 'parcelado':
-        return 'Parcelado';
-      case 'supabase':
-        return 'Manual';
+        return { label: 'Parcelado', icon: <Package className="h-3 w-3 text-muted-foreground" /> };
       default:
-        return 'Manual';
+        return { label: 'Manual', icon: <DollarSign className="h-3 w-3 text-muted-foreground" /> };
     }
   };
 
@@ -577,12 +617,22 @@ export function SessionPaymentsManager({
                         </TableCell>
 
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            {getOriginIcon(payment.origem, payment.observacoes)}
-                            <span className="text-xs">
-                              {getOriginLabel(payment.origem, payment.observacoes)}
-                            </span>
-                          </div>
+                          {(() => {
+                            const originInfo = getPaymentOriginInfo(payment);
+                            const providerInfo = getProviderInfo(payment);
+                            return (
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-2xs font-medium border ${originInfo.badgeClass}`}>
+                                  {originInfo.icon}
+                                  <span>{originInfo.label}</span>
+                                </span>
+                                <div className="flex items-center gap-1 text-2xs text-muted-foreground pl-0.5">
+                                  {providerInfo.icon}
+                                  <span>{providerInfo.label}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">

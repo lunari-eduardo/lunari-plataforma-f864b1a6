@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   ChevronLeft, 
@@ -376,46 +377,49 @@ export function Lightbox({
 
   const isGestureActive = isPinchingRef.current || isPanningRef.current;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-2xl supports-[backdrop-filter]:bg-black/80 flex flex-col animate-fade-in select-none">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center gap-4">
-          <span className="text-white/80 text-sm">
-            {currentIndex + 1} / {photos.length}
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/80 via-black/40 to-transparent z-10">
+        <div className="flex items-center gap-3 md:gap-4">
+          <span className="text-white/90 text-sm font-medium tracking-wide bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 shadow-sm">
+            {currentIndex + 1} <span className="text-white/40 font-normal">/</span> {photos.length}
           </span>
-          <span className="text-white/40 text-xs truncate max-w-[200px] sm:max-w-[400px]">
+          <span className="text-white/60 text-xs md:text-sm font-light tracking-wide truncate max-w-[160px] sm:max-w-[320px] md:max-w-[480px]">
             {currentPhoto.originalFilename || currentPhoto.filename}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2">
           {!isMobile && (
-            <>
+            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md p-1 rounded-full border border-white/10 mr-1 shadow-sm">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/10"
+                className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
                 onClick={() => setZoom(z => Math.max(1, z - 0.25))}
                 disabled={zoom <= 1}
+                title="Diminuir zoom"
               >
-                <ZoomOut className="h-5 w-5" />
+                <ZoomOut className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/10"
+                className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
                 onClick={() => setZoom(z => Math.min(2, z + 0.25))}
                 disabled={zoom >= 2}
+                title="Aumentar zoom"
               >
-                <ZoomIn className="h-5 w-5" />
+                <ZoomIn className="h-4 w-4" />
               </Button>
-            </>
+            </div>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/10"
+            className="h-9 w-9 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full transition-all active:scale-95 shadow-sm"
             onClick={handleManualClose}
+            title="Fechar (Esc)"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -431,7 +435,8 @@ export function Lightbox({
         {currentIndex > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex - 1); }}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 hover:text-white transition-colors z-10"
+            className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 h-11 w-11 md:h-12 md:w-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-md flex items-center justify-center text-white/90 hover:text-white shadow-xl transition-all active:scale-95 z-20"
+            title="Foto anterior"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -439,13 +444,14 @@ export function Lightbox({
         {currentIndex < photos.length - 1 && (
           <button
             onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex + 1); }}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 hover:text-white transition-colors z-10"
+            className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 h-11 w-11 md:h-12 md:w-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-md flex items-center justify-center text-white/90 hover:text-white shadow-xl transition-all active:scale-95 z-20"
+            title="Próxima foto"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
         )}
 
-        {/* Image wrapper - watermark is burned into pixels, no overlay needed */}
+        {/* Image wrapper - clicking the empty wrapper space closes the lightbox */}
         <div 
           className="relative flex items-center justify-center overflow-hidden"
           style={{ 
@@ -453,17 +459,24 @@ export function Lightbox({
             height: isMobile ? 'calc(100vh - 140px)' : 'calc(100vh - 180px)',
             touchAction: 'none',
           }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleManualClose();
+            }
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onWheel={handleWheel}
         >
-          <div className="relative inline-flex">
+          <div 
+            className="relative inline-flex"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
               src={displayUrl}
               alt={currentPhoto.filename}
-              className="select-none"
+              className="select-none rounded-[2px] drop-shadow-[0_25px_60px_rgba(0,0,0,0.7)]"
               draggable={false}
               style={{ 
                 maxWidth: isMobile ? 'calc(100vw - 32px)' : 'calc(100vw - 120px)',
@@ -471,7 +484,7 @@ export function Lightbox({
                 objectFit: 'contain',
                 transform: getImageTransform(),
                 transformOrigin: 'center center',
-                transition: isGestureActive ? 'none' : 'transform 0.2s ease-out',
+                transition: isGestureActive ? 'none' : 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
               onContextMenu={(e) => e.preventDefault()}
             />
@@ -480,22 +493,25 @@ export function Lightbox({
               className="absolute inset-0 z-[5]" 
               style={{ background: 'url(data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7)' }}
               onContextMenu={(e) => e.preventDefault()}
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="p-4 bg-gradient-to-t from-black/50 to-transparent">
-        <div className="flex items-center justify-center gap-3">
+      <div className="p-4 md:p-5 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10">
+        <div className="flex items-center justify-center gap-2.5 md:gap-3 flex-wrap">
           <Button
             onClick={() => !disabled && onSelect(currentPhoto.id)}
             disabled={disabled}
             variant={currentPhoto.isSelected ? 'terracotta' : 'outline'}
             size={isMobile ? 'icon' : 'default'}
             className={cn(
-              !isMobile && 'gap-2',
-              !currentPhoto.isSelected && 'bg-transparent text-white border-white/40 hover:bg-white/10 hover:text-white'
+              !isMobile && 'gap-2 px-5 py-2.5 font-medium shadow-lg backdrop-blur-md',
+              currentPhoto.isSelected 
+                ? 'shadow-[0_4px_20px_rgba(198,163,106,0.35)]'
+                : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white shadow-md'
             )}
           >
             <Check className="h-4 w-4" />
@@ -509,11 +525,10 @@ export function Lightbox({
               variant="outline"
               size={isMobile ? 'icon' : 'default'}
               className={cn(
-                !isMobile && 'gap-2',
-                'bg-transparent',
+                !isMobile && 'gap-2 px-4 shadow-md backdrop-blur-md',
                 currentPhoto.isFavorite 
-                  ? 'text-red-500 border-red-500/40 hover:bg-red-500/10' 
-                  : 'text-white border-white/40 hover:bg-white/10 hover:text-white'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30' 
+                  : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white'
               )}
             >
               <Heart className={cn("h-4 w-4", currentPhoto.isFavorite && "fill-current")} />
@@ -527,11 +542,10 @@ export function Lightbox({
               variant="outline"
               size={isMobile ? 'icon' : 'default'}
               className={cn(
-                !isMobile && 'gap-2',
-                'bg-transparent',
+                !isMobile && 'gap-2 px-4 shadow-md backdrop-blur-md',
                 currentPhoto.comment 
-                  ? 'text-primary border-primary hover:bg-primary/10' 
-                  : 'text-white border-white/40 hover:bg-white/10 hover:text-white'
+                  ? 'bg-primary/20 text-primary border-primary/40 hover:bg-primary/30' 
+                  : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white'
               )}
             >
               <MessageSquare className="h-4 w-4" />
@@ -546,8 +560,8 @@ export function Lightbox({
               variant="outline"
               size={isMobile ? 'icon' : 'default'}
               className={cn(
-                !isMobile && 'gap-2',
-                'bg-transparent text-white border-white/40 hover:bg-white/10 hover:text-white'
+                !isMobile && 'gap-2 px-4 shadow-md backdrop-blur-md',
+                'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white'
               )}
             >
               {isDownloadingPhoto ? (
@@ -562,15 +576,15 @@ export function Lightbox({
 
         {/* Comment Panel */}
         {showComment && (
-          <div className="mt-4 max-w-md mx-auto animate-slide-up">
+          <div className="mt-4 max-w-md mx-auto animate-slide-up bg-black/40 backdrop-blur-xl border border-white/15 p-4 rounded-xl shadow-2xl">
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Adicione um comentário sobre esta foto..."
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none focus-visible:ring-primary/50"
               rows={3}
             />
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-3">
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -590,6 +604,7 @@ export function Lightbox({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

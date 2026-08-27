@@ -87,6 +87,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { getGalleryUrl } from '@/lib/galleryUrl';
 import { cn } from '@/lib/utils';
 
+// Helper to remove extension from filename
+function removeExtension(filename: string): string {
+  const lastDot = filename.lastIndexOf('.');
+  return lastDot > 0 ? filename.slice(0, lastDot) : filename;
+}
+
+// Generate Windows Explorer search string
+function generateWindowsSearchCode(photos: GalleryPhoto[]): string {
+  if (photos.length === 0) return '';
+  const filenames = photos.map(p => removeExtension(p.originalFilename || p.filename));
+  return filenames.map(f => `"${f}"`).join(' OR ');
+}
+
 // Polling interval for pending payments (30 seconds)
 const PAYMENT_POLL_INTERVAL = 30000;
 
@@ -94,14 +107,16 @@ export default function GalleryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  type LightboxSource = 'all' | 'selection';
+  type LightboxSource = 'all' | 'selection' | 'filtered';
   const [lightboxState, setLightboxState] = useState<{ source: LightboxSource; index: number } | null>(null);
   const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [reactivateSuccessOpen, setReactivateSuccessOpen] = useState(false);
   const [reactivateDays, setReactivateDays] = useState(7);
-  const [showSelectedPhotos, setShowSelectedPhotos] = useState(false);
+  const [activePhotoFilter, setActivePhotoFilter] = useState<string>('all');
+  const [isCodesCollapsed, setIsCodesCollapsed] = useState(false);
+  const [isCodeCopied, setIsCodeCopied] = useState(false);
   const [codesFilter, setCodesFilter] = useState<'all' | 'favorites'>('all');
   const [activeDetailFolderId, setActiveDetailFolderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('selection');
@@ -469,6 +484,29 @@ export default function GalleryDetail() {
   const selectedPhotos = transformedPhotos.filter(p => p.isSelected);
   const favoritePhotos = selectedPhotos.filter(p => p.isFavorite);
   const photosWithComments = selectedPhotos.filter(p => p.comment);
+
+  // Filtered photos based on activePhotoFilter tab
+  const currentPhotosList = useMemo(() => {
+    if (activePhotoFilter === 'selected') {
+      return transformedPhotos.filter(p => p.isSelected);
+    }
+    if (activePhotoFilter === 'favorites') {
+      return transformedPhotos.filter(p => p.isSelected && p.isFavorite);
+    }
+    if (activePhotoFilter.startsWith('folder:')) {
+      const folderId = activePhotoFilter.replace('folder:', '');
+      return transformedPhotos.filter(p => p.folderId === folderId);
+    }
+    return transformedPhotos;
+  }, [transformedPhotos, activePhotoFilter]);
+
+  const handleCopyCode = (code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setIsCodeCopied(true);
+    toast.success('Código copiado para a área de transferência!');
+    setTimeout(() => setIsCodeCopied(false), 2500);
+  };
   
   // Use public_token for client link if available, otherwise show warning
   const hasPublicToken = !!supabaseGallery.publicToken;
@@ -907,54 +945,80 @@ export default function GalleryDetail() {
         </TabsList>
 
         <TabsContent value="photos" className="space-y-4">
-          {/* Folder filter tabs */}
-          {galleryFolders.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {/* Filter pills: Todas, Selecionadas, Favoritas e Pastas */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setActivePhotoFilter('all')}
+              className={cn(
+                'shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border',
+                activePhotoFilter === 'all'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              Todas ({transformedPhotos.length})
+            </button>
+
+            <button
+              onClick={() => setActivePhotoFilter('selected')}
+              className={cn(
+                'shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border inline-flex items-center gap-1.5',
+                activePhotoFilter === 'selected'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Check className="h-3.5 w-3.5" />
+              Selecionadas ({selectedPhotos.length})
+            </button>
+
+            {favoritePhotos.length > 0 && (
               <button
-                onClick={() => setActiveDetailFolderId(null)}
+                onClick={() => setActivePhotoFilter('favorites')}
                 className={cn(
-                  'shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border',
-                  activeDetailFolderId === null
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border text-muted-foreground hover:bg-muted'
+                  'shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border inline-flex items-center gap-1.5',
+                  activePhotoFilter === 'favorites'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                Todas ({transformedPhotos.length})
+                <Heart className="h-3.5 w-3.5 text-red-500 fill-current" />
+                Favoritas ({favoritePhotos.length})
               </button>
-              {galleryFolders.map((folder: any) => {
-                const count = transformedPhotos.filter(p => p.folderId === folder.id).length;
-                return (
-                  <button
-                    key={folder.id}
-                    onClick={() => setActiveDetailFolderId(folder.id)}
-                    className={cn(
-                      'shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border',
-                      activeDetailFolderId === folder.id
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    {folder.nome} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {(() => {
-            const filteredPhotos = activeDetailFolderId
-              ? transformedPhotos.filter(p => p.folderId === activeDetailFolderId)
-              : transformedPhotos;
-            return filteredPhotos.length > 0 ? (
+            )}
+
+            {galleryFolders.map((folder: any) => {
+              const count = transformedPhotos.filter(p => p.folderId === folder.id).length;
+              const isFolderActive = activePhotoFilter === `folder:${folder.id}`;
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => setActivePhotoFilter(`folder:${folder.id}`)}
+                  className={cn(
+                    'shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border',
+                    isFolderActive
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                      : 'border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {folder.nome} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Photos Grid */}
+          {currentPhotosList.length > 0 ? (
             <MasonryGrid gap={supabaseGallery?.configuracoes?.photoSpacing ?? settings?.defaultPhotoSpacing ?? galleryForSummary.settings.photoSpacing ?? 6}>
-              {filteredPhotos.map((photo, index) => (
+              {currentPhotosList.map((photo, index) => (
                 <MasonryItem key={photo.id} photoWidth={photo.width} photoHeight={photo.height}>
                   <PhotoCard
                     photo={photo}
                     isSelected={photo.isSelected}
                     allowComments={supabaseGallery.configuracoes?.allowComments ?? true}
-                    disabled
+                    readOnly
                     onSelect={() => {}}
-                    onViewFullscreen={() => setLightboxState({ source: 'all', index: transformedPhotos.findIndex(p => p.id === photo.id) })}
+                    onViewFullscreen={() => setLightboxState({ source: 'filtered', index })}
                   />
                 </MasonryItem>
               ))}
@@ -963,11 +1027,16 @@ export default function GalleryDetail() {
             <div className="text-center py-16 lunari-card">
               <Image className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                {activeDetailFolderId ? 'Nenhuma foto nesta pasta' : 'Nenhuma foto adicionada ainda'}
+                {activePhotoFilter === 'selected'
+                  ? 'Nenhuma foto selecionada pelo cliente ainda'
+                  : activePhotoFilter === 'favorites'
+                    ? 'Nenhuma foto marcada como favorita'
+                    : activePhotoFilter.startsWith('folder:')
+                      ? 'Nenhuma foto nesta pasta'
+                      : 'Nenhuma foto adicionada ainda'}
               </p>
             </div>
-          );
-          })()}
+          )}
         </TabsContent>
 
         <TabsContent value="selection" className="space-y-6">
@@ -982,165 +1051,195 @@ export default function GalleryDetail() {
               </p>
             </div>
           ) : (
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-4">
-              {/* Resumo com badges */}
-              <div className="lunari-card p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-lg font-medium">
-                      {selectedPhotos.length} foto{selectedPhotos.length !== 1 ? 's' : ''} selecionada{selectedPhotos.length !== 1 ? 's' : ''}
-                    </span>
-                    
-                    {/* Badges */}
-                    <div className="flex items-center gap-2">
-                      {favoritePhotos.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
-                          <Heart className="h-3 w-3 fill-current" />
-                          {favoritePhotos.length} favorita{favoritePhotos.length !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                      
-                      {photosWithComments.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                          <MessageSquare className="h-3 w-3" />
-                          {photosWithComments.length} comentário{photosWithComments.length !== 1 ? 's' : ''}
-                        </span>
+            <div className="grid gap-6 lg:grid-cols-2 items-start">
+              {/* COLUNA ESQUERDA: Seleção da sessão + Resumo da seleção */}
+              <div className="space-y-4">
+                {/* Card 1: Seleção da sessão */}
+                <div className="lunari-card p-5 space-y-4">
+                  <h3 className="text-base font-semibold tracking-tight text-foreground">
+                    Seleção da sessão
+                  </h3>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-card/60 border border-border/50">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-10 h-10 rounded-full border border-border/80 flex items-center justify-center bg-muted/40 shrink-0">
+                        <Check className="h-5 w-5 text-foreground/80" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-base text-foreground">
+                            {selectedPhotos.length} {selectedPhotos.length === 1 ? 'foto selecionada' : 'fotos selecionadas'}
+                          </p>
+                          {favoritePhotos.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium">
+                              <Heart className="h-3 w-3 fill-current" />
+                              {favoritePhotos.length}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {supabaseGallery.fotosIncluidas} {supabaseGallery.fotosIncluidas === 1 ? 'foto incluída' : 'fotos incluídas'}
+                          {extrasNecessarias > 0 ? ` + ${extrasNecessarias} ${extrasNecessarias === 1 ? 'foto extra paga' : 'fotos extras pagas'}` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 gap-2 font-medium border-border/60 hover:bg-muted"
+                      onClick={() => {
+                        setActivePhotoFilter('selected');
+                        setActiveTab('photos');
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver fotos
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Card 2: Resumo da seleção */}
+                <div className="lunari-card p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">
+                      Resumo da seleção
+                    </h3>
+                    <div className="w-6 h-6 rounded-full bg-muted/50 flex items-center justify-center border border-border/40">
+                      <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  {/* Progresso da Seleção */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span>Progresso da seleção</span>
+                      <span className="text-foreground font-bold">
+                        {Math.round((selectedPhotos.length / Math.max(supabaseGallery.fotosIncluidas, 1)) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full transition-all duration-700 rounded-full',
+                          extrasNecessarias > 0 ? 'bg-amber-500' : 'bg-primary'
+                        )}
+                        style={{
+                          width: `${Math.min(100, (selectedPhotos.length / Math.max(supabaseGallery.fotosIncluidas, 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Métricas: Incluídas, Selecionadas, Extras */}
+                  <div className="grid grid-cols-3 gap-3 py-2 border-y border-border/40">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                        Fotos Incluídas
+                      </span>
+                      <span className="text-lg font-bold text-foreground">
+                        {supabaseGallery.fotosIncluidas}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                        Selecionadas
+                      </span>
+                      <span className={cn('text-lg font-bold', extrasNecessarias > 0 ? 'text-amber-500' : 'text-foreground')}>
+                        {selectedPhotos.length}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                        Fotos Extras
+                      </span>
+                      <span className="text-lg font-bold text-amber-500">
+                        {extrasNecessarias > 0 ? `+${extrasNecessarias}` : '0'}
+                      </span>
+                      {extrasPagasTotal > 0 && (
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Já pagas em ciclos anteriores: {extrasPagasTotal}
+                        </p>
                       )}
                     </div>
                   </div>
-                  
-                  {selectedPhotos.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowSelectedPhotos(!showSelectedPhotos)}
-                    >
-                      {showSelectedPhotos ? (
-                        <>
-                          <EyeOff className="h-4 w-4 mr-2" />
-                          Ocultar fotos
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver fotos selecionadas
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              {/* Lista vertical de fotos (expansível) */}
-              {showSelectedPhotos && selectedPhotos.length > 0 && (
-                <div className="lunari-card divide-y divide-border">
-                  {selectedPhotos.map((photo) => (
-                    <div 
-                      key={photo.id} 
-                      className="flex items-start gap-4 p-3 hover:bg-muted/50 transition-colors"
-                    >
-                      {/* Thumbnail 1:1 */}
-                      <div 
-                        className="w-16 h-16 rounded overflow-hidden flex-shrink-0 cursor-pointer"
-                        onClick={() => setLightboxState({ source: 'selection', index: selectedPhotos.findIndex(p => p.id === photo.id) })}
-                      >
-                        <img 
-                          src={photo.thumbnailUrl} 
-                          alt={photo.filename}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm truncate">
-                            {photo.originalFilename || photo.filename}
+
+                  {/* Faturamento */}
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Faturamento
+                      </span>
+                      {(() => {
+                        const totalVendido = supabaseGallery.valorTotalVendido || 0;
+                        const pendente = calculatedExtraTotal || 0;
+                        if (totalVendido > 0 && pendente <= 0) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30">
+                              <Check className="h-3 w-3" />
+                              Pago
+                            </span>
+                          );
+                        }
+                        if (pendente > 0) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              <Clock className="h-3 w-3" />
+                              Pendente
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
+                            Sem cobrança
                           </span>
-                          {photo.isFavorite && (
-                            <Heart className="h-4 w-4 text-red-500 fill-current flex-shrink-0" />
-                          )}
-                        </div>
-                        
-                        {photo.comment && (
-                          <div className="mt-1 text-sm text-muted-foreground flex items-start gap-2">
-                            <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{photo.comment}</span>
-                          </div>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Empty state */}
-              {selectedPhotos.length === 0 && (
-                <div className="text-center py-16 lunari-card">
-                  <Image className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    Nenhuma foto selecionada ainda
-                  </p>
-                </div>
-              )}
-            </div>
 
-            <div>
-              {/* Botão de códigos com filtro de favoritas */}
-              {selectedPhotos.length > 0 && (
-                <div className="mb-4 space-y-2">
-                  <Button 
-                    variant={effectiveStatus === 'selection_completed' ? "outline" : "terracotta"} 
-                    className="w-full"
-                    onClick={() => {
-                      setCodesFilter('all');
-                      setIsCodesModalOpen(true);
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    {effectiveStatus === 'selection_completed' ? 'Ver códigos das fotos' : 'Códigos para separação das fotos'}
-                  </Button>
-                  
-                  {favoritePhotos.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => {
-                        setCodesFilter('favorites');
-                        setIsCodesModalOpen(true);
-                      }}
+                    <div className="space-y-0.5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-muted-foreground">Valor total</span>
+                        <span className="text-lg font-bold text-foreground">
+                          R$ {((supabaseGallery.valorTotalVendido || 0) + (calculatedExtraTotal || 0)).toFixed(2)}
+                        </span>
+                      </div>
+                      {(supabaseGallery.totalFotosExtrasVendidas || extrasNecessarias) ? (
+                        <p className="text-xs text-muted-foreground">
+                          {(supabaseGallery.totalFotosExtrasVendidas || extrasNecessarias)} {(supabaseGallery.totalFotosExtrasVendidas || extrasNecessarias) === 1 ? 'foto extra vendida' : 'fotos extras vendidas'}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('details')}
+                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors group pt-1"
                     >
-                      <Heart className="h-4 w-4 mr-2" />
-                      Códigos só das favoritas ({favoritePhotos.length})
-                    </Button>
+                      <span>Ver detalhes do pagamento</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                    </button>
+                  </div>
+
+                  {/* Alerta de Fotos Extras */}
+                  {extrasNecessarias > 0 && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>O cliente selecionou {extrasNecessarias} {extrasNecessarias === 1 ? 'foto extra' : 'fotos extras'}.</span>
+                    </div>
+                  )}
+
+                  {/* Confirmação do Cliente */}
+                  {supabaseGallery.statusSelecao === 'selecao_completa' && (
+                    <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 pt-1">
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Seleção confirmada pelo cliente</span>
+                    </div>
                   )}
                 </div>
-              )}
 
-
-              <SelectionSummary
-                gallery={galleryForSummary}
-                regrasCongeladas={regrasCongeladas}
-                extrasPagasTotal={extrasPagasTotal}
-                extrasACobrar={extrasACobrar}
-                valorJaPago={valorJaPago}
-                saleSettings={galleryForSummary.saleSettings}
-                billingInfo={{
-                  valorTotalVendido: supabaseGallery.valorTotalVendido || 0,
-                  valorPendente: calculatedExtraTotal || 0,
-                  statusPagamento: supabaseGallery.statusPagamento || 'sem_cobranca',
-                  totalExtrasVendidas: supabaseGallery.totalFotosExtrasVendidas || 0,
-                  ultimoPagamentoEm: cobrancasPagas[0]?.data_pagamento || null,
-                  onVerDetalhes: () => setActiveTab('details'),
-                }}
-              />
-
-
-              {/* Payment Status Card — só aparece quando há saldo NOVO a cobrar ou aguardando confirmação manual.
-                  Se calculatedExtraTotal <= 0 (tudo pago), o resumo de faturamento do SelectionSummary é suficiente. */}
-              {(calculatedExtraTotal > 0 || supabaseGallery.statusPagamento === 'aguardando_confirmacao') && (
-                <div className="mt-4">
+                {/* Card de Status de Pagamento (quando pendente / PIX aguardando) */}
+                {(calculatedExtraTotal > 0 || supabaseGallery.statusPagamento === 'aguardando_confirmacao') && (
                   <PaymentStatusCard
                     status={cobrancaData?.status || (calculatedExtraTotal > 0 ? 'pendente' : supabaseGallery.statusPagamento)}
                     provedor={cobrancaData?.provedor || (supabaseGallery.statusPagamento === 'aguardando_confirmacao' ? 'pix_manual' : undefined)}
@@ -1148,7 +1247,6 @@ export default function GalleryDetail() {
                     valorPago={0}
                     dataPagamento={cobrancaData?.data_pagamento}
                     receiptUrl={cobrancaData?.status === 'pago' || cobrancaData?.status === 'pago_manual' ? cobrancaData?.ip_receipt_url : undefined}
-
                     checkoutUrl={cobrancaData?.ip_checkout_url}
                     sessionId={supabaseGallery.sessionId || undefined}
                     cobrancaId={cobrancaData?.id}
@@ -1165,10 +1263,62 @@ export default function GalleryDetail() {
                       refetchCobranca();
                     }}
                   />
+                )}
+              </div>
+
+              {/* COLUNA DIREITA: Código das fotos selecionadas */}
+              <div className="space-y-4">
+                <div className="lunari-card p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">
+                      Código das fotos selecionadas
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsCodesCollapsed(!isCodesCollapsed)}
+                      className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground border-border/60"
+                    >
+                      <span>{isCodesCollapsed ? 'Expandir' : 'Recolher'}</span>
+                      {isCodesCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+
+                  {!isCodesCollapsed && (
+                    selectedPhotos.length > 0 ? (
+                      <div className="space-y-4 animate-fade-in">
+                        <p className="text-xs text-muted-foreground">
+                          Cole o código na barra de pesquisa do Windows Explorer para filtrar as fotos selecionadas.
+                        </p>
+
+                        {/* Bloco de Código Mono */}
+                        <div className="p-4 rounded-xl bg-muted/40 border border-border/60 font-mono text-xs text-foreground/90 max-h-56 overflow-y-auto leading-relaxed select-all">
+                          {generateWindowsSearchCode(selectedPhotos)}
+                        </div>
+
+                        {/* Botão Copiar */}
+                        <Button
+                          variant="terracotta"
+                          className="w-auto px-5 font-medium gap-2 shadow-sm"
+                          onClick={() => handleCopyCode(generateWindowsSearchCode(selectedPhotos))}
+                        >
+                          {isCodeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          {isCodeCopied ? 'Código copiado!' : 'Copiar código'}
+                        </Button>
+
+                        <p className="text-[11px] text-muted-foreground">
+                          Dica: Cole este código na barra de pesquisa do Windows Explorer para mostrar apenas as fotos selecionadas.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-muted-foreground text-xs">
+                        Nenhuma foto selecionada ainda. O código para Windows Explorer aparecerá aqui assim que houver fotos selecionadas.
+                      </div>
+                    )
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
           )}
         </TabsContent>
 
@@ -1445,7 +1595,13 @@ export default function GalleryDetail() {
       {/* Lightbox */}
       {lightboxState !== null && (
         <Lightbox
-          photos={lightboxState.source === 'selection' ? selectedPhotos : transformedPhotos}
+          photos={
+            lightboxState.source === 'selection'
+              ? selectedPhotos
+              : lightboxState.source === 'filtered'
+                ? currentPhotosList
+                : transformedPhotos
+          }
           currentIndex={lightboxState.index}
           allowComments={supabaseGallery.configuracoes?.allowComments ?? true}
           disabled

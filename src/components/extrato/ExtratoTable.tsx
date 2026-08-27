@@ -20,7 +20,9 @@ import {
   TIPO_LABELS,
   TIPO_BADGE_COLORS,
   ORIGEM_LABELS,
-  MEIO_PAGAMENTO_LABELS
+  MEIO_PAGAMENTO_LABELS,
+  ESCOPO_LABELS,
+  ESCOPO_COLORS
 } from '@/constants/extratoConstants';
 
 const STATUS_ICONS = {
@@ -163,14 +165,66 @@ export default function ExtratoTable({
                           </TableCell>
                           
                           <TableCell>
-                            <Badge className={ORIGEM_COLORS[linha.origem]}>
-                              {ORIGEM_LABELS[linha.origem]}
-                            </Badge>
-                            {linha.meioPagamento && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {MEIO_PAGAMENTO_LABELS[linha.meioPagamento] || linha.meioPagamento}
-                              </div>
-                            )}
+                            {(() => {
+                              let label = ORIGEM_LABELS[linha.origem] || 'Studio';
+                              let badgeClass: string = ORIGEM_COLORS[linha.origem] || 'bg-muted/40 text-muted-foreground border-border/40';
+
+                              if (linha.tipo === 'entrada') {
+                                const escopo = linha.escopo;
+                                const desc = (linha.descricao || '').toLowerCase();
+                                const obs = (linha.observacoes || '').toLowerCase();
+
+                                if (escopo === 'sinal' || desc.includes('sinal') || obs.includes('sinal') || desc.includes('entrada') || obs.includes('entrada')) {
+                                  label = 'Sinal';
+                                  badgeClass = ESCOPO_COLORS.sinal;
+                                } else if (escopo === 'fotos_extras' || linha.origem === 'gallery' || /(foto[s]?\s+extra|\[extras)/i.test(desc) || /(foto[s]?\s+extra|\[extras)/i.test(obs)) {
+                                  label = 'Extras';
+                                  badgeClass = ESCOPO_COLORS.fotos_extras;
+                                } else if (escopo === 'sessao_e_extras' || /(sess[ãa]o\s*\+\s*extras)/i.test(desc) || /(sess[ãa]o\s*\+\s*extras)/i.test(obs)) {
+                                  label = 'Sessão + Extras';
+                                  badgeClass = ESCOPO_COLORS.sessao_e_extras;
+                                } else if (escopo === 'avulso' || linha.origem === 'venda_avulsa') {
+                                  label = 'Venda Avulsa';
+                                  badgeClass = ESCOPO_COLORS.avulso;
+                                } else if (linha.origem === 'financeiro') {
+                                  label = 'Financeiro';
+                                  badgeClass = ORIGEM_COLORS.financeiro;
+                                } else {
+                                  label = 'Sessão';
+                                  badgeClass = ESCOPO_COLORS.sessao;
+                                }
+                              } else {
+                                if (linha.cartao || linha.origem === 'cartao') {
+                                  label = 'Cartão';
+                                  badgeClass = ORIGEM_COLORS.cartao;
+                                } else {
+                                  const nat = (linha as any).natureza;
+                                  if (nat === 'taxa_gateway') {
+                                    label = 'Taxa Gateway';
+                                    badgeClass = 'bg-muted/40 text-muted-foreground border-border/40';
+                                  } else if (nat === 'estorno') {
+                                    label = 'Estorno';
+                                    badgeClass = 'bg-destructive/10 text-destructive border-destructive/20';
+                                  } else {
+                                    label = ORIGEM_LABELS[linha.origem] || 'Despesa';
+                                    badgeClass = ORIGEM_COLORS[linha.origem] || 'bg-muted/40 text-muted-foreground border-border/40';
+                                  }
+                                }
+                              }
+
+                              return (
+                                <div className="flex flex-col gap-1 items-start">
+                                  <Badge className={badgeClass}>
+                                    {label}
+                                  </Badge>
+                                  {linha.meioPagamento && (
+                                    <div className="text-2xs text-muted-foreground font-normal">
+                                      {MEIO_PAGAMENTO_LABELS[linha.meioPagamento] || linha.meioPagamento}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           
                           <TableCell>

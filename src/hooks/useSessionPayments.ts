@@ -229,6 +229,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         const allPayments: SessionPaymentExtended[] = [];
         const addedIds = new Set<string>();
 
+        // Mapa de cobranças pagas por ID para enriquecimento
+        const cobrancasById = new Map<string, any>();
+        if (cobrancasPagas && cobrancasPagas.length > 0) {
+          for (const c of cobrancasPagas) {
+            cobrancasById.set(c.id, c);
+          }
+        }
+
         // 4. Converter transações para formato de pagamentos
         if (transacoes && transacoes.length > 0) {
           console.log('✅ [useSessionPayments] Transações do Supabase:', transacoes.length);
@@ -256,6 +264,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                 origem: 'supabase',
                 editavel: false,
                 observacoes: t.descricao?.replace(/\s*\[REF:[^\]]+\]/, '') || 'Estorno',
+                finalidade: 'estorno',
               });
               continue;
             }
@@ -313,6 +322,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             const taxaAnt = t.taxa_antecipacao != null ? Number(t.taxa_antecipacao) : 0;
             const taxaTotalCalc = taxaGw + taxaAnt;
 
+            // Determinar finalidade/origem funcional do pagamento
+            const linkedCob = t.cobranca_id ? cobrancasById.get(t.cobranca_id) : null;
+            let finalidade: SessionPaymentExtended['finalidade'] = 'sessao';
+            if (isCredito) {
+              finalidade = 'credito';
+            } else if (linkedCob?.finalidade === 'fotos_extras' || /(foto[s]?\s+extra|\[extras)/i.test(t.descricao || '')) {
+              finalidade = 'fotos_extras';
+            } else if (linkedCob?.finalidade === 'sessao_e_extras' || /(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(t.descricao || '')) {
+              finalidade = 'sessao_e_extras';
+            } else if (
+              linkedCob?.finalidade === 'sinal' ||
+              /(sinal|entrada|arras|reserva)/i.test(t.descricao || '') ||
+              /(sinal|entrada|arras|reserva)/i.test(linkedCob?.descricao || '')
+            ) {
+              finalidade = 'sinal';
+            } else if (linkedCob?.finalidade) {
+              finalidade = linkedCob.finalidade;
+            } else if (/(venda\s+avulsa|avulso)/i.test(t.descricao || '')) {
+              finalidade = 'avulso';
+            } else {
+              finalidade = 'sessao';
+            }
+
             allPayments.push({
               id: paymentId,
               valor: valorBruto,
@@ -324,6 +356,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               numeroParcela,
               totalParcelas,
               origem,
+              finalidade,
               editavel: canEdit,
               observacoes: (t.descricao || '')
                 .replace(/\s*\[ID:[^\]]+\]/, '')
@@ -428,6 +461,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
                 const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
 
+                let parcelaFinalidade: SessionPaymentExtended['finalidade'] = 'sessao';
+                if (c.finalidade === 'fotos_extras') {
+                  parcelaFinalidade = 'fotos_extras';
+                } else if (c.finalidade === 'sessao_e_extras') {
+                  parcelaFinalidade = 'sessao_e_extras';
+                } else if (c.finalidade === 'sinal' || /(sinal|entrada|arras|reserva)/i.test(c.descricao || '')) {
+                  parcelaFinalidade = 'sinal';
+                } else {
+                  parcelaFinalidade = c.finalidade || 'sessao';
+                }
+
                 allPayments.push({
                   id: parcelaId,
                   valor: valorBruto,
@@ -437,6 +481,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   numeroParcela: parcela.numero_parcela,
                   totalParcelas: c.total_parcelas || parcelas.length,
                   origem,
+                  finalidade: parcelaFinalidade,
                   editavel: isSandboxAsaas,
                   observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
                   valorLiquido: taxaTotalCalc > 0 ? valorLiq : undefined,
@@ -489,6 +534,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
             const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
 
+            let cobFinalidade: SessionPaymentExtended['finalidade'] = 'sessao';
+            if (c.finalidade === 'fotos_extras') {
+              cobFinalidade = 'fotos_extras';
+            } else if (c.finalidade === 'sessao_e_extras') {
+              cobFinalidade = 'sessao_e_extras';
+            } else if (c.finalidade === 'sinal' || /(sinal|entrada|arras|reserva)/i.test(c.descricao || '')) {
+              cobFinalidade = 'sinal';
+            } else {
+              cobFinalidade = c.finalidade || 'sessao';
+            }
+
             allPayments.push({
               id: paymentId,
               valor: valorBruto,
@@ -496,6 +552,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               tipo: 'pago',
               statusPagamento: 'pago',
               origem,
+              finalidade: cobFinalidade,
               editavel: isSandboxAsaas,
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
               valorLiquido: valorLiq,
@@ -577,6 +634,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
           }
           
+          let finalidade: SessionPaymentExtended['finalidade'] = p.finalidade;
+          const obs = (p.observacoes || '').toLowerCase();
+          if (!finalidade) {
+            if (tipo === 'estorno' || statusPagamento === 'estornado') finalidade = 'estorno';
+            else if (p.origem === 'credito' || obs.includes('crédito do cliente')) finalidade = 'credito';
+            else if (/(foto[s]?\s+extra|\[extras)/i.test(obs)) finalidade = 'fotos_extras';
+            else if (/(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) finalidade = 'sessao_e_extras';
+            else if (/(sinal|entrada|arras|reserva)/i.test(obs)) finalidade = 'sinal';
+            else if (/(venda\s+avulsa|avulso)/i.test(obs)) finalidade = 'avulso';
+            else finalidade = 'sessao';
+          }
+
           return {
             id: p.id,
             valor: p.valor,
@@ -584,6 +653,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             tipo: tipo as 'pago' | 'agendado' | 'parcelado',
             statusPagamento: statusPagamento as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
             origem: p.origem || 'manual',
+            finalidade,
             editavel: p.editavel !== false,
             forma_pagamento: p.forma_pagamento,
             observacoes: p.observacoes,

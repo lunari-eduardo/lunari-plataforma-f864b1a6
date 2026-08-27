@@ -59,6 +59,7 @@ function statusStyle(l: LinhaExtrato): { label: string; className: string } {
 }
 
 const ESCOPO_LABEL: Record<string, string> = {
+  sinal: 'Sinal',
   sessao: 'Sessão',
   fotos_extras: 'Extras',
   sessao_e_extras: 'Sessão + Extras',

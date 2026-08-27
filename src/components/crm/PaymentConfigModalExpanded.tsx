@@ -141,6 +141,7 @@ export function PaymentConfigModalExpanded({
           tipo: 'pago',
           statusPagamento: 'pago',
           origem: 'workflow_rapido',
+          finalidade: 'sinal',
           editavel: true,
           observacoes: 'Entrada'
         });

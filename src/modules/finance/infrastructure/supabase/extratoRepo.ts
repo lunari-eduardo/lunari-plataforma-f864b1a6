@@ -28,6 +28,7 @@ function mapLinha(row: any, regime: RegimeContabil): LinhaExtrato {
     observacoes: row.observacoes || undefined,
     cartao: row.cartao || undefined,
     meioPagamento: row.meio_pagamento || undefined,
+    escopo: row.escopo || undefined,
     referenciaId: row.id,
     referenciaOrigem: row.origem,
     dataCaixa: row.data,
