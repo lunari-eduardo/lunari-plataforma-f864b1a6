@@ -154,6 +154,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4.b Extrair snapshot de taxas (fee_policy_snapshot)
+    let feePolicySnapshot = null;
+    let integrationData = null;
+    if (provedor === "asaas") {
+      const { data: integ } = await supabase
+        .from("usuarios_integracoes")
+        .select("access_token, dados_extras")
+        .eq("user_id", userId)
+        .eq("provedor", "asaas")
+        .eq("status", "ativo")
+        .order("is_default", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (integ) {
+        integrationData = integ;
+        const rawSettings = (integ.dados_extras || {}) as Record<string, any>;
+        feePolicySnapshot = {
+          absorverTaxa: rawSettings.absorverTaxa ?? false,
+          ireiAntecipar: rawSettings.ireiAntecipar ?? false,
+          repassarTaxaAntecipacao: rawSettings.repassarTaxaAntecipacao ?? false,
+          incluirTaxaAntecipacao: rawSettings.incluirTaxaAntecipacao ?? false,
+          taxaProcessamento: rawSettings.taxaProcessamento ?? 0,
+          taxaAntecipacao: rawSettings.taxaAntecipacao ?? 0,
+        };
+      }
+    }
+
     // 5. Inserir registro preliminar na tabela cobrancas
     const insertPayload: Record<string, any> = {
       user_id: userId,
@@ -161,6 +190,8 @@ Deno.serve(async (req) => {
       session_id: normalizedSessionId,
       galeria_id: binding.galeria_id,
       valor: Math.round(Number(valor) * 100) / 100,
+      valor_principal: Math.round(Number(dadosExtras?.valorBase ?? valor) * 100) / 100,
+      valor_cobrado_cliente: Math.round(Number(valor) * 100) / 100,
       descricao: descricao || "Serviço fotográfico",
       tipo_cobranca: billingType === "PIX" ? "pix" : billingType === "CREDIT_CARD" ? "card" : "link",
       total_parcelas: installmentCount && installmentCount > 1 ? installmentCount : 1,
@@ -174,6 +205,7 @@ Deno.serve(async (req) => {
       valor_extras_componente: binding.valor_extras_componente,
       idempotency_key: idempotencyKey || null,
       dados_extras: dadosExtras || null,
+      fee_policy_snapshot: feePolicySnapshot,
     };
 
     let cobranca: any;
@@ -332,7 +364,7 @@ Deno.serve(async (req) => {
       cliente: mergedCliente,
       clientIp: req.headers.get("x-forwarded-for") || undefined,
       requestDadosExtras: dadosExtras,
-      integrationData: {},
+      integrationData: integrationData || {},
       billingType,
       creditCard,
       creditCardHolderInfo,

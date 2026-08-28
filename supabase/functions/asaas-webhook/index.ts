@@ -239,19 +239,18 @@ async function applyDowngrade(adminClient: any, subscription: any) {
 async function checkAndLogEvent(
   adminClient: any,
   eventType: string,
-  paymentId: string | null,
-  installmentId: string | null,
+  eventId: string,
   payload: any
 ): Promise<boolean> {
-  if (!paymentId) return false; // no payment ID = can't dedup
+  if (!eventId) return false;
 
   // Try insert with ON CONFLICT DO NOTHING
   const { data, error } = await adminClient
-    .from("asaas_webhook_events")
+    .from("gateway_events")
     .insert({
       event_type: eventType,
-      payment_id: paymentId,
-      installment_id: installmentId,
+      provider: "asaas",
+      provider_event_id: eventId,
       payload,
       processed: false,
     })
@@ -259,35 +258,33 @@ async function checkAndLogEvent(
     .maybeSingle();
 
   if (error) {
-    // Unique constraint violation = duplicate
     if (error.code === "23505") {
-      // Check if already processed
       const { data: existing } = await adminClient
-        .from("asaas_webhook_events")
+        .from("gateway_events")
         .select("processed")
-        .eq("event_type", eventType)
-        .eq("payment_id", paymentId)
+        .eq("provider", "asaas")
+        .eq("provider_event_id", eventId)
         .maybeSingle();
 
       if (existing?.processed) {
-        console.log(`⏭️ Event ${eventType}/${paymentId} already processed, skipping`);
-        return true; // already processed
+        console.log(`⏭️ Event ${eventId} already processed, skipping`);
+        return true;
       }
-      return false; // exists but not processed yet
+      return false;
     }
     console.error("Error logging webhook event:", error);
     return false;
   }
 
-  return false; // new event, not yet processed
+  return false;
 }
 
-async function markEventProcessed(adminClient: any, eventType: string, paymentId: string) {
+async function markEventProcessed(adminClient: any, eventId: string) {
   await adminClient
-    .from("asaas_webhook_events")
-    .update({ processed: true })
-    .eq("event_type", eventType)
-    .eq("payment_id", paymentId);
+    .from("gateway_events")
+    .update({ processed: true, processed_at: new Date().toISOString() })
+    .eq("provider", "asaas")
+    .eq("provider_event_id", eventId);
 }
 
 async function findCobranca(adminClient: any, payment: any) {
@@ -450,8 +447,7 @@ Deno.serve(async (req) => {
         const alreadyProcessed = await checkAndLogEvent(
           adminClient,
           event,
-          payment.id,
-          payment.installment || null,
+          body.id || `${event}_${payment.id}`,
           body
         );
         if (alreadyProcessed) {
@@ -527,7 +523,7 @@ Deno.serve(async (req) => {
 
           // Only mark as processed if upsert succeeded
           if (upsertSuccess && payment.id) {
-            await markEventProcessed(adminClient, event, payment.id);
+            await markEventProcessed(adminClient, body.id || `${event}_${payment.id}`);
 
             // Sincronizar status da cobranca principal
             const parentStatus = (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED")
@@ -626,7 +622,106 @@ Deno.serve(async (req) => {
             );
           }
         }
+      }
+    }
 
+    // ==========================================
+    // ANTICIPATION EVENTS
+    // ==========================================
+    const ANTICIPATION_EVENTS = [
+      "RECEIVABLE_ANTICIPATION_SCHEDULED",
+      "RECEIVABLE_ANTICIPATION_AUTHORIZED",
+      "RECEIVABLE_ANTICIPATION_CREDITED",
+      "RECEIVABLE_ANTICIPATION_DENIED",
+      "RECEIVABLE_ANTICIPATION_CANCELLED",
+    ];
+
+    if (ANTICIPATION_EVENTS.includes(event) && body.anticipation) {
+      const anticipation = body.anticipation;
+      
+      const alreadyProcessed = await checkAndLogEvent(
+        adminClient,
+        event,
+        body.id || `${event}_${anticipation.id}`,
+        body
+      );
+      if (alreadyProcessed) {
+        return new Response(JSON.stringify({ received: true, skipped: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // We need to find the related payment/installment
+      const cobranca = anticipation.payment ? await findCobranca(adminClient, { id: anticipation.payment }) : null;
+      let parcelaId = null;
+
+      if (cobranca && anticipation.payment) {
+        const { data: pData } = await adminClient
+          .from("cobranca_parcelas")
+          .select("id")
+          .eq("cobranca_id", cobranca.id)
+          .eq("asaas_payment_id", anticipation.payment)
+          .maybeSingle();
+        parcelaId = pData?.id || null;
+      }
+
+      const statusMap: Record<string, string> = {
+        "RECEIVABLE_ANTICIPATION_SCHEDULED": "SCHEDULED",
+        "RECEIVABLE_ANTICIPATION_AUTHORIZED": "AUTHORIZED",
+        "RECEIVABLE_ANTICIPATION_CREDITED": "CREDITED",
+        "RECEIVABLE_ANTICIPATION_DENIED": "DENIED",
+        "RECEIVABLE_ANTICIPATION_CANCELLED": "CANCELLED",
+      };
+
+      const mappedStatus = statusMap[event] || "PENDING";
+
+      const anticipationPayload = {
+        provider: "asaas",
+        provider_anticipation_id: anticipation.id,
+        cobranca_id: cobranca?.id || null,
+        parcela_id: parcelaId,
+        status: mappedStatus,
+        fee: anticipation.fee || 0,
+        net_value: anticipation.netValue || 0,
+        request_date: anticipation.anticipationDate || null,
+        credit_date: mappedStatus === "CREDITED" ? (anticipation.creditDate || new Date().toISOString()) : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: antError } = await adminClient
+        .from("gateway_anticipations")
+        .upsert(anticipationPayload, { onConflict: "provider, provider_anticipation_id" });
+
+      if (antError) {
+        console.error("Error upserting anticipation:", antError);
+      } else {
+        await markEventProcessed(adminClient, body.id || `${event}_${anticipation.id}`);
+        
+        // Se creditado, gerar movimento de caixa (flag interna)
+        if (mappedStatus === "CREDITED") {
+          await adminClient.from("gateway_cash_movements").upsert({
+            provider: "asaas",
+            provider_transaction_id: `anticipation_${anticipation.id}_credit`,
+            cobranca_id: cobranca?.id || null,
+            parcela_id: parcelaId,
+            anticipation_id: null, // we'd need to query the inserted ID
+            movement_type: "credit",
+            amount: anticipation.netValue || 0,
+            movement_date: anticipation.creditDate || new Date().toISOString(),
+            description: `Crédito de antecipação ${anticipation.id}`,
+          }, { onConflict: "provider, provider_transaction_id, movement_type" });
+          
+          await adminClient.from("gateway_cash_movements").upsert({
+            provider: "asaas",
+            provider_transaction_id: `anticipation_${anticipation.id}_fee`,
+            cobranca_id: cobranca?.id || null,
+            parcela_id: parcelaId,
+            movement_type: "fee",
+            amount: -(anticipation.fee || 0),
+            movement_date: anticipation.creditDate || new Date().toISOString(),
+            description: `Taxa de antecipação ${anticipation.id}`,
+          }, { onConflict: "provider, provider_transaction_id, movement_type" });
+        }
       }
     }
 
