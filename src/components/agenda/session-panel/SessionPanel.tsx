@@ -370,46 +370,6 @@ export default function SessionPanel({
   };
 
   /**
-   * Localiza o session_id do agendamento recém-criado (fluxo "cobrar ao salvar").
-   * Faz algumas tentativas curtas porque a criação é assíncrona.
-   */
-  const findCreatedSession = async (
-    clienteId: string,
-    date: Date,
-    time: string,
-  ): Promise<{ sessionId: string; appointmentId: string } | null> => {
-    const dateStr = formatDateForStorage(date);
-    for (let attempt = 0; attempt < 6; attempt++) {
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        const userId = auth?.user?.id;
-        if (userId) {
-          const { data } = await supabase
-            .from("appointments")
-            .select("id, session_id, created_at")
-            .eq("user_id", userId)
-            .eq("cliente_id", clienteId)
-            .eq("date", dateStr)
-            .eq("time", time)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          const row = (data as any[])?.[0];
-          if (row?.session_id) {
-            return {
-              sessionId: row.session_id as string,
-              appointmentId: row.id as string,
-            };
-          }
-        }
-      } catch {
-        /* tenta de novo */
-      }
-      await new Promise((r) => setTimeout(r, 500));
-    }
-    return null;
-  };
-
-  /**
    * Garante que exista uma linha em `clientes_sessoes` para o agendamento antes de
    * qualquer cobrança — evita transações órfãs quando o pagamento é confirmado.
    * Idempotente.
@@ -555,7 +515,7 @@ export default function SessionPanel({
 
           // Fluxo "Cobrar ao salvar": abre o modal de cobrança logo após criar
           if (!isEdit && cobrarAoSalvar && resolved.clienteId) {
-            const createdSessionId = createdApp?.session_id;
+            const createdSessionId = createdApp?.sessionId || createdApp?.session_id;
             const createdAppId = createdApp?.id;
 
             if (!createdSessionId || !createdAppId) {
