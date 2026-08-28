@@ -753,8 +753,8 @@ export class PaymentSupabaseService {
 
       const descricaoBase = `Estorno${motivo ? `: ${motivo}` : ''}`;
       const descricao = keepAsCredit
-        ? `${descricaoBase} [Mantido como crédito do cliente]`
-        : descricaoBase;
+        ? `${descricaoBase} [Mantido como crédito do cliente] [REF:${paymentId}]`
+        : `${descricaoBase} [REF:${paymentId}]`;
 
       const { error } = await supabase
         .from('clientes_transacoes')

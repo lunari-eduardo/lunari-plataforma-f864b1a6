@@ -204,7 +204,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             .select('*')
             .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
             .eq('user_id', user.id)
-            .eq('status', 'pago')
+            .in('status', ['pago', 'estornado'])
             // Extras de galeria vinculada à sessão também são receita da sessão.
             // (Filtro `finalidade='sessao'` removido — vide migration 20260625181941.)
             .order('data_pagamento', { ascending: false })
@@ -228,6 +228,19 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
         const allPayments: SessionPaymentExtended[] = [];
         const addedIds = new Set<string>();
+        const refundedPaymentIds = new Set<string>();
+
+        // Extract refunded payment IDs from estornos
+        if (transacoes && transacoes.length > 0) {
+          for (const t of transacoes) {
+            if (t.tipo === 'estorno') {
+              const refMatch = t.descricao?.match(/\[REF:([^\]]+)\]/);
+              if (refMatch) {
+                refundedPaymentIds.add(refMatch[1]);
+              }
+            }
+          }
+        }
 
         // Mapa de cobranças pagas por ID para enriquecimento
         const cobrancasById = new Map<string, any>();
@@ -278,7 +291,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               tipo = totalParcelas ? 'parcelado' : 'agendado';
             }
 
-            let statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' = 'pago';
+            let statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'estornado' = 'pago';
             if (isPending) {
               statusPagamento = 'pendente';
               if (t.data_vencimento) {
@@ -286,6 +299,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                 const vencimento = new Date(t.data_vencimento);
                 if (vencimento < hoje) statusPagamento = 'atrasado';
               }
+            } else if (refundedPaymentIds.has(paymentId)) {
+              statusPagamento = 'estornado';
             }
 
             // Detectar origem por descrição
@@ -550,7 +565,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               valor: valorBruto,
               data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
               tipo: 'pago',
-              statusPagamento: 'pago',
+              statusPagamento: c.status === 'estornado' || refundedPaymentIds.has(paymentId) ? 'estornado' : 'pago',
               origem,
               finalidade: cobFinalidade,
               editavel: isSandboxAsaas,
@@ -684,17 +699,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     .reduce((acc, p) => acc + p.valor, 0);
 
   const totalPago = payments
-    .filter(p => p.statusPagamento === 'pago')
+    .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => acc + p.valor, 0) - totalEstornado;
 
   // Calcular total recebido (líquido - o que o fotógrafo recebeu de fato)
   const totalRecebido = payments
-    .filter(p => p.statusPagamento === 'pago')
+    .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0) - totalEstornado;
 
   // Calcular total de taxas
   const totalTaxas = payments
-    .filter(p => p.statusPagamento === 'pago')
+    .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => {
       const taxa = (p.taxaTotal || 0) + (p.taxaAntecipacao || 0);
       return acc + taxa;
@@ -943,7 +958,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivoFinal, keepAsCredit);
     if (success) {
-      // Adicionar estorno à lista local
+      // Adicionar estorno à lista local e atualizar o status do pagamento original
       const estorno: SessionPaymentExtended = {
         id: `refund-${Date.now()}`,
         valor: payment.valor,
@@ -954,7 +969,9 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         editavel: false,
         observacoes: `Estorno${motivoFinal ? `: ${motivoFinal}` : ''}`
       };
-      setPayments(prev => [...prev, estorno]);
+      setPayments(prev => prev.map(p => 
+        p.id === paymentId ? { ...p, statusPagamento: 'estornado' } : p
+      ).concat(estorno));
 
       // Notifica card/footer para invalidar financeiros imediatamente.
       window.dispatchEvent(new CustomEvent('payment-optimistic', {
