@@ -32,7 +32,7 @@ export function useExtratoCalculationsSupabase(
         .from('clientes_sessoes')
         .select('valor_total, valor_pago, status')
         .eq('tipo_registro', 'workflow')
-        .or('status.is.null,status.neq.historico')
+        .or('status.is.null,status.not.in.(historico,stub)')
         .gte('data_sessao', filtros.dataInicio)
         .lte('data_sessao', filtros.dataFim);
 

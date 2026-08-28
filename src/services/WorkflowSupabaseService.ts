@@ -1,6 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';
-import { generateUniversalSessionId } from '@/types/appointments-supabase';
-import { formatDateForStorage } from '@/utils/dateUtils';
+import { supabase } from "@/integrations/supabase/client";
+import { generateUniversalSessionId } from "@/types/appointments-supabase";
+import { formatDateForStorage } from "@/utils/dateUtils";
 
 /**
  * IMPORTANTE - SINCRONIZAÇÃO DE DATAS:
@@ -8,28 +8,37 @@ import { formatDateForStorage } from '@/utils/dateUtils';
  * - appointments.time ↔ clientes_sessoes.hora_sessao (sincronizado via trigger)
  * - Trigger: sync_appointment_date_to_session (ativa em UPDATE de date/time)
  * - Sempre usar formatDateForStorage() para evitar bugs de timezone
- * 
+ *
  * Service for handling workflow integration with appointments
  * Automatically creates workflow sessions when appointments are confirmed
  */
 export class WorkflowSupabaseService {
   // FASE 3: Lock para prevenir race conditions na criação de sessões
   private static creationLocks: Map<string, Promise<any>> = new Map();
-  
+
   /**
    * Create workflow session from confirmed appointment
    * Uses lock mechanism to prevent duplicate session creation
    */
-  static async createSessionFromAppointment(appointmentId: string, appointmentData: any) {
+  static async createSessionFromAppointment(
+    appointmentId: string,
+    appointmentData: any,
+  ) {
     // ✅ Verificar se já está sendo criada (lock)
     const existingLock = this.creationLocks.get(appointmentId);
     if (existingLock) {
-      console.log('⏳ [WorkflowService] Session creation already in progress for:', appointmentId);
+      console.log(
+        "⏳ [WorkflowService] Session creation already in progress for:",
+        appointmentId,
+      );
       return existingLock;
     }
 
     // ✅ Criar lock
-    const creationPromise = this._createSessionInternal(appointmentId, appointmentData);
+    const creationPromise = this._createSessionInternal(
+      appointmentId,
+      appointmentData,
+    );
     this.creationLocks.set(appointmentId, creationPromise);
 
     try {
@@ -48,10 +57,15 @@ export class WorkflowSupabaseService {
    * agenda) com os dados reais do pacote do appointment. Idempotente: só preenche
    * campos vazios e nunca toca em valor_pago nem em vínculos financeiros.
    */
-  private static async hydrateStubSession(session: any, appointmentId: string, userId: string) {
+  private static async hydrateStubSession(
+    session: any,
+    appointmentId: string,
+    userId: string,
+  ) {
     try {
       const rcPacote =
-        session?.regras_congeladas && typeof session.regras_congeladas === 'object'
+        session?.regras_congeladas &&
+        typeof session.regras_congeladas === "object"
           ? (session.regras_congeladas as any).pacote
           : null;
 
@@ -64,27 +78,31 @@ export class WorkflowSupabaseService {
       if (!isStub) return session;
 
       const { data: appointments } = await supabase
-        .from('appointments')
-        .select('package_id, description, date, time, paid_amount')
-        .eq('id', appointmentId)
-        .eq('user_id', userId)
+        .from("appointments")
+        .select("package_id, description, date, time, paid_amount")
+        .eq("id", appointmentId)
+        .eq("user_id", userId)
         .limit(1);
 
       const appointment = appointments?.[0] || null;
       if (!appointment?.package_id) return session;
 
       const { data: pkg } = await supabase
-        .from('pacotes')
-        .select('id, nome, valor_base, valor_foto_extra, fotos_incluidas, categoria_id, produtos_incluidos, categorias ( id, nome )')
-        .eq('id', appointment.package_id)
-        .eq('user_id', userId)
+        .from("pacotes")
+        .select(
+          "id, nome, valor_base, valor_foto_extra, fotos_incluidas, categoria_id, produtos_incluidos, categorias ( id, nome )",
+        )
+        .eq("id", appointment.package_id)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (!pkg) return session;
 
-      const categoriaNome = (pkg.categorias as any)?.nome || 'Sessão';
+      const categoriaNome = (pkg.categorias as any)?.nome || "Sessão";
       const categoriaId = (pkg.categorias as any)?.id || pkg.categoria_id;
-      const produtos = Array.isArray(pkg.produtos_incluidos) ? pkg.produtos_incluidos : [];
+      const produtos = Array.isArray(pkg.produtos_incluidos)
+        ? pkg.produtos_incluidos
+        : [];
       const valorBase = Number(pkg.valor_base) || 0;
 
       const patch: Record<string, any> = {
@@ -97,84 +115,99 @@ export class WorkflowSupabaseService {
       if (!Number(session?.valor_foto_extra)) {
         patch.valor_foto_extra = Number(pkg.valor_foto_extra) || 0;
       }
-      if (!Array.isArray(session?.produtos_incluidos) || session.produtos_incluidos.length === 0) {
+      if (
+        !Array.isArray(session?.produtos_incluidos) ||
+        session.produtos_incluidos.length === 0
+      ) {
         patch.produtos_incluidos = produtos;
       }
-      if (appointment.description !== undefined && appointment.description !== null) {
+      if (
+        appointment.description !== undefined &&
+        appointment.description !== null
+      ) {
         patch.descricao = appointment.description;
       }
       if (Number(session?.valor_total || 0) < valorBase) {
         patch.valor_total = valorBase;
       }
       if (!rcPacote) {
-        const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-        patch.regras_congeladas = await pricingFreezingService.congelarDadosCompletos(
-          pkg.id,
-          categoriaNome
-        );
+        const { pricingFreezingService } =
+          await import("@/services/PricingFreezingService");
+        patch.regras_congeladas =
+          await pricingFreezingService.congelarDadosCompletos(
+            pkg.id,
+            categoriaNome,
+          );
       }
 
       const { data: updated } = await supabase
-        .from('clientes_sessoes')
+        .from("clientes_sessoes")
         .update(patch)
-        .eq('id', session.id)
-        .eq('user_id', userId)
-        .select('*')
+        .eq("id", session.id)
+        .eq("user_id", userId)
+        .select("*")
         .maybeSingle();
 
       const paidAmount = Number(appointment.paid_amount) || 0;
       if (paidAmount > 0 && session.session_id && session.cliente_id) {
         const { data: existingTx } = await supabase
-          .from('clientes_transacoes')
-          .select('id')
-          .eq('session_id', session.session_id)
-          .eq('descricao', 'Entrada do agendamento')
-          .is('cobranca_id', null)
+          .from("clientes_transacoes")
+          .select("id")
+          .eq("session_id", session.session_id)
+          .eq("descricao", "Entrada do agendamento")
+          .is("cobranca_id", null)
           .maybeSingle();
 
         if (!existingTx) {
           const dataHoje = new Date();
-          await supabase
-            .from('clientes_transacoes')
-            .insert({
-              user_id: userId,
-              cliente_id: session.cliente_id,
-              session_id: session.session_id,
-              tipo: 'pagamento',
-              valor: paidAmount,
-              valor_liquido: paidAmount,
-              descricao: 'Entrada do agendamento',
-              data_transacao: formatDateForStorage(dataHoje)
-            });
+          await supabase.from("clientes_transacoes").insert({
+            user_id: userId,
+            cliente_id: session.cliente_id,
+            session_id: session.session_id,
+            tipo: "pagamento",
+            valor: paidAmount,
+            valor_liquido: paidAmount,
+            descricao: "Entrada do agendamento",
+            data_transacao: formatDateForStorage(dataHoje),
+          });
         }
       }
 
-      console.log('🩹 [Workflow] Sessão stub hidratada com dados do pacote:', session.id);
+      console.log(
+        "🩹 [Workflow] Sessão stub hidratada com dados do pacote:",
+        session.id,
+      );
       return updated || { ...session, ...patch };
     } catch (error) {
-      console.error('⚠️ [Workflow] Falha ao hidratar sessão stub:', error);
+      console.error("⚠️ [Workflow] Falha ao hidratar sessão stub:", error);
       return session;
     }
   }
 
-
   /**
    * Internal method for session creation (called by lock mechanism)
    */
-  private static async _createSessionInternal(appointmentId: string, appointmentData: any) {
+  private static async _createSessionInternal(
+    appointmentId: string,
+    appointmentData: any,
+  ) {
     try {
-      console.log('🔄 Creating workflow session from appointment:', appointmentId, appointmentData);
-      
+      console.log(
+        "🔄 Creating workflow session from appointment:",
+        appointmentId,
+        appointmentData,
+      );
+
       const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error("User not authenticated");
 
       // Check if session already exists for this appointment (ordena por mais recente caso haja duplicata)
       const { data: existingSessions } = await supabase
-        .from('clientes_sessoes')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .eq('appointment_id', appointmentId)
-        .order('created_at', { ascending: false })
+        .from("clientes_sessoes")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .eq("appointment_id", appointmentId)
+        .order("created_at", { ascending: false })
         .limit(1);
 
       const existingSession = existingSessions?.[0] || null;
@@ -184,43 +217,52 @@ export class WorkflowSupabaseService {
         // entrada ainda na etapa "a confirmar" (SessionPanel.handleGerarCobranca).
         // Nesse caso ela existe, mas sem pacote/valores/regras congeladas — o que
         // fazia o card do Workflow nascer vazio ao confirmar o agendamento.
-        const hydrated = await this.hydrateStubSession(existingSession, appointmentId, user.user.id);
+        const hydrated = await this.hydrateStubSession(
+          existingSession,
+          appointmentId,
+          user.user.id,
+        );
 
         const { data: freshAppts } = await supabase
-          .from('appointments')
-          .select('description')
-          .eq('id', appointmentId)
-          .eq('user_id', user.user.id)
+          .from("appointments")
+          .select("description")
+          .eq("id", appointmentId)
+          .eq("user_id", user.user.id)
           .limit(1);
 
         const apptDesc = freshAppts?.[0]?.description;
         if (apptDesc && hydrated?.descricao !== apptDesc) {
           await supabase
-            .from('clientes_sessoes')
+            .from("clientes_sessoes")
             .update({ descricao: apptDesc, updated_by: user.user.id })
-            .eq('id', hydrated.id)
-            .eq('user_id', user.user.id);
+            .eq("id", hydrated.id)
+            .eq("user_id", user.user.id);
           hydrated.descricao = apptDesc;
         }
 
-        console.log('✅ Session already exists for appointment:', appointmentId);
+        console.log(
+          "✅ Session already exists for appointment:",
+          appointmentId,
+        );
         return hydrated;
       }
 
-
       // ✅ HIDRATAÇÃO FORÇADA: SEMPRE buscar dados completos do banco
-      console.log('🧴 [Workflow] Hidratando appointment do banco (sempre)...');
-      
+      console.log("🧴 [Workflow] Hidratando appointment do banco (sempre)...");
+
       const { data: freshAppointment, error: hydrationError } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('id', appointmentId)
-        .eq('user_id', user.user.id)
+        .from("appointments")
+        .select("*")
+        .eq("id", appointmentId)
+        .eq("user_id", user.user.id)
         .single();
-      
+
       if (hydrationError || !freshAppointment) {
-        console.error('❌ [Workflow] Falha ao hidratar appointment:', hydrationError);
-        throw new Error('Failed to fetch appointment from database');
+        console.error(
+          "❌ [Workflow] Falha ao hidratar appointment:",
+          hydrationError,
+        );
+        throw new Error("Failed to fetch appointment from database");
       }
 
       // Usar SEMPRE dados hidratados (do banco)
@@ -236,263 +278,301 @@ export class WorkflowSupabaseService {
         description: freshAppointment.description,
         title: freshAppointment.title,
         paid_amount: freshAppointment.paid_amount,
-        paidAmount: freshAppointment.paid_amount
+        paidAmount: freshAppointment.paid_amount,
       };
-      
-      console.log('🧴 [Workflow] Appointment hidratado com sucesso:', {
+
+      console.log("🧴 [Workflow] Appointment hidratado com sucesso:", {
         package_id: hydratedData.package_id,
         cliente_id: hydratedData.cliente_id,
-        type: hydratedData.type
+        type: hydratedData.type,
       });
 
       // Generate universal session ID
-      const sessionId = generateUniversalSessionId('workflow');
+      const sessionId = generateUniversalSessionId("workflow");
 
       // Get package details if package_id exists
       let packageData = null;
-      let categoria = '';
-      let nomePacote = ''; // ✅ CORREÇÃO: Armazenar nome do pacote
+      let categoria = "";
+      let nomePacote = ""; // ✅ CORREÇÃO: Armazenar nome do pacote
       let valorTotal = 0;
 
       // ✅ CRÍTICO: Resolver package_id tolerante a camelCase e snake_case
-      const resolvedPackageId = hydratedData.package_id || hydratedData.packageId;
-      console.log('📦 [Workflow] resolvedPackageId:', resolvedPackageId);
+      const resolvedPackageId =
+        hydratedData.package_id || hydratedData.packageId;
+      console.log("📦 [Workflow] resolvedPackageId:", resolvedPackageId);
 
       if (resolvedPackageId) {
-        console.log('📦 Loading package data for:', resolvedPackageId);
-        
+        console.log("📦 Loading package data for:", resolvedPackageId);
+
         // ✅ FASE 1: Adicionar verificação de erro explícita
-      const { data: pacote, error: packageError } = await supabase
-        .from('pacotes')
-        .select('*, categorias(nome)')
-        .eq('id', resolvedPackageId)
-        .eq('user_id', user.user.id)
-        .single();
+        const { data: pacote, error: packageError } = await supabase
+          .from("pacotes")
+          .select("*, categorias(nome)")
+          .eq("id", resolvedPackageId)
+          .eq("user_id", user.user.id)
+          .single();
 
         if (packageError) {
-          console.error('❌ Error loading package:', packageError);
-          console.error('   resolvedPackageId:', resolvedPackageId);
-          console.error('   user_id:', user.user.id);
-          
+          console.error("❌ Error loading package:", packageError);
+          console.error("   resolvedPackageId:", resolvedPackageId);
+          console.error("   user_id:", user.user.id);
+
           // FASE 1: FALLBACK - Tentar buscar sem JOIN para debug
-          console.log('🔄 Tentando buscar pacote sem JOIN...');
+          console.log("🔄 Tentando buscar pacote sem JOIN...");
           const { data: pacoteSemJoin, error: errorSemJoin } = await supabase
-            .from('pacotes')
-            .select('*')
-            .eq('id', resolvedPackageId)
-            .eq('user_id', user.user.id)
+            .from("pacotes")
+            .select("*")
+            .eq("id", resolvedPackageId)
+            .eq("user_id", user.user.id)
             .maybeSingle();
-          
+
           if (errorSemJoin) {
-            console.error('❌ Erro mesmo sem JOIN:', errorSemJoin);
+            console.error("❌ Erro mesmo sem JOIN:", errorSemJoin);
           } else if (pacoteSemJoin) {
-            console.log('✅ Pacote encontrado SEM JOIN, problema no categorias:', pacoteSemJoin);
+            console.log(
+              "✅ Pacote encontrado SEM JOIN, problema no categorias:",
+              pacoteSemJoin,
+            );
             // Usar dados do pacote mesmo sem categoria
             packageData = pacoteSemJoin;
-            nomePacote = pacoteSemJoin.nome || '';
+            nomePacote = pacoteSemJoin.nome || "";
             valorTotal = Number(pacoteSemJoin.valor_base) || 0;
-            
+
             // Buscar categoria separadamente
             if (pacoteSemJoin.categoria_id) {
               const { data: cat } = await supabase
-                .from('categorias')
-                .select('nome')
-                .eq('id', pacoteSemJoin.categoria_id)
+                .from("categorias")
+                .select("nome")
+                .eq("id", pacoteSemJoin.categoria_id)
                 .maybeSingle();
-              
+
               if (cat) {
                 categoria = cat.nome;
-                console.log('✅ Categoria carregada separadamente:', categoria);
+                console.log("✅ Categoria carregada separadamente:", categoria);
               }
             }
           } else {
-            console.error('❌ Pacote realmente não existe no banco!');
+            console.error("❌ Pacote realmente não existe no banco!");
           }
         } else if (pacote) {
-          console.log('✅ Package loaded:', pacote);
+          console.log("✅ Package loaded:", pacote);
           packageData = pacote;
-          nomePacote = pacote.nome || '';
-          categoria = (pacote as any).categorias?.nome || '';
+          nomePacote = pacote.nome || "";
+          categoria = (pacote as any).categorias?.nome || "";
           valorTotal = Number(pacote.valor_base) || 0;
         } else {
-          console.log('⚠️ Package not found for ID:', resolvedPackageId);
+          console.log("⚠️ Package not found for ID:", resolvedPackageId);
         }
       }
 
       // Get client data if available - create if missing
       let clienteId = appointmentData.cliente_id || appointmentData.clienteId;
-      const rawClientName = appointmentData.client || appointmentData.title || '';
+      const rawClientName =
+        appointmentData.client || appointmentData.title || "";
       // Limpa prefixos automáticos como "Sessão - ", "Ensaio - ", "Reunião - " se presentes
       const cleanClientName = rawClientName
-        .replace(/^(sessão|ensaio|reunião|reuniao)\s*[-–—:]\s*/i, '')
-        .replace(/\s*[-–—:]\s*(sessão|ensaio|reunião|reuniao)$/i, '')
+        .replace(/^(sessão|ensaio|reunião|reuniao)\s*[-–—:]\s*/i, "")
+        .replace(/\s*[-–—:]\s*(sessão|ensaio|reunião|reuniao)$/i, "")
         .trim();
 
       if (!clienteId && cleanClientName) {
-        console.log('👤 Searching for client by name:', cleanClientName);
+        console.log("👤 Searching for client by name:", cleanClientName);
         // Try to find client by name
         const { data: cliente } = await supabase
-          .from('clientes')
-          .select('id')
-          .ilike('nome', cleanClientName)
-          .eq('user_id', user.user.id)
+          .from("clientes")
+          .select("id")
+          .ilike("nome", cleanClientName)
+          .eq("user_id", user.user.id)
           .maybeSingle();
-        
+
         if (cliente) {
           clienteId = cliente.id;
-          console.log('✅ Found existing client:', clienteId);
-          
+          console.log("✅ Found existing client:", clienteId);
+
           // Update appointment with client_id
           await supabase
-            .from('appointments')
+            .from("appointments")
             .update({ cliente_id: clienteId })
-            .eq('id', appointmentId);
-            
-          console.log('✅ Linked existing client to appointment:', clienteId);
+            .eq("id", appointmentId);
+
+          console.log("✅ Linked existing client to appointment:", clienteId);
         } else {
-          console.log('👤 Creating new client for:', cleanClientName);
+          console.log("👤 Creating new client for:", cleanClientName);
           // Create new client with cleanClientName
           const { data: newClient, error: clientError } = await supabase
-            .from('clientes')
+            .from("clientes")
             .insert({
               user_id: user.user.id,
               nome: cleanClientName,
-              telefone: 'Não informado',
-              origem: 'agenda'
+              telefone: "Não informado",
+              origem: "agenda",
             })
             .select()
             .single();
-            
+
           if (newClient && !clientError) {
             clienteId = newClient.id;
-            
+
             // Update appointment with client_id
             await supabase
-              .from('appointments')
+              .from("appointments")
               .update({ cliente_id: clienteId })
-              .eq('id', appointmentId);
-              
-            console.log('✅ Created new client and linked to appointment:', clienteId);
+              .eq("id", appointmentId);
+
+            console.log(
+              "✅ Created new client and linked to appointment:",
+              clienteId,
+            );
           } else {
-            console.error('❌ Error creating client:', clientError);
+            console.error("❌ Error creating client:", clientError);
           }
         }
       }
 
       // Freeze complete package and product data with CURRENT pricing model
-      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-      
+      const { pricingFreezingService } =
+        await import("@/services/PricingFreezingService");
+
       // ✅ FASE 4: Sempre priorizar dados hidratados do banco
-      const packageId = hydratedData.package_id || hydratedData.packageId
-        || appointmentData.package_id || appointmentData.packageId;
-      
+      const packageId =
+        hydratedData.package_id ||
+        hydratedData.packageId ||
+        appointmentData.package_id ||
+        appointmentData.packageId;
+
       // FASE 4: Congelar dados de precificação com tolerância a pacote ausente
-      console.log('📦 PackageId being frozen:', packageId, 'Categoria:', categoria);
-      
+      console.log(
+        "📦 PackageId being frozen:",
+        packageId,
+        "Categoria:",
+        categoria,
+      );
+
       // FASE 3: Enhanced freezing with fallbacks to ensure valor_base_pacote is always set
       let regrasCongeladas: any;
       let valorBasePacote = 0;
-      
+
       if (packageId) {
         regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
           packageId,
-          categoria
+          categoria,
         );
-        
+
         if (!regrasCongeladas || !regrasCongeladas.pacote) {
-          console.warn('⚠️ Freezing sem .pacote — reconstruindo a partir de packageData');
+          console.warn(
+            "⚠️ Freezing sem .pacote — reconstruindo a partir de packageData",
+          );
           if (packageData) {
             valorBasePacote = Number(packageData.valor_base) || 0;
-            const categoriaFinal = (packageData as any).categorias?.nome || categoria || 'Sessão';
-            regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
-              packageData.id,
-              categoriaFinal
-            );
+            const categoriaFinal =
+              (packageData as any).categorias?.nome || categoria || "Sessão";
+            regrasCongeladas =
+              await pricingFreezingService.congelarDadosCompletos(
+                packageData.id,
+                categoriaFinal,
+              );
           } else {
             valorBasePacote = 0;
             regrasCongeladas = {
-              modelo: 'completo',
+              modelo: "completo",
               dataCongelamento: new Date().toISOString(),
               produtos: [],
-              precificacaoFotoExtra: { modelo: 'fixo' },
+              precificacaoFotoExtra: { modelo: "fixo" },
             };
           }
         } else {
-          console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
-          
-          valorBasePacote = Number(regrasCongeladas.valorBase) 
-            || Number(regrasCongeladas.pacote?.valorBase)
-            || Number(packageData?.valor_base) 
-            || 0;
-          
-          console.log('💰 Valor base resolvido:', {
-            'regrasCongeladas.valorBase': regrasCongeladas.valorBase,
-            'regrasCongeladas.pacote?.valorBase': regrasCongeladas.pacote?.valorBase,
-            'packageData?.valor_base': packageData?.valor_base,
-            'FINAL valorBasePacote': valorBasePacote
+          console.log(
+            "✅ Dados congelados com sucesso:",
+            Object.keys(regrasCongeladas),
+          );
+
+          valorBasePacote =
+            Number(regrasCongeladas.valorBase) ||
+            Number(regrasCongeladas.pacote?.valorBase) ||
+            Number(packageData?.valor_base) ||
+            0;
+
+          console.log("💰 Valor base resolvido:", {
+            "regrasCongeladas.valorBase": regrasCongeladas.valorBase,
+            "regrasCongeladas.pacote?.valorBase":
+              regrasCongeladas.pacote?.valorBase,
+            "packageData?.valor_base": packageData?.valor_base,
+            "FINAL valorBasePacote": valorBasePacote,
           });
         }
       } else {
-        console.warn('⚠️ Criando sessão sem pacote, usando regras mínimas');
+        console.warn("⚠️ Criando sessão sem pacote, usando regras mínimas");
         if (valorTotal > 0) {
           valorBasePacote = valorTotal;
         }
-        
+
         regrasCongeladas = {
-          modelo: 'completo',
+          modelo: "completo",
           dataCongelamento: new Date().toISOString(),
           produtos: [],
-          precificacaoFotoExtra: { modelo: 'fixo' },
+          precificacaoFotoExtra: { modelo: "fixo" },
         };
       }
-      
-      console.log('💰 Valor base do pacote congelado:', valorBasePacote);
+
+      console.log("💰 Valor base do pacote congelado:", valorBasePacote);
 
       // FASE 4: Calcular valor inicial da foto extra
-      const valorFotoExtraInicial = regrasCongeladas ? 
-        pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(1, regrasCongeladas).valorUnitario : 0;
-      
+      const valorFotoExtraInicial = regrasCongeladas
+        ? pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
+            1,
+            regrasCongeladas,
+          ).valorUnitario
+        : 0;
+
       // FASE 4: Montar descrição sem fallback para title
-      const descricao = hydratedData.description || appointmentData.description || '';
-      console.log('📝 Descrição da sessão:', descricao || '(vazia)');
+      const descricao =
+        hydratedData.description || appointmentData.description || "";
+      console.log("📝 Descrição da sessão:", descricao || "(vazia)");
 
       // ✅ CORREÇÃO CRÍTICA: finalCategoria NUNCA deve ser nome de pacote
       // Prioridade: categoria do pacote > hydratedData.type (se não for pacote) > 'Sessão'
-      let finalCategoria = 'Sessão';
+      let finalCategoria = "Sessão";
       let categoriaData = null;
-      
+
       if (packageData) {
         // Se tem pacote, buscar categoria via categoria_id
         const { data: cat } = await supabase
-          .from('categorias')
-          .select('nome')
-          .eq('id', packageData.categoria_id)
+          .from("categorias")
+          .select("nome")
+          .eq("id", packageData.categoria_id)
           .maybeSingle();
-        
+
         if (cat) {
           categoriaData = cat;
           finalCategoria = cat.nome;
-          console.log('🏷️ Categoria do pacote usada:', finalCategoria);
+          console.log("🏷️ Categoria do pacote usada:", finalCategoria);
         }
       }
-      
+
       // Se não encontrou categoria do pacote, usar hydratedData.type (se não for nome de pacote)
-      if (!categoriaData && hydratedData.type && hydratedData.type !== nomePacote) {
+      if (
+        !categoriaData &&
+        hydratedData.type &&
+        hydratedData.type !== nomePacote
+      ) {
         finalCategoria = hydratedData.type;
-        console.log('🏷️ Type do appointment usado:', finalCategoria);
-      }
-      
-      // ✅ BLINDAGEM FINAL: Se mesmo assim finalCategoria == nomePacote, forçar correção
-      if (finalCategoria === nomePacote) {
-        finalCategoria = categoriaData?.nome || 'Sessão';
-        console.warn('⚠️ Correção: finalCategoria era nome de pacote, ajustado para:', finalCategoria);
+        console.log("🏷️ Type do appointment usado:", finalCategoria);
       }
 
-      console.log('🧩 [Workflow] Final categoria/pacote/valorBase:', { 
-        finalCategoria, 
-        nomePacote, 
+      // ✅ BLINDAGEM FINAL: Se mesmo assim finalCategoria == nomePacote, forçar correção
+      if (finalCategoria === nomePacote) {
+        finalCategoria = categoriaData?.nome || "Sessão";
+        console.warn(
+          "⚠️ Correção: finalCategoria era nome de pacote, ajustado para:",
+          finalCategoria,
+        );
+      }
+
+      console.log("🧩 [Workflow] Final categoria/pacote/valorBase:", {
+        finalCategoria,
+        nomePacote,
         resolvedPackageId,
-        valorBasePacote
+        valorBasePacote,
       });
 
       // Create session record with package ID for proper linking
@@ -500,43 +580,47 @@ export class WorkflowSupabaseService {
         user_id: user.user.id,
         session_id: sessionId,
         appointment_id: appointmentId,
-        cliente_id: clienteId || '',
+        cliente_id: clienteId || "",
         data_sessao: formatDateForStorage(hydratedData.date),
         hora_sessao: hydratedData.time,
         categoria: finalCategoria,
-        pacote: nomePacote || '', // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
+        pacote: nomePacote || "", // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
         valor_base_pacote: valorBasePacote, // ✅ CORREÇÃO: Adicionar valor_base_pacote
-        status: '',
+        status: "stub",
         valor_total: valorTotal, // Frontend calculates and sends correct total
-        valor_pago: Number(hydratedData.paidAmount || hydratedData.paid_amount || 0),
+        valor_pago: Number(
+          hydratedData.paidAmount || hydratedData.paid_amount || 0,
+        ),
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
-        valor_foto_extra: Number(packageData?.valor_foto_extra) || valorFotoExtraInicial || 0,
+        valor_foto_extra:
+          Number(packageData?.valor_foto_extra) || valorFotoExtraInicial || 0,
         qtd_fotos_extra: 0,
         valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,
-        updated_by: user.user.id
+        updated_by: user.user.id,
       };
 
       // FASE 3: Validation - valor_total must include valor_base_pacote
-      console.log('🔍 [Validação] Criando sessão com valores:');
-      console.log('  - valor_base_pacote:', valorBasePacote);
-      console.log('  - valor_total:', valorTotal);
-      
+      console.log("🔍 [Validação] Criando sessão com valores:");
+      console.log("  - valor_base_pacote:", valorBasePacote);
+      console.log("  - valor_total:", valorTotal);
+
       if (valorBasePacote > 0 && valorTotal < valorBasePacote) {
-        console.error('❌ ERRO: valor_total menor que valor_base_pacote!');
-        console.error('  Corrigindo valor_total...');
+        console.error("❌ ERRO: valor_total menor que valor_base_pacote!");
+        console.error("  Corrigindo valor_total...");
         sessionData.valor_total = valorBasePacote;
       }
-      
-      console.log('📝 Creating session with data:', sessionData);
+
+      console.log("📝 Creating session with data:", sessionData);
 
       // FASE 1: Corrigir SELECT com JOIN para trazer dados do cliente
       const { data, error } = await supabase
-        .from('clientes_sessoes')
+        .from("clientes_sessoes")
         .insert(sessionData)
-        .select(`
+        .select(
+          `
           *,
           clientes (
             nome,
@@ -544,19 +628,22 @@ export class WorkflowSupabaseService {
             telefone,
             whatsapp
           )
-        `)
+        `,
+        )
         .single();
 
       if (error) {
-        console.error('❌ Error inserting session:', error);
+        console.error("❌ Error inserting session:", error);
         // Handle unique constraint violation (duplicate)
-        if (error.code === '23505') {
-          console.log('Session already exists due to unique constraint, fetching existing...');
+        if (error.code === "23505") {
+          console.log(
+            "Session already exists due to unique constraint, fetching existing...",
+          );
           const { data: existing } = await supabase
-            .from('clientes_sessoes')
-            .select('*')
-            .eq('user_id', user.user.id)
-            .eq('appointment_id', appointmentId)
+            .from("clientes_sessoes")
+            .select("*")
+            .eq("user_id", user.user.id)
+            .eq("appointment_id", appointmentId)
             .single();
           return existing;
         }
@@ -567,62 +654,64 @@ export class WorkflowSupabaseService {
       const paidAmount = Number(appointmentData.paid_amount) || 0;
       if (paidAmount > 0 && clienteId) {
         const { data: existingTx } = await supabase
-          .from('clientes_transacoes')
-          .select('id')
-          .eq('session_id', sessionId)
-          .eq('descricao', 'Entrada do agendamento')
-          .is('cobranca_id', null)
+          .from("clientes_transacoes")
+          .select("id")
+          .eq("session_id", sessionId)
+          .eq("descricao", "Entrada do agendamento")
+          .is("cobranca_id", null)
           .maybeSingle();
 
         if (!existingTx) {
           const dataHoje = new Date();
-          console.log('💰 Creating initial transaction (fallback):', { 
-            amount: paidAmount, 
-            dateToday: formatDateForStorage(dataHoje)
+          console.log("💰 Creating initial transaction (fallback):", {
+            amount: paidAmount,
+            dateToday: formatDateForStorage(dataHoje),
           });
-          
-          await supabase
-            .from('clientes_transacoes')
-            .insert({
-              user_id: user.user.id,
-              cliente_id: clienteId,
-              session_id: sessionId,
-              tipo: 'pagamento',
-              valor: paidAmount,
-              valor_liquido: paidAmount,
-              descricao: 'Entrada do agendamento',
-              data_transacao: formatDateForStorage(dataHoje)
-            });
-          
-          console.log('✅ Initial transaction created (fallback).');
+
+          await supabase.from("clientes_transacoes").insert({
+            user_id: user.user.id,
+            cliente_id: clienteId,
+            session_id: sessionId,
+            tipo: "pagamento",
+            valor: paidAmount,
+            valor_liquido: paidAmount,
+            descricao: "Entrada do agendamento",
+            data_transacao: formatDateForStorage(dataHoje),
+          });
+
+          console.log("✅ Initial transaction created (fallback).");
         }
       }
 
       // Update appointment with session_id for bidirectional linking
       if (data) {
         await supabase
-          .from('appointments')
+          .from("appointments")
           .update({ session_id: data.session_id })
-          .eq('id', appointmentId)
-          .eq('user_id', user.user.id);
-        
-        console.log('✅ Appointment updated with session_id:', data.session_id);
+          .eq("id", appointmentId)
+          .eq("user_id", user.user.id);
+
+        console.log("✅ Appointment updated with session_id:", data.session_id);
       }
 
-      console.log('✅ Workflow session created from appointment:', data);
-      
+      console.log("✅ Workflow session created from appointment:", data);
+
       // Disparar evento customizado para invalidação imediata do cache
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('workflow-session-created', {
-          detail: { session: data }
-        }));
-        console.log('📢 Event workflow-session-created dispatched');
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("workflow-session-created", {
+            detail: { session: data },
+          }),
+        );
+        console.log("📢 Event workflow-session-created dispatched");
       }
-      
-      return data;
 
+      return data;
     } catch (error) {
-      console.error('❌ Error creating workflow session from appointment:', error);
+      console.error(
+        "❌ Error creating workflow session from appointment:",
+        error,
+      );
       throw error;
     }
   }
@@ -630,25 +719,31 @@ export class WorkflowSupabaseService {
   /**
    * Update appointment link in existing session
    */
-  static async linkAppointmentToSession(sessionId: string, appointmentId: string) {
+  static async linkAppointmentToSession(
+    sessionId: string,
+    appointmentId: string,
+  ) {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error("User not authenticated");
 
       const { error } = await supabase
-        .from('clientes_sessoes')
-        .update({ 
+        .from("clientes_sessoes")
+        .update({
           appointment_id: appointmentId,
-          updated_by: user.user.id
+          updated_by: user.user.id,
         })
-        .eq('session_id', sessionId)
-        .eq('user_id', user.user.id);
+        .eq("session_id", sessionId)
+        .eq("user_id", user.user.id);
 
       if (error) throw error;
 
-      console.log('✅ Session linked to appointment:', { sessionId, appointmentId });
+      console.log("✅ Session linked to appointment:", {
+        sessionId,
+        appointmentId,
+      });
     } catch (error) {
-      console.error('❌ Error linking session to appointment:', error);
+      console.error("❌ Error linking session to appointment:", error);
       throw error;
     }
   }
@@ -659,16 +754,18 @@ export class WorkflowSupabaseService {
   static async getSessionsForMonth(month: number, year: number) {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error("User not authenticated");
 
-      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-      const endDate = month === 12 
-        ? `${year + 1}-01-01` 
-        : `${year}-${(month + 1).toString().padStart(2, '0')}-01`;
+      const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
+      const endDate =
+        month === 12
+          ? `${year + 1}-01-01`
+          : `${year}-${(month + 1).toString().padStart(2, "0")}-01`;
 
       const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select(`
+        .from("clientes_sessoes")
+        .select(
+          `
           *,
           clientes (nome, email, telefone),
           appointments (status, package_id, 
@@ -676,19 +773,20 @@ export class WorkflowSupabaseService {
               categorias (nome)
             )
           )
-        `)
-        .eq('user_id', user.user.id)
-        .gte('data_sessao', startDate)
-        .lt('data_sessao', endDate)
-        .or('status.is.null,status.neq.historico')
-        .order('data_sessao', { ascending: true })
-        .order('hora_sessao', { ascending: true });
+        `,
+        )
+        .eq("user_id", user.user.id)
+        .gte("data_sessao", startDate)
+        .lt("data_sessao", endDate)
+        .or("status.is.null,status.not.in.(historico,stub)")
+        .order("data_sessao", { ascending: true })
+        .order("hora_sessao", { ascending: true });
 
       if (error) throw error;
 
       return data || [];
     } catch (error) {
-      console.error('❌ Error getting sessions for month:', error);
+      console.error("❌ Error getting sessions for month:", error);
       throw error;
     }
   }
@@ -699,9 +797,9 @@ export class WorkflowSupabaseService {
   static async migrateLocalStorageData() {
     try {
       const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) throw new Error('User not authenticated');
+      if (!user?.user) throw new Error("User not authenticated");
 
-      const savedSessions = localStorage.getItem('workflow_sessions');
+      const savedSessions = localStorage.getItem("workflow_sessions");
       if (!savedSessions) return { migrated: 0, skipped: 0 };
 
       const sessions = JSON.parse(savedSessions);
@@ -712,10 +810,10 @@ export class WorkflowSupabaseService {
         try {
           // Check if session already exists in Supabase
           const { data: existing } = await supabase
-            .from('clientes_sessoes')
-            .select('id')
-            .eq('session_id', session.id)
-            .eq('user_id', user.user.id)
+            .from("clientes_sessoes")
+            .select("id")
+            .eq("session_id", session.id)
+            .eq("user_id", user.user.id)
             .single();
 
           if (existing) {
@@ -727,12 +825,12 @@ export class WorkflowSupabaseService {
           let clienteId = session.clienteId;
           if (!clienteId && session.nome) {
             const { data: cliente } = await supabase
-              .from('clientes')
-              .select('id')
-              .eq('nome', session.nome)
-              .eq('user_id', user.user.id)
+              .from("clientes")
+              .select("id")
+              .eq("nome", session.nome)
+              .eq("user_id", user.user.id)
               .single();
-            
+
             if (cliente) {
               clienteId = cliente.id;
             }
@@ -740,46 +838,48 @@ export class WorkflowSupabaseService {
 
           // Parse financial values
           const parseValue = (value: string | number) => {
-            if (typeof value === 'number') return value;
-            return parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            if (typeof value === "number") return value;
+            return (
+              parseFloat(value.replace(/[^\d,]/g, "").replace(",", ".")) || 0
+            );
           };
 
           const sessionData = {
             user_id: user.user.id,
             session_id: session.id,
-            cliente_id: clienteId || '',
+            cliente_id: clienteId || "",
             data_sessao: session.data,
             hora_sessao: session.hora,
-            categoria: session.categoria || 'Outros',
-            pacote: session.pacote || '',
-            descricao: session.descricao || '',
+            categoria: session.categoria || "Outros",
+            pacote: session.pacote || "",
+            descricao: session.descricao || "",
             status: session.status ?? null,
             valor_total: parseValue(session.total || session.valorPacote || 0),
             valor_pago: parseValue(session.valorPago || 0),
             produtos_incluidos: session.produtosList || [],
-            updated_by: user.user.id
+            updated_by: user.user.id,
           };
 
           const { error } = await supabase
-            .from('clientes_sessoes')
+            .from("clientes_sessoes")
             .insert(sessionData);
 
           if (!error) {
             migrated++;
           } else {
-            console.error('Error migrating session:', session.id, error);
+            console.error("Error migrating session:", session.id, error);
           }
-
         } catch (sessionError) {
-          console.error('Error processing session:', session.id, sessionError);
+          console.error("Error processing session:", session.id, sessionError);
         }
       }
 
-      console.log(`✅ Migration complete: ${migrated} migrated, ${skipped} skipped`);
+      console.log(
+        `✅ Migration complete: ${migrated} migrated, ${skipped} skipped`,
+      );
       return { migrated, skipped };
-
     } catch (error) {
-      console.error('❌ Error migrating localStorage data:', error);
+      console.error("❌ Error migrating localStorage data:", error);
       throw error;
     }
   }
@@ -791,52 +891,64 @@ export class WorkflowSupabaseService {
    */
   static async repairAppointmentsSessionsMismatch() {
     try {
-      console.log('🔧 [Repair] Iniciando reparo de divergências...');
-      
+      console.log("🔧 [Repair] Iniciando reparo de divergências...");
+
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user) {
-        console.log('⚠️ [Repair] User not authenticated, skipping repair');
+        console.log("⚠️ [Repair] User not authenticated, skipping repair");
         return;
       }
 
       // 1. Buscar appointments confirmados sem sessão
       const { data: appointmentsWithoutSession } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .eq('status', 'confirmado')
-        .is('session_id', null);
+        .from("appointments")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .eq("status", "confirmado")
+        .is("session_id", null);
 
       if (appointmentsWithoutSession && appointmentsWithoutSession.length > 0) {
-        console.log(`🔧 [Repair] Encontrados ${appointmentsWithoutSession.length} appointments sem sessão`);
-        
+        console.log(
+          `🔧 [Repair] Encontrados ${appointmentsWithoutSession.length} appointments sem sessão`,
+        );
+
         for (const appointment of appointmentsWithoutSession) {
           try {
-            await this.createSessionFromAppointment(appointment.id, appointment);
-            console.log(`✅ [Repair] Sessão criada para appointment ${appointment.id}`);
+            await this.createSessionFromAppointment(
+              appointment.id,
+              appointment,
+            );
+            console.log(
+              `✅ [Repair] Sessão criada para appointment ${appointment.id}`,
+            );
           } catch (error) {
-            console.error(`❌ [Repair] Erro ao criar sessão para ${appointment.id}:`, error);
+            console.error(
+              `❌ [Repair] Erro ao criar sessão para ${appointment.id}:`,
+              error,
+            );
           }
         }
       }
 
       // 2. Buscar sessões com appointment_id e verificar divergências de data/hora
       const { data: sessionsWithAppointment } = await supabase
-        .from('clientes_sessoes')
-        .select('id, appointment_id, data_sessao, hora_sessao')
-        .eq('user_id', user.user.id)
-        .not('appointment_id', 'is', null);
+        .from("clientes_sessoes")
+        .select("id, appointment_id, data_sessao, hora_sessao")
+        .eq("user_id", user.user.id)
+        .not("appointment_id", "is", null);
 
       if (sessionsWithAppointment && sessionsWithAppointment.length > 0) {
-        console.log(`🔧 [Repair] Verificando ${sessionsWithAppointment.length} sessões com appointment_id`);
-        
+        console.log(
+          `🔧 [Repair] Verificando ${sessionsWithAppointment.length} sessões com appointment_id`,
+        );
+
         for (const session of sessionsWithAppointment) {
           // Buscar appointment correspondente
           const { data: appointment } = await supabase
-            .from('appointments')
-            .select('date, time')
-            .eq('id', session.appointment_id)
-            .eq('user_id', user.user.id)
+            .from("appointments")
+            .select("date, time")
+            .eq("id", session.appointment_id)
+            .eq("user_id", user.user.id)
             .single();
 
           if (appointment) {
@@ -844,30 +956,41 @@ export class WorkflowSupabaseService {
             const needsTimeFix = appointment.time !== session.hora_sessao;
 
             if (needsDateFix || needsTimeFix) {
-              console.log(`🔧 [Repair] Divergência detectada na sessão ${session.id}:`, {
-                appointment: { date: appointment.date, time: appointment.time },
-                session: { date: session.data_sessao, time: session.hora_sessao }
-              });
+              console.log(
+                `🔧 [Repair] Divergência detectada na sessão ${session.id}:`,
+                {
+                  appointment: {
+                    date: appointment.date,
+                    time: appointment.time,
+                  },
+                  session: {
+                    date: session.data_sessao,
+                    time: session.hora_sessao,
+                  },
+                },
+              );
 
               await supabase
-                .from('clientes_sessoes')
+                .from("clientes_sessoes")
                 .update({
                   data_sessao: appointment.date,
                   hora_sessao: appointment.time,
-                  updated_at: new Date().toISOString()
+                  updated_at: new Date().toISOString(),
                 })
-                .eq('id', session.id)
-                .eq('user_id', user.user.id);
+                .eq("id", session.id)
+                .eq("user_id", user.user.id);
 
-              console.log(`✅ [Repair] Sessão ${session.id} atualizada para corresponder ao appointment`);
+              console.log(
+                `✅ [Repair] Sessão ${session.id} atualizada para corresponder ao appointment`,
+              );
             }
           }
         }
       }
 
-      console.log('✅ [Repair] Reparo concluído com sucesso');
+      console.log("✅ [Repair] Reparo concluído com sucesso");
     } catch (error) {
-      console.error('❌ [Repair] Erro durante reparo:', error);
+      console.error("❌ [Repair] Erro durante reparo:", error);
     }
   }
 }

@@ -49,7 +49,7 @@ export const listSessionsByPaymentStatus = defineQuery({
         "id, cliente_id, data_sessao, categoria, status, valor_total, valor_pago, clientes(nome)",
       )
       .eq("user_id", userId)
-      .or("status.is.null,status.neq.historico")
+      .or("status.is.null,status.not.in.(historico,stub)")
       .order("data_sessao", { ascending: false })
       .limit(limit * 3);
 

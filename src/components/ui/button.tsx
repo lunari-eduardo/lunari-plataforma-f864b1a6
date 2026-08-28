@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "bg-[#cbb384] text-white hover:bg-[#bfa574] shadow-sm",
         luxury:
           "bg-[#cbb384] text-white hover:bg-[#bfa574] shadow-sm",
-        'gallery-primary': 'bg-[#cbb384] text-white hover:bg-[#bfa574] focus-visible:ring-[#cbb384]',
+        'gallery-primary': 'bg-[var(--gallery-primary,#cbb384)] text-[var(--gallery-primary-fg,#ffffff)] hover:opacity-90 focus-visible:ring-[var(--gallery-primary,#cbb384)] shadow-sm transition-opacity',
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },

@@ -66,7 +66,7 @@ export const useWorkflowRealtime = () => {
           )
         `)
         .eq('user_id', userId)
-        .or('status.is.null,status.neq.historico')
+        .or('status.is.null,status.not.in.(historico,stub)')
         .gte('data_sessao', dateFilter)
         .order('data_sessao', { ascending: true })
         .order('hora_sessao', { ascending: true });

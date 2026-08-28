@@ -77,7 +77,7 @@ export const sessionsRepo = {
       .lte("data_sessao", end)
       .order("data_sessao", { ascending: true });
     if (!opts?.includeHistorico) {
-      q = q.or("status.is.null,status.neq.historico");
+      q = q.or("status.is.null,status.not.in.(historico,stub)");
     }
     if (opts?.signal) q = q.abortSignal(opts.signal);
     const { data, error } = await q;
@@ -114,7 +114,7 @@ export const sessionsRepo = {
       .order("id", { ascending: true })
       .limit(limit);
     if (!opts?.includeHistorico) {
-      q = q.or("status.is.null,status.neq.historico");
+      q = q.or("status.is.null,status.not.in.(historico,stub)");
     }
     if (opts?.categoria) q = q.eq("categoria", opts.categoria);
     if (opts?.status) q = q.eq("status", opts.status);
@@ -142,7 +142,7 @@ export const sessionsRepo = {
       .from("clientes_sessoes")
       .select(SELECT_WITH_CLIENTE)
       .eq("user_id", userId)
-      .or("status.is.null,status.neq.historico")
+      .or("status.is.null,status.not.in.(historico,stub)")
       .gte("data_sessao", dateFilter)
       .order("data_sessao", { ascending: true })
       .order("hora_sessao", { ascending: true });
