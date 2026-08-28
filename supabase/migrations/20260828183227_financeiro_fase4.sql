@@ -193,7 +193,7 @@ DECLARE
   v_soma_parcelas NUMERIC := 0;
 BEGIN
   -- 1) Soma das transacoes manuais e de gateways antigos/legados
-  SELECT COALESCE(SUM(CASE WHEN tipo = 'estorno' THEN -valor ELSE valor END), 0)
+  SELECT COALESCE(SUM(CASE WHEN ct.tipo = 'estorno' THEN -ct.valor ELSE ct.valor END), 0)
   INTO v_soma_tx
   FROM public.clientes_transacoes ct
   LEFT JOIN public.cobrancas c ON ct.cobranca_id = c.id

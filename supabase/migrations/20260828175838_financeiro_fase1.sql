@@ -68,3 +68,51 @@ ALTER TABLE public.cobranca_parcelas ADD COLUMN IF NOT EXISTS taxa_processamento
 ALTER TABLE public.cobranca_parcelas ADD COLUMN IF NOT EXISTS taxa_antecipacao_real NUMERIC DEFAULT 0;
 ALTER TABLE public.cobranca_parcelas ADD COLUMN IF NOT EXISTS valor_liquido_creditado NUMERIC DEFAULT 0;
 ALTER TABLE public.cobranca_parcelas ADD COLUMN IF NOT EXISTS source_event_id UUID REFERENCES public.gateway_events(id) ON DELETE SET NULL;
+
+-- 4. Novas colunas em clientes_transacoes
+ALTER TABLE public.clientes_transacoes ADD COLUMN IF NOT EXISTS dados_extras JSONB;
+
+-- 5. Índices de performance
+CREATE INDEX IF NOT EXISTS idx_cobranca_parcelas_cobranca_id ON public.cobranca_parcelas(cobranca_id);
+CREATE INDEX IF NOT EXISTS idx_cobranca_parcelas_status ON public.cobranca_parcelas(status);
+CREATE INDEX IF NOT EXISTS idx_gateway_cash_movements_cobranca_id ON public.gateway_cash_movements(cobranca_id);
+CREATE INDEX IF NOT EXISTS idx_gateway_cash_movements_parcela_id ON public.gateway_cash_movements(parcela_id);
+CREATE INDEX IF NOT EXISTS idx_gateway_cash_movements_date ON public.gateway_cash_movements(movement_date);
+CREATE INDEX IF NOT EXISTS idx_gateway_anticipations_cobranca_id ON public.gateway_anticipations(cobranca_id);
+CREATE INDEX IF NOT EXISTS idx_gateway_anticipations_parcela_id ON public.gateway_anticipations(parcela_id);
+
+-- 6. RLS Policies
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'gateway_cash_movements' 
+      AND policyname = 'Users can view own gateway cash movements'
+  ) THEN
+    CREATE POLICY "Users can view own gateway cash movements" ON public.gateway_cash_movements
+    FOR SELECT TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.cobrancas c 
+        WHERE c.id = gateway_cash_movements.cobranca_id 
+          AND c.user_id = auth.uid()
+      )
+    );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'gateway_anticipations' 
+      AND policyname = 'Users can view own gateway anticipations'
+  ) THEN
+    CREATE POLICY "Users can view own gateway anticipations" ON public.gateway_anticipations
+    FOR SELECT TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.cobrancas c 
+        WHERE c.id = gateway_anticipations.cobranca_id 
+          AND c.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
