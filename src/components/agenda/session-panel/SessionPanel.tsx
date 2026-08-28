@@ -81,7 +81,7 @@ export interface SessionPanelProps {
   initialDate?: Date;
   initialTime?: string;
   preselectedClienteId?: string;
-  onSave: (data: any) => void | Promise<void>;
+  onSave: (data: any) => any | Promise<any>;
   /** Persistência silenciosa (não fecha o painel) antes de gerar cobrança. */
   onPersist?: (data: any) => void | Promise<void>;
   onDelete?: (id: string, action?: "preserve" | "refund" | "remove") => void;
@@ -551,24 +551,22 @@ export default function SessionPanel({
             clientName: resolved.nome,
           };
           setForm(next);
-          await onSave(buildPayload(next, resolved));
+          const createdApp = await onSave(buildPayload(next, resolved));
 
           // Fluxo "Cobrar ao salvar": abre o modal de cobrança logo após criar
           if (!isEdit && cobrarAoSalvar && resolved.clienteId) {
-            const created = await findCreatedSession(
-              resolved.clienteId,
-              parsedDate,
-              finalTime,
-            );
-            if (!created) {
+            const createdSessionId = createdApp?.session_id;
+            const createdAppId = createdApp?.id;
+
+            if (!createdSessionId || !createdAppId) {
               toast.error(
                 "Não foi possível preparar a cobrança. Abra a sessão e tente novamente.",
               );
               return;
             }
             const ok = await ensureSessionStub(
-              created.sessionId,
-              created.appointmentId,
+              createdSessionId,
+              createdAppId,
               resolved.clienteId,
               parsedDate,
               finalTime,
@@ -579,7 +577,7 @@ export default function SessionPanel({
               );
               return;
             }
-            setChargeSessionId(created.sessionId);
+            setChargeSessionId(createdSessionId);
             setShowCharge(true);
           }
         },

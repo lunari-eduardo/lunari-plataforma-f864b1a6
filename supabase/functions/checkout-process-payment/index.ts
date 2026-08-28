@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
         data_vencimento: new Date().toISOString().split("T")[0],
         data_pagamento: isPaid ? updatePayload.data_pagamento : null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "asaas_payment_id" }).maybeSingle();
+      }, { onConflict: "cobranca_id, numero_parcela" }).maybeSingle();
     }
 
     if (isPaid && (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras")) {

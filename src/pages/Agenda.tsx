@@ -239,12 +239,15 @@ export default function Agenda() {
     if (editingAppointment) {
       await updateAppointment(editingAppointment.id, appointmentData);
       setIsAppointmentDialogOpen(false);
+      return { id: editingAppointment.id, ...appointmentData };
     } else if (viewingAppointment) {
       await updateAppointment(viewingAppointment.id, appointmentData);
       setIsDetailsOpen(false);
+      return { id: viewingAppointment.id, ...appointmentData };
     } else {
-      await addAppointment(appointmentData);
+      const created = await addAppointment(appointmentData);
       setIsAppointmentDialogOpen(false);
+      return created;
     }
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 

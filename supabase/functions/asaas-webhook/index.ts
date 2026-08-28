@@ -361,10 +361,10 @@ async function upsertParcela(
     updated_at: new Date().toISOString(),
   };
 
-  // Upsert by asaas_payment_id
+  // Upsert by cobranca_id, numero_parcela
   const { error } = await adminClient
     .from("cobranca_parcelas")
-    .upsert(parcelaData, { onConflict: "asaas_payment_id" })
+    .upsert(parcelaData, { onConflict: "cobranca_id, numero_parcela" })
     .select()
     .maybeSingle();
 
@@ -509,7 +509,7 @@ Deno.serve(async (req) => {
                 data_credito: payment.creditDate || null,
                 antecipado: true,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: "asaas_payment_id" })
+              }, { onConflict: "cobranca_id, numero_parcela" })
               .select()
               .maybeSingle();
 

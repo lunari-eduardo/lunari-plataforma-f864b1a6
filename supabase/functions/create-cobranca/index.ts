@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
       updateData.ip_checkout_url = finalCheckoutUrl;
       updateData.ip_invoice_slug = adapterData.providerOrderId || null;
     } else if (provedor === "asaas") {
-      updateData.asaas_payment_id = adapterData.providerOrderId || null;
+      updateData.provider_order_id = adapterData.providerOrderId || null;
       if (adapterData.pixCopiaCola) updateData.mp_pix_copia_cola = adapterData.pixCopiaCola;
     }
 
@@ -430,7 +430,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    await supabase.from("cobrancas").update(updateData).eq("id", cobrancaId);
+    const { error: updateError } = await supabase.from("cobrancas").update(updateData).eq("id", cobrancaId);
+
+    if (updateError) {
+      console.error(`[create-cobranca] Erro CRÍTICO ao atualizar a cobrança ${cobrancaId} no banco de dados:`, updateError);
+      return errorResponse("Erro interno ao consolidar cobrança", 500, "UPDATE_COBRANCA_FAILED", updateError);
+    }
 
     if (isPaid && (binding.finalidade === "fotos_extras" || binding.finalidade === "sessao_e_extras")) {
       try {
