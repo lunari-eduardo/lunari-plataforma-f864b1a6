@@ -778,11 +778,6 @@ export function AsaasCheckout({
                 : "Sua seleção foi finalizada com sucesso."}
             </p>
           </div>
-          {studioName && (
-            <p className="text-xs text-muted-foreground pt-4 border-t border-border/40">
-              {studioName}
-            </p>
-          )}
         </div>
       </div>
     );

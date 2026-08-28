@@ -282,7 +282,7 @@ export default function InfinitePayCheckout() {
     <PublicThemeWrapper primaryColor={data?.theme?.primaryColor || undefined} className="flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header comercial */}
-        {data && (
+        {data && phase !== "paid" && (
           <div className="text-center mb-4">
             <p className="text-xs uppercase tracking-widest text-neutral-500">Pagamento para</p>
             <h1 className="text-base font-medium text-neutral-700 mt-1">{data.photographer.display_name}</h1>

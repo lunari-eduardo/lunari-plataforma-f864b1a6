@@ -448,11 +448,6 @@ export default function PublicCheckout() {
               <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
               <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
             </div>
-            {data?.photographer?.name && (
-              <p className="text-xs text-neutral-500 pt-4 border-t border-neutral-100">
-                {data.photographer.name}
-              </p>
-            )}
           </div>
         </div>
       </PublicThemeWrapper>

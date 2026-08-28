@@ -317,7 +317,7 @@ export function PaymentPendingScreen({
               alt={studioName || 'Studio'}
               className="h-32 sm:h-36 w-auto max-w-[220px] object-contain"
             />
-          ) : studioName ? (
+          ) : (studioName && status !== 'confirmed') ? (
             <p className="text-sm tracking-[0.2em] uppercase text-muted-foreground">{studioName}</p>
           ) : null}
         </div>
