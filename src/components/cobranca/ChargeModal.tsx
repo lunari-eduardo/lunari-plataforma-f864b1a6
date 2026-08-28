@@ -727,10 +727,6 @@ export function ChargeModal({
                     </div>
                   )}
                 </div>
-
-                          const est = calcularLiquidoEstimado();
-                          return (
-                            <div className="flex items-center justify-between p-3.5 bg-muted/40 border border-border/60 rounded-xl shadow-xs mt-1">
                 {/* AÇÕES DE GERAÇÃO E TIPO DE COBRANÇA */}
                 <div className="pt-3 space-y-3">
                   {showPixManualSection && (
