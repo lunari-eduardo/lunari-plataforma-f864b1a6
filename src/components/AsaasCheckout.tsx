@@ -703,6 +703,18 @@ export function AsaasCheckout({
         const mp = new window.MercadoPago(data.mpPublicKey, { locale: 'pt-BR' });
         
         try {
+          const bin = rawCard.substring(0, 6);
+          if (bin.length >= 6) {
+            try {
+              const pmResult = await mp.getPaymentMethods({ bin });
+              if (pmResult?.results?.[0]?.id) {
+                paymentMethodId = pmResult.results[0].id;
+              }
+            } catch (pmErr) {
+              console.warn('[mercadopago] getPaymentMethods fallback:', pmErr);
+            }
+          }
+
           const tokenResult = await mp.createCardToken({
             cardNumber: rawCard,
             cardholderName: cardName.toUpperCase(),
@@ -1271,7 +1283,7 @@ export function AsaasCheckout({
                         onChange={e => {
                           const masked = maskExpiry(e.target.value);
                           setCardExpiry(masked);
-                          if (fieldErrors.expiry) setFieldError('expiry', null);
+                          setFieldError('expiry', null);
                           if (masked.length === 5) cardCvvRef.current?.focus();
                         }}
                         onBlur={() => {
@@ -1280,9 +1292,13 @@ export function AsaasCheckout({
                             const mm = parseInt(m);
                             if (!mm || mm < 1 || mm > 12) {
                               setFieldError('expiry', 'Validade inválida');
+                            } else {
+                              setFieldError('expiry', null);
                             }
-                          } else if (cardExpiry) {
+                          } else if (cardExpiry && cardExpiry.length > 0) {
                             setFieldError('expiry', 'Validade incompleta');
+                          } else {
+                            setFieldError('expiry', null);
                           }
                         }}
                         placeholder="MM/AA"

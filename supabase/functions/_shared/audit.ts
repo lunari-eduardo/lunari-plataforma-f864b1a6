@@ -1,8 +1,14 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+let _auditClient: SupabaseClient | null = null;
+function getAuditClient(): SupabaseClient | null {
+  if (_auditClient) return _auditClient;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !supabaseKey) return null;
+  _auditClient = createClient(supabaseUrl, supabaseKey);
+  return _auditClient;
+}
 
 export async function logAuditEvent(params: {
   correlationId: string;
@@ -17,6 +23,8 @@ export async function logAuditEvent(params: {
   errorMessage?: string;
 }) {
   try {
+    const supabase = getAuditClient();
+    if (!supabase) return;
     const { data, error } = await supabase.from('system_audit_logs').insert({
       correlation_id: params.correlationId,
       event_type: params.eventType,
@@ -46,6 +54,8 @@ export async function logWebhookEvent(params: {
   errorLog?: string;
 }) {
   try {
+    const supabase = getAuditClient();
+    if (!supabase) return;
     const { data, error } = await supabase.from('webhook_events_audit').upsert({
       correlation_id: params.correlationId,
       provider: params.provider,
@@ -73,6 +83,8 @@ export async function acquireWebhookLock(provider: string, externalId: string, e
   lockAcquired: boolean;
 }> {
   try {
+    const supabase = getAuditClient();
+    if (!supabase) return { isAlreadyProcessed: false, lockAcquired: false };
     // 1. Check if already processed (status = 'success')
     const { data: existing } = await supabase
       .from('webhook_events_audit')

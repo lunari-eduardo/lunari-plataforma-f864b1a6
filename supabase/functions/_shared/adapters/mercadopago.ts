@@ -68,10 +68,19 @@ export async function createMercadoPagoPayment(
   const clientPhoneDigits = digitsOnly(cliente?.whatsapp || cliente?.telefone);
   const docDigits = digitsOnly(cliente?.cpfCnpj);
 
+  // Split client name into first_name and last_name for Mercado Pago (Mercado Pago v1/payments rejects payer.name)
+  const rawNome = (cliente?.nome || "").trim();
+  const nameParts = rawNome.split(/\s+/).filter(Boolean);
+  const firstName = nameParts[0] || "Cliente";
+  const lastName = nameParts.slice(1).join(" ") || undefined;
+
   const payerPayload: Record<string, any> = {
-    name: cliente?.nome?.trim() || "Cliente",
     email: cleanEmail(cliente?.email) || "cliente@lunarihub.com",
+    first_name: firstName,
   };
+  if (lastName) {
+    payerPayload.last_name = lastName;
+  }
 
   if (clientPhoneDigits) {
     const areaCode = clientPhoneDigits.length >= 10 ? clientPhoneDigits.slice(0, 2) : "11";
