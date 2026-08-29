@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { calcularAntecipacao } from '@/lib/anticipationUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { loadMercadoPagoSdk } from '@/utils/mercadopagoSdk';
 
 const SUPABASE_URL = 'https://tlnjspsywycbudhewsfv.supabase.co';
 const POLL_INTERVAL = 15_000;
@@ -58,6 +59,8 @@ export interface AsaasCheckoutData {
   descricao: string;
   qtdFotos?: number;
   cobrancaId?: string;
+  provedor?: string;
+  mpPublicKey?: string;
   finalidade?: string;
   clienteId?: string;
   sessionId?: string;
@@ -387,7 +390,7 @@ export function AsaasCheckout({
             galeriaId: data.galeriaId,
             qtdFotos: data.qtdFotos,
             finalidade: data.finalidade || 'fotos_extras',
-            provedor: 'asaas',
+            provedor: data.provedor || 'asaas',
             billingType: 'PIX',
             payerContact: payerContactData,
             dadosExtras: {
@@ -645,6 +648,41 @@ export function AsaasCheckout({
         postalCode: cardCep.replace(/\D/g, ''),
         addressNumber: 'S/N',
       };
+      
+      let cardToken: string | undefined;
+      let paymentMethodId: string | undefined;
+
+      if (data.provedor === 'mercadopago') {
+        if (!data.mpPublicKey) {
+          throw new Error('Chave pública do Mercado Pago não encontrada.');
+        }
+        await loadMercadoPagoSdk();
+        if (!window.MercadoPago) {
+          throw new Error('Falha ao carregar SDK de pagamento. Recarregue a página.');
+        }
+        const mp = new window.MercadoPago(data.mpPublicKey, { locale: 'pt-BR' });
+        
+        try {
+          const tokenResult = await mp.createCardToken({
+            cardNumber: rawCard,
+            cardholderName: cardName.toUpperCase(),
+            cardExpirationMonth: expM.padStart(2, '0'),
+            cardExpirationYear: `20${expY}`,
+            securityCode: cardCvv,
+            identificationType: cardCpfCnpj.replace(/\D/g, '').length === 11 ? 'CPF' : 'CNPJ',
+            identificationNumber: cardCpfCnpj.replace(/\D/g, ''),
+          });
+
+          if ('cause' in tokenResult && tokenResult.cause?.length > 0) {
+            throw new Error(tokenResult.cause[0]?.description || 'Erro ao processar cartão');
+          }
+          if ('id' in tokenResult) {
+            cardToken = tokenResult.id;
+          }
+        } catch (e: any) {
+          throw new Error(e.message || 'Erro ao tokenizar cartão. Verifique os dados.');
+        }
+      }
 
       const payerContactPayload = {
         name: cardName.trim(),
@@ -662,6 +700,8 @@ export function AsaasCheckout({
             billingType: 'CREDIT_CARD',
             payerContact: payerContactPayload,
             creditCard: creditCardPayload,
+            cardToken,
+            paymentMethodId,
             creditCardHolderInfo: creditCardHolderInfoPayload,
             installmentCount: parseInt(cardInstallments)
           }),
@@ -680,11 +720,13 @@ export function AsaasCheckout({
             galeriaId: data.galeriaId,
             qtdFotos: data.qtdFotos,
             finalidade: data.finalidade || 'fotos_extras',
-            provedor: 'asaas',
+            provedor: data.provedor || 'asaas',
             billingType: 'CREDIT_CARD',
             installmentCount: parseInt(cardInstallments),
             payerContact: payerContactPayload,
             creditCard: creditCardPayload,
+            cardToken,
+            paymentMethodId,
             creditCardHolderInfo: creditCardHolderInfoPayload,
             dadosExtras: {
               valorBase: data.valorTotal,

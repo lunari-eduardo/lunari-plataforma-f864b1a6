@@ -456,8 +456,8 @@ export default function PublicCheckout() {
 
   const provedorAtual = (data.provedor ?? 'asaas') as string;
 
-  // ——— Provedores não-Asaas: mesma casca, painel próprio ———
-  if (provedorAtual !== 'asaas') {
+  // ——— Provedores não transparentes (ex: infinitepay) ———
+  if (provedorAtual !== 'asaas' && provedorAtual !== 'mercadopago') {
     const payerValue: PayerValue = {
       nome: payerName,
       email: payerEmail,
@@ -490,7 +490,7 @@ export default function PublicCheckout() {
     );
   }
 
-  const { cobranca, photographer, settings } = data;
+  const { cobranca, photographer, settings, provider } = data;
 
   const handlePersistContact = async (contactData: { email?: string; phone?: string; nome?: string; cpfCnpj?: string }) => {
     if (!cobrancaId) return;
@@ -522,6 +522,8 @@ export default function PublicCheckout() {
           valorTotal: cobranca.valor,
           descricao: cobranca.descricao,
           cobrancaId: cobranca.id,
+          provedor: provedorAtual,
+          mpPublicKey: provider?.mpPublicKey,
           enabledMethods: {
             pix: settings.habilitarPix,
             creditCard: settings.habilitarCartao,

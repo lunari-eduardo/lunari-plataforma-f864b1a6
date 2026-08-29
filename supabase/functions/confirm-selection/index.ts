@@ -519,6 +519,201 @@ Deno.serve(async (req) => {
       }
 
       // Handle PIX Manual - no checkout link, just mark as awaiting confirmation
+    // A RPC calculate_gallery_extra_payment lê galerias.fotos_selecionadas.
+    // Essa coluna só era atualizada no commit final, então em cenários de
+    // primeira confirmação/reabertura a RPC recebia valor obsoleto (0/qtd antiga)
+    // e retornava extras_a_cobrar=0 → galeria era finalizada sem cobrar.
+    // Sincronizamos aqui, antes de qualquer decisão de cobrança.
+    {
+      const { error: syncErr } = await supabase
+        .from('galerias')
+        .update({ fotos_selecionadas: selectedCount, updated_at: new Date().toISOString() })
+        .eq('id', galleryId);
+      if (syncErr) {
+        console.error('❌ Falha ao sincronizar fotos_selecionadas antes da RPC:', syncErr);
+        await rollbackGalleryStatus();
+        return errorResponse('Erro ao sincronizar seleção', 500, 'SELECTION_SYNC_ERROR');
+      }
+    }
+
+
+
+    try {
+      const { data: canon, error: canonErr } = await supabase.rpc('calculate_gallery_extra_payment', {
+        p_gallery_id: galleryId,
+        // Bypass do pre_selecao_gate: estamos no momento canônico da transição
+        // selecao_iniciada -> selecao_completa; sem bypass a RPC retorna 0.
+        p_bypass_pre_selecao_gate: true,
+      });
+
+
+      if (canonErr) throw canonErr;
+      if (!canon || (canon as any).success !== true) {
+        throw new Error(`RPC retornou success=false: ${JSON.stringify(canon)}`);
+      }
+
+      const c = canon as Record<string, any>;
+      canonRulesSource = c.rules_source ?? null;
+      valorUnitario = Number(c.valor_unitario) || 0;
+      valorTotal = Number(c.valor_a_cobrar) || 0;
+      extrasACobrar = Number(c.extras_a_cobrar) || 0;
+      extrasPagasTotal = Number(c.extras_pagas) || extrasPagasTotal;
+      valorJaPago = Number(c.valor_pago) || valorJaPago;
+
+
+
+
+      console.log(`📊 [RPC canônica] rules_source=${c.rules_source}, extras_necess=${c.extras_necessarias}, extras_pagas=${c.extras_pagas}, extras_a_cobrar=${c.extras_a_cobrar}, valor_unitario=R$${c.valor_unitario}, valor_total_ideal=R$${c.valor_total_ideal}, valor_pago=R$${c.valor_pago}, valor_a_cobrar=R$${c.valor_a_cobrar}`);
+    } catch (rpcErr) {
+      // Fallback defensivo: se a RPC canônica falhar, cai no cálculo local.
+      // Loga como ERRO porque isso NÃO deve acontecer em produção — trigger
+      // tg_protect_no_overcharge pode rejeitar se houver divergência.
+      console.error('❌ [FALLBACK] calculate_gallery_extra_payment falhou, usando cálculo local:', rpcErr);
+
+      let regrasCongeladasSource: RegrasCongeladas | null = null;
+      let fallbackPrice = Number(gallery.valor_foto_extra || 0);
+
+      if (fallbackPrice <= 0) {
+        if (gallery.session_id) {
+          const { data: sessao } = await supabase
+            .from('clientes_sessoes')
+            .select('regras_congeladas')
+            .eq('session_id', gallery.session_id)
+            .single();
+          if (sessao?.regras_congeladas) {
+            regrasCongeladasSource = sessao.regras_congeladas as RegrasCongeladas;
+          }
+        }
+        if (!regrasCongeladasSource && gallery.regras_congeladas) {
+          regrasCongeladasSource = gallery.regras_congeladas as RegrasCongeladas;
+        }
+        if (regrasCongeladasSource) {
+          fallbackPrice = Number((regrasCongeladasSource as any)?.pacote?.valorFotoExtra ?? 0);
+        }
+      }
+
+      const resultado = calcularPrecoProgressivoComCredito(
+        extrasACobrar,
+        extrasPagasTotal,
+        valorJaPago,
+        regrasCongeladasSource,
+        fallbackPrice
+      );
+      valorUnitario = resultado.valorUnitario;
+      valorTotal = resultado.valorACobrar;
+    }
+
+    console.log(`📊 Extras (final): necessarias=${extrasNecessarias}, pagas=${extrasPagasTotal}, a_cobrar=${extrasACobrar}, valorJaPago=R$${valorJaPago}, valorACobrar=R$${valorTotal}`);
+
+    // 4. Parse sale settings to determine if payment is required
+    // CRITICAL: Decision is 100% server-side — frontend's requestPayment is IGNORED
+    // Normalization rule (contrato pipeline): COLUNAS > JSON > default.
+    // A trigger `tg_sync_gallery_sale_settings_json` mantém JSON alinhado, mas em
+    // caso de qualquer divergência residual, a coluna vence sempre.
+    const saleSettingsMode = saleSettingsJson.mode;
+    const vendaModoColumn = gallery.venda_modo;
+
+    const VALID_SALE_MODES = ['no_sale', 'sale_with_payment', 'sale_without_payment'];
+    const isValidVendaModoColumn = vendaModoColumn && VALID_SALE_MODES.includes(vendaModoColumn);
+    const isValidVendaModoJson = saleSettingsMode && VALID_SALE_MODES.includes(saleSettingsMode);
+
+    // Column-first precedence
+    const saleMode = isValidVendaModoColumn
+      ? vendaModoColumn
+      : (isValidVendaModoJson ? saleSettingsMode : 'no_sale');
+
+    if (isValidVendaModoColumn && isValidVendaModoJson && saleSettingsMode !== vendaModoColumn) {
+      console.warn(`⚠️ SALE_MODE_DIVERGENCE gallery=${galleryId} column=${vendaModoColumn} json=${saleSettingsMode} — column wins`);
+      await logAuditEvent({
+        correlationId,
+        eventType: 'SALE_MODE_DIVERGENCE',
+        source: 'edge_function',
+        sourceName: 'confirm-selection',
+        payload: { galleryId, column: vendaModoColumn, json: saleSettingsMode }
+      });
+    }
+
+    // Payment method: coluna venda_pagamento_provedor > JSON.paymentMethod
+    const configuredPaymentMethod = gallery.venda_pagamento_provedor || saleSettingsJson.paymentMethod;
+
+    // Server-side rule: if mode is sale_with_payment AND there's value to charge, payment is required
+    const shouldCreatePayment = saleMode === 'sale_with_payment' && valorTotal > 0 && extrasACobrar > 0;
+
+    console.log(`💰 Payment check: mode=${saleMode} (source: ${isValidVendaModoColumn ? 'column' : isValidVendaModoJson ? 'json' : 'default'}), provider=${configuredPaymentMethod}, valorTotal=${valorTotal}, extrasACobrar=${extrasACobrar}, shouldCreate=${shouldCreatePayment}`);
+
+    // 🛡️ CONTRACT GUARD (server-side): se a galeria opera em sale_with_payment e há
+    // seleção acima do incluído (ou all_selected com qualquer foto), mas o cálculo
+    // canônico retornou zero E não há histórico pago que justifique — NUNCA finalizar
+    // em silêncio. Devolve erro para o cliente retomar; rollback do status.
+    {
+      const debeCobrar =
+        saleMode === 'sale_with_payment' &&
+        (chargeType === 'all_selected'
+          ? selectedCount > 0
+          : selectedCount > (gallery.fotos_incluidas || 0));
+      const jaQuitado = extrasPagasTotal >= extrasNecessarias && extrasNecessarias > 0;
+      if (debeCobrar && !shouldCreatePayment && !jaQuitado) {
+        console.warn('⚠️ [CONTRACT GUARD BYPASS] Cálculo retornou zero em galeria que exigia cobrança. O cliente terá a galeria finalizada gratuitamente. Regras:', {
+          galleryId, selectedCount, fotos_incluidas: gallery.fotos_incluidas,
+          extrasNecessarias, extrasPagasTotal, valorTotal, chargeType,
+          rulesSource: canonRulesSource,
+        });
+        
+        // Em vez de barrar o cliente com erro 500 (o que causa frustração se o preço
+        // for intencionalmente zero), permitimos que a galeria seja finalizada como 'sem cobrança'.
+      }
+    }
+
+
+
+
+
+
+    // 5. CRITICAL: If payment is required, create it BEFORE confirming gallery
+    let paymentResponse: { checkoutUrl?: string; provedor?: string; cobrancaId?: string } | null = null;
+    let statusPagamento = 'sem_vendas'; // Default for no payment
+
+    if (shouldCreatePayment) {
+      console.log(`💳 PAYMENT REQUIRED: Creating payment for ${extrasCount} extras, total R$ ${valorTotal}`);
+      console.log(`💳 Configured payment method: ${configuredPaymentMethod || 'default'}`);
+
+      // Discover payment provider
+      let integracao;
+
+      if (configuredPaymentMethod) {
+        const { data } = await supabase
+          .from('usuarios_integracoes')
+          .select('provedor, dados_extras')
+          .eq('user_id', gallery.user_id)
+          .eq('provedor', configuredPaymentMethod)
+          .eq('status', 'ativo')
+          .maybeSingle();
+        integracao = data;
+      } else {
+        const { data } = await supabase
+          .from('usuarios_integracoes')
+          .select('provedor, dados_extras')
+          .eq('user_id', gallery.user_id)
+          .eq('is_default', true)
+          .eq('status', 'ativo')
+          .in('provedor', ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'])
+          .maybeSingle();
+        integracao = data;
+
+        if (!integracao) {
+          const { data: anyActive } = await supabase
+            .from('usuarios_integracoes')
+            .select('provedor, dados_extras')
+            .eq('user_id', gallery.user_id)
+            .eq('status', 'ativo')
+            .in('provedor', ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'])
+            .limit(1)
+            .maybeSingle();
+          integracao = anyActive;
+        }
+      }
+
+      // Handle PIX Manual - no checkout link, just mark as awaiting confirmation
       if (integracao?.provedor === 'pix_manual') {
         const pixData = integracao.dados_extras as { chavePix?: string; nomeTitular?: string; tipoChave?: string } | null;
         statusPagamento = 'aguardando_confirmacao';
@@ -535,8 +730,8 @@ Deno.serve(async (req) => {
       // Handle InfinitePay/MercadoPago/Asaas checkout
       else if (integracao && (integracao.provedor === 'infinitepay' || integracao.provedor === 'mercadopago' || integracao.provedor === 'asaas')) {
         
-        // ——— ASAAS TRANSPARENT CHECKOUT: return data to frontend, don't create charge yet ———
-        if (integracao.provedor === 'asaas') {
+        // ——— TRANSPARENT CHECKOUT (Asaas/MercadoPago): return data to frontend, don't create charge yet ———
+        if (integracao.provedor === 'asaas' || integracao.provedor === 'mercadopago') {
           const asaasSettings = (integracao.dados_extras || {}) as {
             habilitarPix?: boolean;
             habilitarCartao?: boolean;
@@ -547,6 +742,10 @@ Deno.serve(async (req) => {
             taxaAntecipacaoPercentual?: number;
             taxaAntecipacaoCreditoAvista?: number;
             taxaAntecipacaoCreditoParcelado?: number;
+            incluirTaxaAntecipacao?: boolean;
+            ireiAntecipar?: boolean;
+            repassarTaxaAntecipacao?: boolean;
+            mp_public_key?: string;
           };
 
           // Normalize session_id to text format
@@ -565,7 +764,7 @@ Deno.serve(async (req) => {
           // Mark gallery as awaiting payment (status is set below in the common update)
           statusPagamento = 'pendente';
           paymentResponse = {
-            provedor: 'asaas',
+            provedor: integracao.provedor,
           };
 
           // Store checkout data for the response — charge created by frontend
@@ -579,10 +778,12 @@ Deno.serve(async (req) => {
             sessionId: sessionIdTexto,
             galleryToken: gallery.public_token,
             visitorId: visitorId || undefined,
+            provedor: integracao.provedor,
+            mpPublicKey: asaasSettings.mp_public_key || undefined,
             enabledMethods: {
               pix: asaasSettings.habilitarPix !== false,
               creditCard: asaasSettings.habilitarCartao !== false,
-              boleto: asaasSettings.habilitarBoleto === true,
+              boleto: integracao.provedor === 'asaas' ? asaasSettings.habilitarBoleto === true : false,
             },
             maxParcelas: asaasSettings.maxParcelas || 12,
             absorverTaxa: asaasSettings.absorverTaxa || false,
@@ -598,14 +799,14 @@ Deno.serve(async (req) => {
             correlationId,
           };
 
-          console.log(`💳 Asaas transparent checkout prepared for gallery ${galleryId}, R$ ${valorTotal}`);
+          console.log(`💳 ${integracao.provedor} transparent checkout prepared for gallery ${galleryId}, R$ ${valorTotal}`);
 
           // We'll still continue to the gallery update section, but override the final response
           // Store the data so we can return it at the end
           (paymentResponse as Record<string, unknown>).__asaasCheckoutData = asaasCheckoutData;
           // Skip the external payment creation — continue to gallery update
         }
-        // ——— InfinitePay / MercadoPago: pipeline unificado ———
+        // ——— InfinitePay: pipeline unificado ———
         // Contrato pipeline (.lovable/pipeline-galeria-pagamento.md): a criação
         // do link SEMPRE passa por `gallery-create-payment`, nunca chama
         // *-create-link diretamente. gcp é a fonte única de valor/qtd, faz

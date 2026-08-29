@@ -68,6 +68,7 @@ export interface CreateCobrancaRequest {
   billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'UNDEFINED';
   payerContact?: ClienteContact;
   creditCard?: CreditCardData;
+  cardToken?: string;
   creditCardHolderInfo?: CreditCardHolderInfo;
   installmentCount?: number;
   correlationId?: string;
@@ -109,6 +110,7 @@ export interface AdapterCreatePaymentInput {
   };
   billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'UNDEFINED';
   creditCard?: CreditCardData;
+  cardToken?: string;
   creditCardHolderInfo?: CreditCardHolderInfo;
   installmentCount?: number;
   correlationId?: string;

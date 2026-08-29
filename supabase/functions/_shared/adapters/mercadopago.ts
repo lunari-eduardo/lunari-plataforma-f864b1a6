@@ -96,7 +96,136 @@ export async function createMercadoPagoPayment(
 
   const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-webhook`;
   const backUrl = `${publicSiteUrl}/l/${cobrancaId}`;
+  const transactionAmount = Math.round(Number(valor) * 100) / 100;
+  
+  if (input.billingType === 'PIX') {
+    console.log(`[mercadopago-adapter] Criando PIX MP para cobranca=${cobrancaId}, valor=${valor}`);
+    const pixPayload = {
+      transaction_amount: transactionAmount,
+      description: descricao || "Serviço fotográfico",
+      payment_method_id: "pix",
+      payer: payerPayload,
+      external_reference: cobrancaId,
+      notification_url: webhookUrl,
+      metadata: {
+        cobranca_id: cobrancaId,
+        user_id: userId,
+        correlation_id: input.correlationId,
+      },
+    };
 
+    const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": cobrancaId + "-pix",
+      },
+      body: JSON.stringify(pixPayload),
+    });
+    
+    const mpData = await mpRes.json();
+    
+    if (!mpRes.ok || !mpData.id) {
+      console.error("[mercadopago-adapter] Erro na API Pix do MP:", mpData);
+      return {
+        success: false,
+        error: mpData.message || mpData.error || "Erro ao processar Pix no Mercado Pago",
+        errorCode: "MP_API_ERROR",
+      };
+    }
+    
+    const qrCode = mpData.point_of_interaction?.transaction_data?.qr_code;
+    const qrCodeBase64 = mpData.point_of_interaction?.transaction_data?.qr_code_base64;
+    
+    return {
+      success: true,
+      providerOrderId: String(mpData.id),
+      pixCopiaCola: qrCode,
+      pixQrCodeBase64: qrCodeBase64,
+      dadosExtras: {
+        paymentId: mpData.id,
+        status: mpData.status,
+        statusDetail: mpData.status_detail,
+      }
+    };
+  }
+  
+  if (input.billingType === 'CREDIT_CARD') {
+    console.log(`[mercadopago-adapter] Criando Cartão MP para cobranca=${cobrancaId}, valor=${valor}`);
+    
+    const paymentMethodId = input.requestDadosExtras?.paymentMethodId || 'visa'; // Defaulting to visa if missing, though frontend should pass it
+    const token = input.cardToken;
+    
+    if (!token) {
+      return { success: false, error: "Token de cartão ausente", errorCode: "MP_MISSING_TOKEN" };
+    }
+    
+    const cardPayload = {
+      transaction_amount: transactionAmount,
+      token: token,
+      description: descricao || "Serviço fotográfico",
+      installments: input.installmentCount || 1,
+      payment_method_id: paymentMethodId,
+      payer: payerPayload,
+      external_reference: cobrancaId,
+      notification_url: webhookUrl,
+      metadata: {
+        cobranca_id: cobrancaId,
+        user_id: userId,
+        correlation_id: input.correlationId,
+      },
+    };
+    
+    // Antifraude device session id se existir
+    if (input.requestDadosExtras?.deviceId) {
+       (cardPayload as any).device_id = input.requestDadosExtras.deviceId;
+    }
+
+    const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": cobrancaId + "-card",
+      },
+      body: JSON.stringify(cardPayload),
+    });
+    
+    const mpData = await mpRes.json();
+    
+    if (!mpRes.ok || !mpData.id) {
+      console.error("[mercadopago-adapter] Erro na API Cartão do MP:", mpData);
+      return {
+        success: false,
+        error: mpData.message || mpData.error || "Erro ao processar cartão no Mercado Pago",
+        errorCode: "MP_API_ERROR",
+        dadosExtras: { mpError: mpData },
+      };
+    }
+    
+    // Status approved ou in_process significa sucesso na requisição
+    if (mpData.status === 'rejected') {
+      return {
+        success: false,
+        error: `Pagamento recusado (${mpData.status_detail})`,
+        errorCode: "MP_REJECTED",
+        dadosExtras: { status_detail: mpData.status_detail, paymentId: mpData.id }
+      };
+    }
+
+    return {
+      success: true,
+      providerOrderId: String(mpData.id),
+      dadosExtras: {
+        paymentId: mpData.id,
+        status: mpData.status,
+        statusDetail: mpData.status_detail,
+      }
+    };
+  }
+
+  // Fallback genérico para preferência (caso o billingType não seja enviado, ou link)
   const preferencePayload: Record<string, any> = {
     items: [
       {
@@ -104,7 +233,7 @@ export async function createMercadoPagoPayment(
         title: descricao || "Serviço fotográfico",
         quantity: 1,
         currency_id: "BRL",
-        unit_price: Math.round(Number(valor) * 100) / 100,
+        unit_price: transactionAmount,
       },
     ],
     payer: payerPayload,

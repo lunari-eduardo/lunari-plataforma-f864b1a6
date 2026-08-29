@@ -87,7 +87,60 @@ serve(async (req) => {
       }
     }
 
-    // NON-ASAAS: forceUpdate fallback
+    // MERCADO PAGO: Query API
+    if (cobranca.provedor === "mercadopago") {
+      const { data: integracao } = await supabase
+        .from("usuarios_integracoes")
+        .select("access_token")
+        .eq("user_id", cobranca.user_id)
+        .eq("provedor", "mercadopago")
+        .eq("status", "ativo")
+        .maybeSingle();
+
+      const mpPaymentId = cobranca.provider_order_id || cobranca.provider_transaction_id || cobranca.mp_payment_id;
+      
+      if (integracao?.access_token && mpPaymentId) {
+        try {
+          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}`, {
+            headers: { Authorization: `Bearer ${integracao.access_token}` },
+          });
+          
+          if (mpRes.ok) {
+            const mpData = await mpRes.json();
+            if (mpData.status === 'approved' && cobranca.status !== 'pago') {
+              const now = new Date().toISOString();
+              await supabase.from("cobrancas").update({
+                status: "pago",
+                data_pagamento: mpData.date_approved || now,
+                valor_liquido: mpData.transaction_details?.net_received_amount || cobranca.valor,
+                updated_at: now
+              }).eq("id", cobranca.id);
+              
+              if (cobranca.galeria_id) {
+                try {
+                  await supabase.rpc('finalize_gallery_payment', {
+                    p_cobranca_id: cobranca.id,
+                    p_receipt_url: null,
+                    p_paid_at: mpData.date_approved || now,
+                  });
+                } catch (e) {
+                  console.warn("[check-payment-status] auto-heal failed:", e);
+                }
+              }
+              return jsonResponse({ found: true, status: "pago", updated: true, source: "mp_api_check", cobrancaId: cobranca.id });
+            } else if (mpData.status === 'rejected' && cobranca.status !== 'recusado') {
+              await supabase.from("cobrancas").update({ status: "recusado", updated_at: new Date().toISOString() }).eq("id", cobranca.id);
+              return jsonResponse({ found: true, status: "recusado", updated: true, source: "mp_api_check", cobrancaId: cobranca.id });
+            }
+            return jsonResponse({ found: true, status: cobranca.status, updated: false, source: "mp_api_check" });
+          }
+        } catch (mpErr) {
+          console.error("[check-payment-status] Erro MP API:", mpErr);
+        }
+      }
+    }
+
+    // NON-ASAAS/MP: forceUpdate fallback
     if (forceUpdate) {
       const now = new Date().toISOString();
       const { error: updateError } = await supabase

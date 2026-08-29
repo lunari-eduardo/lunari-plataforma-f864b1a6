@@ -127,11 +127,37 @@ Deno.serve(async (req) => {
     // 2c. Provedores não-Asaas: devolvem casca branded + bloco próprio.
     if (provedor !== 'asaas') {
       const providerBlock: Record<string, unknown> = {};
+      let settingsToReturn = {
+        habilitarPix: provedor !== 'infinitepay',
+        habilitarCartao: false,
+        habilitarBoleto: false,
+        maxParcelas: 1,
+        absorverTaxa: true,
+      };
 
       if (provedor === 'mercadopago') {
+        const { data: mpInteg } = await supabase
+          .from('usuarios_integracoes')
+          .select('mp_public_key, dados_extras')
+          .eq('user_id', cobranca.user_id)
+          .eq('provedor', 'mercadopago')
+          .eq('status', 'ativo')
+          .maybeSingle();
+          
+        const rawExtras = (mpInteg?.dados_extras || {}) as Record<string, any>;
+        providerBlock.mpPublicKey = mpInteg?.mp_public_key || rawExtras?.mp_public_key || null;
+        
         providerBlock.initPoint = cobranca.mp_payment_link || cobranca.checkout_url || null;
-        providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
-        providerBlock.pixQrCodeBase64 = cobranca.mp_qr_code_base64 || null;
+        providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || cobranca.pix_copia_cola || null;
+        providerBlock.pixQrCodeBase64 = cobranca.mp_qr_code_base64 || cobranca.pix_qr_code_base64 || null;
+        
+        settingsToReturn = {
+          habilitarPix: rawExtras.habilitarPix !== false,
+          habilitarCartao: rawExtras.habilitarCartao !== false,
+          habilitarBoleto: false,
+          maxParcelas: Number(rawExtras.maxParcelas) || 12,
+          absorverTaxa: true,
+        };
       } else if (provedor === 'pix_manual') {
         providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
       } else if (provedor === 'infinitepay') {
@@ -155,13 +181,7 @@ Deno.serve(async (req) => {
             logoUrl,
             userId: cobranca.user_id,
           },
-          settings: {
-            habilitarPix: provedor !== 'infinitepay',
-            habilitarCartao: false,
-            habilitarBoleto: false,
-            maxParcelas: 1,
-            absorverTaxa: true,
-          },
+          settings: settingsToReturn,
           accountFees: null,
           provider: providerBlock,
           payerHints,

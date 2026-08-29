@@ -7,6 +7,7 @@ import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput, ClienteContact } from "../_shared/payment-types.ts";
 import { normalizeAsaasFees, calculateCreditFees } from "../_shared/asaas-helpers.ts";
 import { createAsaasPayment } from "../_shared/adapters/asaas.ts";
+import { createMercadoPagoPayment } from "../_shared/adapters/mercadopago.ts";
 import { resolvePayerHints } from "../_shared/payer-hints.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -32,6 +33,8 @@ interface RequestBody {
     expiryYear: string;
     ccv: string;
   };
+  cardToken?: string;
+  paymentMethodId?: string;
   creditCardHolderInfo?: {
     name: string;
     cpfCnpj: string;
@@ -50,7 +53,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: RequestBody = await req.json();
-    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo, payerContact } = body;
+    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo, payerContact, cardToken, paymentMethodId } = body;
 
     if (!cobrancaId || !billingType) {
       return errorResponse("cobrancaId e billingType são obrigatórios", 400);
@@ -143,101 +146,17 @@ Deno.serve(async (req) => {
       uf: cliente?.estado,
     };
 
-    // 3. Buscar integração do Asaas para resolução de taxas
-    const { data: integracao } = await supabase
-      .from("usuarios_integracoes")
-      .select("access_token, dados_extras")
-      .eq("user_id", cobranca.user_id)
-      .eq("provedor", "asaas")
-      .eq("status", "ativo")
-      .order("is_default", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
-    const globalSettings = {
-      ...((rawExtras.gestao_settings as Record<string, any>) || {}),
-      ...((rawExtras.gallery_settings as Record<string, any>) || {}),
-      ...rawExtras,
-    };
-
-    const asaasBaseUrl = globalSettings.environment === "production"
-      ? "https://api.asaas.com"
-      : "https://api-sandbox.asaas.com";
-
-    // Resolução de preferências de taxa: overrides por cobrança (dados_extras) > configuração global
-    const chargeOverrides = (cobranca.dados_extras || {}) as {
-      repassarTaxasProcessamento?: boolean;
-      anteciparParcelas?: boolean;
-      repassarTaxaAntecipacao?: boolean;
-    };
-
-    const legacyAntecipar = globalSettings.incluirTaxaAntecipacao === true;
-    const globalAbsorverTaxa = globalSettings.absorverTaxa === true;
-    const globalIreiAntecipar = globalSettings.ireiAntecipar ?? legacyAntecipar;
-    const globalRepassarAntecipacao = globalIreiAntecipar ? (globalSettings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
-
-    // Regra canônica: qualquer override explícito na cobrança PREVALECE sobre a configuração global
-    const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
-      ? chargeOverrides.repassarTaxasProcessamento
-      : !globalAbsorverTaxa;
-    const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
-      ? chargeOverrides.anteciparParcelas
-      : globalIreiAntecipar;
-    const repassarAntecipacao = ireiAntecipar
-      ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : globalRepassarAntecipacao)
-      : false;
-
-    const baseValue = Number(cobranca.valor);
-    let finalValue = baseValue;
-    let finalInstallments = 1;
+    // 3. Resolução de taxas e processamento por provedor
+    let adapterData: AdapterCreatePaymentOutput;
+    let finalValue = Number(cobranca.valor);
+    let finalInstallments = billingType === "CREDIT_CARD" ? Math.max(1, installmentCount || 1) : 1;
     let taxaProcessamento = 0;
     let taxaAntecipacao = 0;
+    let repassarTaxas = false;
+    let repassarAntecipacao = false;
+    let ireiAntecipar = false;
+    const baseValue = Number(cobranca.valor);
 
-    if (billingType === "CREDIT_CARD") {
-      finalInstallments = Math.max(1, installmentCount || 1);
-
-      // Calcular taxas de cartão se repasse estiver ativo
-      if ((repassarTaxas || repassarAntecipacao) && integracao?.access_token) {
-        let normalizedFees = normalizeAsaasFees(null);
-        try {
-          const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
-            headers: { access_token: integracao.access_token },
-          });
-          if (feesResp.ok) {
-            const rawFees = await feesResp.json();
-            normalizedFees = normalizeAsaasFees(rawFees);
-          } else {
-            console.warn(`[checkout-process-payment] Failed to fetch Asaas fees, status: ${feesResp.status}`);
-          }
-        } catch (feeErr) {
-          console.warn(`[checkout-process-payment] Error fetching Asaas fees:`, feeErr);
-        }
-
-        const calc = calculateCreditFees(
-          baseValue,
-          finalInstallments,
-          normalizedFees,
-          repassarTaxas,
-          repassarAntecipacao
-        );
-
-        finalValue = calc.totalValue;
-        taxaProcessamento = calc.processingFee;
-        taxaAntecipacao = calc.anticipationFee;
-
-        console.log(`[checkout-process-payment] Cartão ${finalInstallments}x: base=${baseValue}, proc=${taxaProcessamento}, antec=${taxaAntecipacao}, total=${finalValue}`);
-      }
-    } else {
-      // REGRA EXPLICITA: PIX NUNCA repassa taxas ao cliente final
-      finalValue = baseValue;
-      finalInstallments = 1;
-      taxaProcessamento = 0;
-      taxaAntecipacao = 0;
-    }
-
-    // 4. Invocar o adaptador Asaas diretamente em processo
     const adapterPayload: AdapterCreatePaymentInput = {
       cobrancaId: cobranca.id,
       userId: cobranca.user_id,
@@ -247,23 +166,109 @@ Deno.serve(async (req) => {
       integrationData: {},
       billingType,
       creditCard,
+      cardToken,
       creditCardHolderInfo,
       installmentCount: finalInstallments,
+      requestDadosExtras: { paymentMethodId },
     };
 
-    const adapterData: AdapterCreatePaymentOutput = await createAsaasPayment(
-      supabase,
-      adapterPayload,
-      PUBLIC_SITE_URL
-    );
+    if (cobranca.provedor === 'mercadopago') {
+      adapterData = await createMercadoPagoPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
+      if (!adapterData.success) {
+        console.error("[checkout-process-payment] Adaptador MercadoPago retornou erro:", adapterData);
+        return jsonResponse({
+          success: false,
+          error: adapterData.error || "Erro ao processar pagamento",
+          code: adapterData.errorCode || "MP_ERROR",
+        }, 400);
+      }
+    } else {
+      // Logic original do Asaas
+      const { data: integracao } = await supabase
+        .from("usuarios_integracoes")
+        .select("access_token, dados_extras")
+        .eq("user_id", cobranca.user_id)
+        .eq("provedor", "asaas")
+        .eq("status", "ativo")
+        .order("is_default", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (!adapterData.success) {
-      console.error("[checkout-process-payment] Adaptador Asaas retornou erro:", adapterData);
-      return jsonResponse({
-        success: false,
-        error: adapterData.error || "Erro ao processar pagamento",
-        code: adapterData.errorCode || "ASAAS_ERROR",
-      }, 400);
+      const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
+      const globalSettings = {
+        ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+        ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+        ...rawExtras,
+      };
+
+      const asaasBaseUrl = globalSettings.environment === "production"
+        ? "https://api.asaas.com"
+        : "https://api-sandbox.asaas.com";
+
+      const chargeOverrides = (cobranca.dados_extras || {}) as {
+        repassarTaxasProcessamento?: boolean;
+        anteciparParcelas?: boolean;
+        repassarTaxaAntecipacao?: boolean;
+      };
+
+      const legacyAntecipar = globalSettings.incluirTaxaAntecipacao === true;
+      const globalAbsorverTaxa = globalSettings.absorverTaxa === true;
+      const globalIreiAntecipar = globalSettings.ireiAntecipar ?? legacyAntecipar;
+      const globalRepassarAntecipacao = globalIreiAntecipar ? (globalSettings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+
+      repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
+        ? chargeOverrides.repassarTaxasProcessamento
+        : !globalAbsorverTaxa;
+      ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
+        ? chargeOverrides.anteciparParcelas
+        : globalIreiAntecipar;
+      repassarAntecipacao = ireiAntecipar
+        ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : globalRepassarAntecipacao)
+        : false;
+
+      if (billingType === "CREDIT_CARD") {
+        if ((repassarTaxas || repassarAntecipacao) && integracao?.access_token) {
+          let normalizedFees = normalizeAsaasFees(null);
+          try {
+            const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
+              headers: { access_token: integracao.access_token },
+            });
+            if (feesResp.ok) {
+              const rawFees = await feesResp.json();
+              normalizedFees = normalizeAsaasFees(rawFees);
+            } else {
+              console.warn(`[checkout-process-payment] Failed to fetch Asaas fees, status: ${feesResp.status}`);
+            }
+          } catch (feeErr) {
+            console.warn(`[checkout-process-payment] Error fetching Asaas fees:`, feeErr);
+          }
+
+          const calc = calculateCreditFees(
+            baseValue,
+            finalInstallments,
+            normalizedFees,
+            repassarTaxas,
+            repassarAntecipacao
+          );
+
+          finalValue = calc.totalValue;
+          taxaProcessamento = calc.processingFee;
+          taxaAntecipacao = calc.anticipationFee;
+        }
+      }
+
+      adapterPayload.valor = finalValue;
+
+      adapterData = await createAsaasPayment(supabase, adapterPayload, PUBLIC_SITE_URL);
+      if (!adapterData.success) {
+        console.error("[checkout-process-payment] Adaptador Asaas retornou erro:", adapterData);
+        return jsonResponse({
+          success: false,
+          error: adapterData.error || "Erro ao processar pagamento",
+          code: adapterData.errorCode || "ASAAS_ERROR",
+        }, 400);
+      }
     }
 
     // 5. Atualizar registro da cobrança com IDs e breakdown de taxas

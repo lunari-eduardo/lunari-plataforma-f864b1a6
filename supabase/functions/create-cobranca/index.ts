@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
       creditCard,
       creditCardHolderInfo,
       installmentCount,
+      cardToken,
+      paymentMethodId,
       dadosExtras,
     } = body;
 
@@ -367,6 +369,8 @@ Deno.serve(async (req) => {
       integrationData: integrationData || {},
       billingType,
       creditCard,
+      cardToken,
+      paymentMethodId,
       creditCardHolderInfo,
       installmentCount,
       correlationId: binding.correlation_id,

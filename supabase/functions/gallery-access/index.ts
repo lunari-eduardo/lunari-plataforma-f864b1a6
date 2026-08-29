@@ -402,12 +402,12 @@ serve(async (req) => {
         // Reconstitui asaasCheckoutData quando cliente retorna com cobrança
         // Asaas pendente OU aguardando_confirmacao — o checkout transparente precisa desse payload.
         let asaasCheckoutData: Record<string, unknown> | null = null;
-        if (cobranca.provedor === 'asaas' && ['pendente','aguardando_confirmacao'].includes(cobranca.status)) {
+        if ((cobranca.provedor === 'asaas' || cobranca.provedor === 'mercadopago') && ['pendente','aguardando_confirmacao'].includes(cobranca.status)) {
           const { data: integracao } = await supabase
             .from('usuarios_integracoes')
-            .select('dados_extras')
+            .select('dados_extras, mp_public_key')
             .eq('user_id', gallery.user_id)
-            .eq('provedor', 'asaas')
+            .eq('provedor', cobranca.provedor)
             .eq('status', 'ativo')
             .maybeSingle();
           const s = (integracao?.dados_extras || {}) as Record<string, any>;
@@ -426,10 +426,12 @@ serve(async (req) => {
             galleryToken: gallery.public_token,
             visitorId: visitorId || undefined,
             cobrancaId: cobranca.id,
+            provedor: cobranca.provedor,
+            mpPublicKey: integracao?.mp_public_key || s.mp_public_key || undefined,
             enabledMethods: {
               pix: s.habilitarPix !== false,
               creditCard: s.habilitarCartao !== false,
-              boleto: s.habilitarBoleto === true,
+              boleto: cobranca.provedor === 'asaas' ? s.habilitarBoleto === true : false,
             },
             maxParcelas: s.maxParcelas || 12,
             absorverTaxa: s.absorverTaxa || false,
@@ -443,8 +445,8 @@ serve(async (req) => {
           checkoutUrl?: string | null;
           provedor: string;
         };
-        if (cobranca.provedor === 'asaas' && asaasCheckoutData) {
-          pendingAction = { kind: 'asaas_modal', provedor: 'asaas' };
+        if ((cobranca.provedor === 'asaas' || cobranca.provedor === 'mercadopago') && asaasCheckoutData) {
+          pendingAction = { kind: 'asaas_modal', provedor: cobranca.provedor };
         } else if (cobranca.provedor === 'pix_manual') {
           pendingAction = { kind: 'pix_modal', provedor: 'pix_manual' };
         } else if (checkoutUrl) {
@@ -470,12 +472,12 @@ serve(async (req) => {
         let asaasCheckoutData: Record<string, unknown> | null = null;
         let pendingAction: any = { kind: 'regenerate', provedor: provedor || 'desconhecido' };
 
-        if (provedor === 'asaas' && valorCanonico > 0) {
+        if ((provedor === 'asaas' || provedor === 'mercadopago') && valorCanonico > 0) {
           const { data: integracao } = await supabase
             .from('usuarios_integracoes')
-            .select('dados_extras')
+            .select('dados_extras, mp_public_key')
             .eq('user_id', gallery.user_id)
-            .eq('provedor', 'asaas')
+            .eq('provedor', provedor)
             .eq('status', 'ativo')
             .maybeSingle();
           const s = (integracao?.dados_extras || {}) as Record<string, any>;
@@ -490,10 +492,12 @@ serve(async (req) => {
             sessionId: gallery.session_id,
             galleryToken: gallery.public_token,
             visitorId: visitorId || undefined,
+            provedor: provedor,
+            mpPublicKey: integracao?.mp_public_key || s.mp_public_key || undefined,
             enabledMethods: {
               pix: s.habilitarPix !== false,
               creditCard: s.habilitarCartao !== false,
-              boleto: s.habilitarBoleto === true,
+              boleto: provedor === 'asaas' ? s.habilitarBoleto === true : false,
             },
             maxParcelas: s.maxParcelas || 12,
             absorverTaxa: s.absorverTaxa || false,
@@ -507,7 +511,7 @@ serve(async (req) => {
             snapshotFotosIncluidas: gallery.fotos_incluidas || 0,
             snapshotRegrasCongeladas: gallery.regras_congeladas,
           };
-          pendingAction = { kind: 'asaas_modal', provedor: 'asaas' };
+          pendingAction = { kind: 'asaas_modal', provedor };
         } else if (provedor === 'pix_manual') {
           pendingAction = { kind: 'pix_modal', provedor: 'pix_manual' };
         }
