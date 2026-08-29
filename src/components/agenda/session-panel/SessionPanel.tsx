@@ -59,6 +59,8 @@ import { SlotConflictDialog } from "../SlotConflictDialog";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { SendBriefingModal } from "@/components/formularios/SendBriefingModal";
 import { SessionTimeline } from "./SessionTimeline";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 import { useOrcamentos } from "@/hooks/useOrcamentos";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
@@ -255,6 +257,28 @@ export default function SessionPanel({
       ? form.clienteId || undefined
       : undefined,
   });
+
+  const {
+    dialogState: confirmDialogState,
+    confirm: confirmDialog,
+    handleConfirm: handleConfirmDialog,
+    handleCancel: handleCancelDialog,
+    handleClose: handleCloseDialog,
+  } = useConfirmDialog();
+
+  const handleCancelCharge = async (chargeId: string) => {
+    const ok = await confirmDialog({
+      title: "Cancelar cobrança pendente",
+      description:
+        "Deseja realmente cancelar esta cobrança pendente? O link de pagamento deixará de ser válido.",
+      confirmText: "Cancelar cobrança",
+      cancelText: "Voltar",
+      variant: "destructive",
+    });
+    if (ok) {
+      await cancelCharge(chargeId);
+    }
+  };
 
   const pagoCobrancas = useMemo(
     () => cobrancas.filter((c) => ["pago", "pago_manual"].includes(c.status)),
@@ -1055,15 +1079,7 @@ export default function SessionPanel({
                               variant="ghost"
                               size="sm"
                               className="h-6 rounded text-[11px] px-2 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
-                              onClick={async () => {
-                                if (
-                                  confirm(
-                                    "Deseja realmente cancelar esta cobrança pendente?",
-                                  )
-                                ) {
-                                  await cancelCharge(cobrancaPendente.id);
-                                }
-                              }}
+                              onClick={() => handleCancelCharge(cobrancaPendente.id)}
                             >
                               <Ban className="h-3 w-3" />
                               Cancelar
@@ -1162,17 +1178,11 @@ export default function SessionPanel({
                             variant="ghost"
                             size="sm"
                             className="h-7 rounded-md text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
-                            onClick={async () => {
-                              if (
-                                confirm(
-                                  "Deseja realmente cancelar esta cobrança pendente?",
-                                )
-                              ) {
-                                await cancelCharge(
-                                  (cobrancaPendente || cobranca)!.id,
-                                );
-                              }
-                            }}
+                            onClick={() =>
+                              handleCancelCharge(
+                                (cobrancaPendente || cobranca)!.id,
+                              )
+                            }
                           >
                             <Ban className="h-3.5 w-3.5" />
                             Cancelar cobrança
@@ -1382,6 +1392,13 @@ export default function SessionPanel({
       )}
 
       <SlotConflictDialog {...dialogProps} />
+
+      <ConfirmDialog
+        state={confirmDialogState}
+        onConfirm={handleConfirmDialog}
+        onCancel={handleCancelDialog}
+        onClose={handleCloseDialog}
+      />
     </>
   );
 }

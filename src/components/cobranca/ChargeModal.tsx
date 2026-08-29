@@ -15,6 +15,8 @@ import { PixManualSection } from './PixManualSection';
 import { AsaasChargeOptions } from './AsaasChargeOptions';
 import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
 import { assertNotAmbiguousSessionChargeClient } from './_chargeGuards';
@@ -207,6 +209,28 @@ export function ChargeModal({
     cancelCharge,
     checkPaymentStatus,
   } = useCobranca({ clienteId, sessionId, galeriaId: galeriaId ?? undefined });
+
+  const {
+    dialogState: confirmDialogState,
+    confirm: confirmDialog,
+    handleConfirm: handleConfirmDialog,
+    handleCancel: handleCancelDialog,
+    handleClose: handleCloseDialog,
+  } = useConfirmDialog();
+
+  const handleCancelCharge = async (chargeId: string) => {
+    const ok = await confirmDialog({
+      title: "Cancelar cobrança pendente",
+      description:
+        "Deseja realmente cancelar esta cobrança pendente? O link de pagamento deixará de funcionar.",
+      confirmText: "Cancelar cobrança",
+      cancelText: "Voltar",
+      variant: "destructive",
+    });
+    if (ok) {
+      await cancelCharge(chargeId);
+    }
+  };
 
   // Reset state when modal opens
   useEffect(() => {
@@ -769,7 +793,7 @@ export function ChargeModal({
 
               </>
             ) : (
-              <ChargeHistory cobrancas={cobrancas} onCancel={cancelCharge} />
+              <ChargeHistory cobrancas={cobrancas} onCancel={handleCancelCharge} />
             )}
           </div>
           
@@ -793,6 +817,13 @@ export function ChargeModal({
         qrCodeBase64={asaasPixQrCode}
         copiaECola={asaasPixCopiaECola}
         valor={valor}
+      />
+
+      <ConfirmDialog
+        state={confirmDialogState}
+        onConfirm={handleConfirmDialog}
+        onCancel={handleCancelDialog}
+        onClose={handleCloseDialog}
       />
     </>
   );
