@@ -323,6 +323,11 @@ Deno.serve(async (req) => {
     }
 
     // 5. Atualizar registro da cobrança com IDs e breakdown de taxas
+    let existingExtras = cobranca.dados_extras || {};
+    if (typeof existingExtras === 'string') {
+      try { existingExtras = JSON.parse(existingExtras); } catch(e) {}
+    }
+
     const updatePayload: Record<string, any> = {
       provider_order_id: adapterData.providerOrderId || null,
       checkout_url: adapterData.checkoutUrl || null,
@@ -330,7 +335,7 @@ Deno.serve(async (req) => {
       pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,
       mp_pix_copia_cola: adapterData.pixCopiaCola || null, // Retrocompatibilidade
       dados_extras: {
-        ...(cobranca.dados_extras || {}),
+        ...existingExtras,
         ...(adapterData.dadosExtras || {}),
         valorBase: baseValue,
         valorComTaxas: finalValue,
@@ -433,8 +438,8 @@ Deno.serve(async (req) => {
       pixQrCodeBase64: adapterData.pixQrCodeBase64,
       invoiceUrl: adapterData.checkoutUrl,
       billingType,
-      status: asaasStatus || (billingType === "PIX" ? "PENDING" : "CONFIRMED"),
-      creditCardStatus: asaasStatus || undefined,
+      status: gatewayStatus || (billingType === "PIX" ? "PENDING" : (isPaid ? "CONFIRMED" : "PENDING")),
+      creditCardStatus: gatewayStatus || undefined,
       paid: isPaid,
     }, 200);
   } catch (err: any) {

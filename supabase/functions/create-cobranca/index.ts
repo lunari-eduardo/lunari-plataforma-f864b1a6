@@ -451,8 +451,8 @@ Deno.serve(async (req) => {
       if (adapterData.pixCopiaCola) updateData.mp_pix_copia_cola = adapterData.pixCopiaCola;
     }
 
-    const asaasStatus = adapterData.dadosExtras?.status;
-    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+    const gatewayStatus = adapterData.dadosExtras?.status;
+    const isPaid = gatewayStatus === "CONFIRMED" || gatewayStatus === "RECEIVED" || gatewayStatus === "approved";
     if (isPaid) {
       updateData.status = "pago";
       updateData.data_pagamento = new Date().toISOString();
@@ -511,7 +511,7 @@ Deno.serve(async (req) => {
       provedor,
       status: isPaid ? "pago" : "pendente",
       paid: isPaid,
-      creditCardStatus: asaasStatus || undefined,
+      creditCardStatus: gatewayStatus || undefined,
       requiresPolling: !isPaid && billingType === "CREDIT_CARD",
       paymentId: adapterData.providerOrderId,
     };
