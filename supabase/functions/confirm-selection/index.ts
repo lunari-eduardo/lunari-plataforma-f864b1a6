@@ -474,51 +474,6 @@ Deno.serve(async (req) => {
 
 
 
-    // 5. CRITICAL: If payment is required, create it BEFORE confirming gallery
-    let paymentResponse: { checkoutUrl?: string; provedor?: string; cobrancaId?: string } | null = null;
-    let statusPagamento = 'sem_vendas'; // Default for no payment
-
-    if (shouldCreatePayment) {
-      console.log(`💳 PAYMENT REQUIRED: Creating payment for ${extrasCount} extras, total R$ ${valorTotal}`);
-      console.log(`💳 Configured payment method: ${configuredPaymentMethod || 'default'}`);
-
-      // Discover payment provider
-      let integracao;
-
-      if (configuredPaymentMethod) {
-        const { data } = await supabase
-          .from('usuarios_integracoes')
-          .select('provedor, dados_extras')
-          .eq('user_id', gallery.user_id)
-          .eq('provedor', configuredPaymentMethod)
-          .eq('status', 'ativo')
-          .maybeSingle();
-        integracao = data;
-      } else {
-        const { data } = await supabase
-          .from('usuarios_integracoes')
-          .select('provedor, dados_extras')
-          .eq('user_id', gallery.user_id)
-          .eq('is_default', true)
-          .eq('status', 'ativo')
-          .in('provedor', ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'])
-          .maybeSingle();
-        integracao = data;
-
-        if (!integracao) {
-          const { data: anyActive } = await supabase
-            .from('usuarios_integracoes')
-            .select('provedor, dados_extras')
-            .eq('user_id', gallery.user_id)
-            .eq('status', 'ativo')
-            .in('provedor', ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'])
-            .limit(1)
-            .maybeSingle();
-          integracao = anyActive;
-        }
-      }
-
-      // Handle PIX Manual - no checkout link, just mark as awaiting confirmation
     // A RPC calculate_gallery_extra_payment lê galerias.fotos_selecionadas.
     // Essa coluna só era atualizada no commit final, então em cenários de
     // primeira confirmação/reabertura a RPC recebia valor obsoleto (0/qtd antiga)
@@ -1089,7 +1044,7 @@ Deno.serve(async (req) => {
         const { error: logError } = await supabase.from('galeria_acoes').insert({
           galeria_id: galleryId,
           tipo: 'cliente_confirmou',
-          descricao: `Cliente confirmou seleção de ${selectedCount || 0} fotos${extrasACobrar ? ` (${extrasACobrar} extras - R$ ${valorTotal.toFixed(2)})` : ''}`,
+          descricao: `Cliente confirmou seleção de ${selectedCount || 0} fotos` + (extrasACobrar ? ` (${extrasACobrar} extras - R$ ${valorTotal.toFixed(2)})` : ''),
           user_id: null,
         });
         if (logError) console.error('[bg] Log insert error:', logError);
@@ -1167,7 +1122,7 @@ Deno.serve(async (req) => {
 
     // 9. Return response based on payment type
     // 🛡️ CRITICAL SAFETY CHECK: If payment was required but not created, BLOCK finalization
-    if (shouldCreatePayment && (!paymentResponse || (!paymentResponse.checkoutUrl && paymentResponse.provedor !== 'pix_manual' && paymentResponse.provedor !== 'asaas'))) {
+    if (shouldCreatePayment && (!paymentResponse || (!paymentResponse.checkoutUrl && paymentResponse.provedor !== 'pix_manual' && paymentResponse.provedor !== 'asaas' && paymentResponse.provedor !== 'mercadopago'))) {
       console.error(`❌ CRITICAL: Payment was required (R$ ${valorTotal}) but no checkout link was generated. Provider: ${paymentResponse?.provedor || 'none'}, Mode: ${saleMode}`);
       await rollbackGalleryStatus();
       return errorResponse('Erro ao gerar link de pagamento. Por favor, tente novamente ou entre em contato com o suporte.', 500, 'PAYMENT_LINK_FAILED');
@@ -1198,9 +1153,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Asaas transparent checkout - return data for frontend to create charge
+    // Transparent checkout (Asaas / Mercado Pago) - return data for frontend to create charge
     const asaasCheckoutData = (paymentResponse as Record<string, unknown> | null)?.__asaasCheckoutData;
-    if (paymentResponse?.provedor === 'asaas' && asaasCheckoutData) {
+    if ((paymentResponse?.provedor === 'asaas' || paymentResponse?.provedor === 'mercadopago') && asaasCheckoutData) {
       return new Response(
         JSON.stringify({
           success: true,
@@ -1210,7 +1165,7 @@ Deno.serve(async (req) => {
           valorTotal,
           message: 'Seleção confirmada com sucesso',
           requiresPayment: true,
-          provedor: 'asaas',
+          provedor: paymentResponse.provedor,
           transparentCheckout: true,
           asaasCheckoutData,
         }),

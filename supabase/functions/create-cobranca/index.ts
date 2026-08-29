@@ -140,7 +140,9 @@ Deno.serve(async (req) => {
       if (existing) {
         console.log(`[create-cobranca] Cobrança existente reutilizada por idempotency_key=${idempotencyKey}, id=${existing.id}`);
         const socialUrl = `${PUBLIC_SITE_URL}/l/${existing.id}`;
-        const finalUrl = existing.checkout_url || existing.ip_checkout_url || existing.mp_payment_link || socialUrl;
+        const finalUrl = (existing.provedor === "mercadopago" || existing.provedor === "asaas")
+          ? socialUrl
+          : (existing.checkout_url || existing.ip_checkout_url || existing.mp_payment_link || socialUrl);
         return jsonResponse({
           success: true,
           cobrancaId: existing.id,
@@ -229,7 +231,9 @@ Deno.serve(async (req) => {
 
         if (raceFound) {
           const socialUrl = `${PUBLIC_SITE_URL}/l/${raceFound.id}`;
-          const finalUrl = raceFound.checkout_url || raceFound.ip_checkout_url || raceFound.mp_payment_link || socialUrl;
+          const finalUrl = (raceFound.provedor === "mercadopago" || raceFound.provedor === "asaas")
+            ? socialUrl
+            : (raceFound.checkout_url || raceFound.ip_checkout_url || raceFound.mp_payment_link || socialUrl);
           return jsonResponse({
             success: true,
             cobrancaId: raceFound.id,
@@ -409,7 +413,9 @@ Deno.serve(async (req) => {
 
     // 9. Atualizar cobrança com os identificadores retornados pelo adaptador
     const socialShareUrl = `${PUBLIC_SITE_URL}/l/${cobrancaId}`;
-    const finalCheckoutUrl = adapterData.checkoutUrl || socialShareUrl;
+    const finalCheckoutUrl = (provedor === "mercadopago" || provedor === "asaas")
+      ? socialShareUrl
+      : (adapterData.checkoutUrl || socialShareUrl);
 
     const updateData: Record<string, any> = {
       provider_order_id: adapterData.providerOrderId || null,
@@ -427,7 +433,7 @@ Deno.serve(async (req) => {
     // Campos de retrocompatibilidade para leitores legados
     if (provedor === "mercadopago") {
       updateData.mp_preference_id = adapterData.providerOrderId || null;
-      updateData.mp_payment_link = finalCheckoutUrl;
+      updateData.mp_payment_link = socialShareUrl;
       if (adapterData.pixCopiaCola) updateData.mp_pix_copia_cola = adapterData.pixCopiaCola;
       if (adapterData.pixQrCodeBase64) updateData.mp_qr_code_base64 = adapterData.pixQrCodeBase64;
     } else if (provedor === "infinitepay") {

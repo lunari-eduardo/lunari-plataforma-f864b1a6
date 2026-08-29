@@ -229,69 +229,70 @@ export async function createMercadoPagoPayment(
     };
   }
 
-  // Fallback genérico para preferência (caso o billingType não seja enviado, ou link)
-  const preferencePayload: Record<string, any> = {
-    items: [
-      {
-        id: cobrancaId,
-        title: descricao || "Serviço fotográfico",
-        quantity: 1,
-        currency_id: "BRL",
-        unit_price: transactionAmount,
+  // Checkout Transparente: o link de checkout é sempre a URL pública do Lunari (/l/:cobrancaId)
+  const transparentCheckoutUrl = `${publicSiteUrl}/l/${cobrancaId}`;
+
+  // Opcionalmente podemos gerar a preferência em segundo plano apenas para registro de auditoria,
+  // mas o checkoutUrl principal DEVE SER o link transparente do Lunari!
+  let preferenceData: any = null;
+  try {
+    const preferencePayload: Record<string, any> = {
+      items: [
+        {
+          id: cobrancaId,
+          title: descricao || "Serviço fotográfico",
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: transactionAmount,
+        },
+      ],
+      payer: payerPayload,
+      external_reference: cobrancaId,
+      notification_url: webhookUrl,
+      back_urls: {
+        success: backUrl,
+        pending: backUrl,
+        failure: backUrl,
       },
-    ],
-    payer: payerPayload,
-    external_reference: cobrancaId,
-    notification_url: webhookUrl,
-    back_urls: {
-      success: backUrl,
-      pending: backUrl,
-      failure: backUrl,
-    },
-    auto_return: "approved",
-    payment_methods: {
-      excluded_payment_types: excludedPaymentTypes,
-      installments: maxParcelas,
-    },
-    metadata: {
-      cobranca_id: cobrancaId,
-      user_id: userId,
-      correlation_id: input.correlationId,
-    },
-  };
-
-  console.log(`[mercadopago-adapter] Criando preferência MP para cobranca=${cobrancaId}, valor=${valor}`);
-
-  const mpRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "X-Idempotency-Key": cobrancaId,
-    },
-    body: JSON.stringify(preferencePayload),
-  });
-
-  const mpData = await mpRes.json();
-
-  if (!mpRes.ok || !mpData.id || !mpData.init_point) {
-    console.error("[mercadopago-adapter] Erro na resposta do MP:", mpData);
-    return {
-      success: false,
-      error: mpData.message || "Erro ao gerar preferência no Mercado Pago",
-      errorCode: "MP_API_ERROR",
+      auto_return: "approved",
+      payment_methods: {
+        excluded_payment_types: excludedPaymentTypes,
+        installments: maxParcelas,
+      },
+      metadata: {
+        cobranca_id: cobrancaId,
+        user_id: userId,
+        correlation_id: input.correlationId,
+      },
     };
+
+    const mpRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": cobrancaId,
+      },
+      body: JSON.stringify(preferencePayload),
+    });
+
+    if (mpRes.ok) {
+      preferenceData = await mpRes.json();
+    }
+  } catch (prefErr) {
+    console.warn("[mercadopago-adapter] Falha não impeditiva ao criar preferência de auditoria:", prefErr);
   }
 
   return {
     success: true,
-    providerOrderId: mpData.id,
-    checkoutUrl: mpData.init_point,
+    providerOrderId: preferenceData?.id || cobrancaId,
+    checkoutUrl: transparentCheckoutUrl,
     dadosExtras: {
-      preferenceId: mpData.id,
-      initPoint: mpData.init_point,
-      sandboxInitPoint: mpData.sandbox_init_point,
-      collectorId: mpData.collector_id,
+      isTransparent: true,
+      preferenceId: preferenceData?.id || null,
+      initPoint: preferenceData?.init_point || null,
+      sandboxInitPoint: preferenceData?.sandbox_init_point || null,
+      collectorId: preferenceData?.collector_id || null,
     },
   };
 }
