@@ -423,11 +423,17 @@ Deno.serve(async (req) => {
       checkout_url: finalCheckoutUrl,
       pix_copia_cola: adapterData.pixCopiaCola || null,
       pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,
-      dados_extras: {
-        ...(cobranca.dados_extras || {}),
-        ...(adapterData.dadosExtras || {}),
-      },
       updated_at: new Date().toISOString(),
+    };
+
+    let existingExtras = cobranca.dados_extras || {};
+    if (typeof existingExtras === 'string') {
+      try { existingExtras = JSON.parse(existingExtras); } catch(e) {}
+    }
+
+    updateData.dados_extras = {
+      ...existingExtras,
+      ...(adapterData.dadosExtras || {}),
     };
 
     // Campos de retrocompatibilidade para leitores legados
