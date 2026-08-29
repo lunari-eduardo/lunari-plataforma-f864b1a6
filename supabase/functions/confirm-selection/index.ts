@@ -487,7 +487,7 @@ Deno.serve(async (req) => {
       if (configuredPaymentMethod) {
         const { data } = await supabase
           .from('usuarios_integracoes')
-          .select('provedor, dados_extras')
+          .select('provedor, dados_extras, mp_public_key, access_token')
           .eq('user_id', gallery.user_id)
           .eq('provedor', configuredPaymentMethod)
           .eq('status', 'ativo')
@@ -496,7 +496,7 @@ Deno.serve(async (req) => {
       } else {
         const { data } = await supabase
           .from('usuarios_integracoes')
-          .select('provedor, dados_extras')
+          .select('provedor, dados_extras, mp_public_key, access_token')
           .eq('user_id', gallery.user_id)
           .eq('is_default', true)
           .eq('status', 'ativo')
@@ -507,7 +507,7 @@ Deno.serve(async (req) => {
         if (!integracao) {
           const { data: anyActive } = await supabase
             .from('usuarios_integracoes')
-            .select('provedor, dados_extras')
+            .select('provedor, dados_extras, mp_public_key, access_token')
             .eq('user_id', gallery.user_id)
             .eq('status', 'ativo')
             .in('provedor', ['mercadopago', 'infinitepay', 'pix_manual', 'asaas'])

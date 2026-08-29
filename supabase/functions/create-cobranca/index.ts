@@ -276,11 +276,11 @@ Deno.serve(async (req) => {
     const patchCliente: Record<string, string> = {};
     const isEmptyField = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-    const candName = payerContact?.nome?.trim() || creditCardHolderInfo?.name?.trim();
-    const candEmail = payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
-    const candPhone = payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim() || creditCardHolderInfo?.phone?.trim();
-    const candCpf = payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
-    const candCep = payerContact?.cep?.trim() || creditCardHolderInfo?.postalCode?.trim();
+    const candName = (payerContact as any)?.name?.trim() || payerContact?.nome?.trim() || creditCardHolderInfo?.name?.trim();
+    const candEmail = (payerContact as any)?.email?.trim() || payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
+    const candPhone = (payerContact as any)?.phone?.trim() || payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim() || creditCardHolderInfo?.phone?.trim();
+    const candCpf = (payerContact as any)?.cpfCnpj?.trim() || payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
+    const candCep = (payerContact as any)?.cep?.trim() || payerContact?.cep?.trim() || creditCardHolderInfo?.postalCode?.trim();
 
     if (candName && isEmptyField(clienteDb?.nome)) patchCliente.nome = candName;
     if (candEmail && isEmptyField(clienteDb?.email)) patchCliente.email = candEmail.toLowerCase();
