@@ -165,7 +165,7 @@ export async function createMercadoPagoPayment(
   if (input.billingType === 'CREDIT_CARD') {
     console.log(`[mercadopago-adapter] Criando Cartão MP para cobranca=${cobrancaId}, valor=${valor}`);
     
-    const paymentMethodId = input.requestDadosExtras?.paymentMethodId || 'visa'; // Defaulting to visa if missing, though frontend should pass it
+    const paymentMethodId = input.paymentMethodId || 'master';
     const token = input.cardToken;
     
     if (!token) {

@@ -1023,8 +1023,9 @@ export function AsaasCheckout({
                             autoFocus={!needsName}
                             value={pixEmail}
                             onChange={(e) => { setPixEmail(e.target.value); if (fieldErrors.pixEmail) setFieldError('pixEmail', null); }}
-                            onBlur={() => {
-                              if (pixEmail && !/\S+@\S+\.\S+/.test(pixEmail)) setFieldError('pixEmail', 'Email inválido');
+                            onBlur={(e) => {
+                              const val = e.target.value;
+                              if (val && !/\S+@\S+\.\S+/.test(val)) setFieldError('pixEmail', 'Email inválido');
                             }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (needsCpf ? pixCpfRef : needsPhone ? pixPhoneRef : pixGenerateRef).current?.focus(); } }}
                             placeholder="voce@email.com"
@@ -1055,8 +1056,9 @@ export function AsaasCheckout({
                                 else pixGenerateRef.current?.focus();
                               }
                             }}
-                            onBlur={() => {
-                              if (pixCpfCnpj && !validateCpfCnpj(pixCpfCnpj)) setFieldError('pixCpf', 'CPF ou CNPJ inválido');
+                            onBlur={(e) => {
+                              const val = e.target.value;
+                              if (val && !validateCpfCnpj(val)) setFieldError('pixCpf', 'CPF ou CNPJ inválido');
                             }}
                             placeholder="000.000.000-00"
                             maxLength={18}
@@ -1194,8 +1196,9 @@ export function AsaasCheckout({
                         const digits = masked.replace(/\D/g, '');
                         if (digits.length === 11) emailRef.current?.focus();
                       }}
-                      onBlur={() => {
-                        if (cardCpfCnpj && !validateCpfCnpj(cardCpfCnpj)) {
+                      onBlur={e => {
+                        const val = e.target.value;
+                        if (val && !validateCpfCnpj(val)) {
                           setFieldError('cpf', 'CPF/CNPJ inválido');
                         }
                       }}
@@ -1221,8 +1224,9 @@ export function AsaasCheckout({
                         setCardEmail(e.target.value);
                         if (fieldErrors.email) setFieldError('email', null);
                       }}
-                      onBlur={() => {
-                        if (cardEmail && !/\S+@\S+\.\S+/.test(cardEmail)) {
+                      onBlur={e => {
+                        const val = e.target.value;
+                        if (val && !/\S+@\S+\.\S+/.test(val)) {
                           setFieldError('email', 'Email inválido');
                         }
                       }}
@@ -1255,8 +1259,8 @@ export function AsaasCheckout({
                         const digits = masked.replace(/\s/g, '');
                         if (digits.length >= 16) cardExpiryRef.current?.focus();
                       }}
-                      onBlur={() => {
-                        const digits = cardNumber.replace(/\s/g, '');
+                      onBlur={e => {
+                        const digits = e.target.value.replace(/\s/g, '');
                         if (digits && digits.length < 13) {
                           setFieldError('cardNumber', 'Número do cartão inválido');
                         }
@@ -1286,16 +1290,17 @@ export function AsaasCheckout({
                           setFieldError('expiry', null);
                           if (masked.length === 5) cardCvvRef.current?.focus();
                         }}
-                        onBlur={() => {
-                          if (cardExpiry && cardExpiry.length === 5) {
-                            const [m, y] = cardExpiry.split('/');
+                        onBlur={e => {
+                          const val = e.target.value;
+                          if (val && val.length === 5) {
+                            const [m, y] = val.split('/');
                             const mm = parseInt(m);
                             if (!mm || mm < 1 || mm > 12) {
                               setFieldError('expiry', 'Validade inválida');
                             } else {
                               setFieldError('expiry', null);
                             }
-                          } else if (cardExpiry && cardExpiry.length > 0) {
+                          } else if (val && val.length > 0) {
                             setFieldError('expiry', 'Validade incompleta');
                           } else {
                             setFieldError('expiry', null);

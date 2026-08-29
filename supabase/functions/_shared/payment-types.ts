@@ -111,6 +111,7 @@ export interface AdapterCreatePaymentInput {
   billingType?: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'UNDEFINED';
   creditCard?: CreditCardData;
   cardToken?: string;
+  paymentMethodId?: string;
   creditCardHolderInfo?: CreditCardHolderInfo;
   installmentCount?: number;
   correlationId?: string;

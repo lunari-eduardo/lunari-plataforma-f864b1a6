@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
       billingType,
       creditCard,
       cardToken,
+      paymentMethodId,
       creditCardHolderInfo,
       installmentCount: finalInstallments,
       requestDadosExtras: { paymentMethodId },
