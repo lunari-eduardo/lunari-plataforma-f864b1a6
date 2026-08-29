@@ -732,21 +732,13 @@ Deno.serve(async (req) => {
         
         // ——— TRANSPARENT CHECKOUT (Asaas/MercadoPago): return data to frontend, don't create charge yet ———
         if (integracao.provedor === 'asaas' || integracao.provedor === 'mercadopago') {
-          const asaasSettings = (integracao.dados_extras || {}) as {
-            habilitarPix?: boolean;
-            habilitarCartao?: boolean;
-            habilitarBoleto?: boolean;
-            maxParcelas?: number;
-            absorverTaxa?: boolean;
-            taxaAntecipacao?: boolean;
-            taxaAntecipacaoPercentual?: number;
-            taxaAntecipacaoCreditoAvista?: number;
-            taxaAntecipacaoCreditoParcelado?: number;
-            incluirTaxaAntecipacao?: boolean;
-            ireiAntecipar?: boolean;
-            repassarTaxaAntecipacao?: boolean;
-            mp_public_key?: string;
+          const rawExtras = (integracao.dados_extras || {}) as Record<string, any>;
+          const unifiedSettings = {
+            ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+            ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+            ...rawExtras,
           };
+          const mpPublicKey = (integracao as any).mp_public_key || unifiedSettings.mp_public_key || undefined;
 
           // Normalize session_id to text format
           let sessionIdTexto = gallery.session_id;
@@ -779,21 +771,21 @@ Deno.serve(async (req) => {
             galleryToken: gallery.public_token,
             visitorId: visitorId || undefined,
             provedor: integracao.provedor,
-            mpPublicKey: asaasSettings.mp_public_key || undefined,
+            mpPublicKey,
             enabledMethods: {
-              pix: asaasSettings.habilitarPix !== false,
-              creditCard: asaasSettings.habilitarCartao !== false,
-              boleto: integracao.provedor === 'asaas' ? asaasSettings.habilitarBoleto === true : false,
+              pix: unifiedSettings.habilitarPix !== false,
+              creditCard: unifiedSettings.habilitarCartao !== false,
+              boleto: integracao.provedor === 'asaas' ? unifiedSettings.habilitarBoleto === true : false,
             },
-            maxParcelas: asaasSettings.maxParcelas || 12,
-            absorverTaxa: asaasSettings.absorverTaxa || false,
-            ireiAntecipar: asaasSettings.ireiAntecipar ?? asaasSettings.incluirTaxaAntecipacao ?? false,
-            repassarTaxaAntecipacao: asaasSettings.repassarTaxaAntecipacao ?? asaasSettings.incluirTaxaAntecipacao ?? false,
-            taxaAntecipacao: asaasSettings.taxaAntecipacao || false,
-            taxaAntecipacaoPercentual: asaasSettings.taxaAntecipacaoPercentual,
-            taxaAntecipacaoCreditoAvista: asaasSettings.taxaAntecipacaoCreditoAvista,
-            taxaAntecipacaoCreditoParcelado: asaasSettings.taxaAntecipacaoCreditoParcelado,
-            incluirTaxaAntecipacao: asaasSettings.incluirTaxaAntecipacao ?? true,
+            maxParcelas: Number(unifiedSettings.maxParcelas) || 12,
+            absorverTaxa: unifiedSettings.absorverTaxa ?? false,
+            ireiAntecipar: unifiedSettings.ireiAntecipar ?? unifiedSettings.incluirTaxaAntecipacao ?? false,
+            repassarTaxaAntecipacao: unifiedSettings.repassarTaxaAntecipacao ?? unifiedSettings.incluirTaxaAntecipacao ?? false,
+            taxaAntecipacao: unifiedSettings.taxaAntecipacao || false,
+            taxaAntecipacaoPercentual: unifiedSettings.taxaAntecipacaoPercentual,
+            taxaAntecipacaoCreditoAvista: unifiedSettings.taxaAntecipacaoCreditoAvista,
+            taxaAntecipacaoCreditoParcelado: unifiedSettings.taxaAntecipacaoCreditoParcelado,
+            incluirTaxaAntecipacao: unifiedSettings.incluirTaxaAntecipacao ?? true,
             snapshotFotosIncluidas: gallery.fotos_incluidas || 0,
             snapshotRegrasCongeladas: gallery.regras_congeladas,
             correlationId,

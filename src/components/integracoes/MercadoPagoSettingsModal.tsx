@@ -24,6 +24,7 @@ export interface MercadoPagoSettings {
   habilitarPix: boolean;
   habilitarCartao: boolean;
   maxParcelas: number;
+  absorverTaxa?: boolean;
 }
 
 interface MercadoPagoSettingsModalProps {
@@ -51,6 +52,7 @@ export function MercadoPagoSettingsModal({
   const [habilitarPix, setHabilitarPix] = useState(true);
   const [habilitarCartao, setHabilitarCartao] = useState(true);
   const [maxParcelas, setMaxParcelas] = useState(12);
+  const [absorverTaxa, setAbsorverTaxa] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Sync state when settings change or modal opens
@@ -59,11 +61,13 @@ export function MercadoPagoSettingsModal({
       setHabilitarPix(settings.habilitarPix !== false);
       setHabilitarCartao(settings.habilitarCartao !== false);
       setMaxParcelas(settings.maxParcelas || 12);
+      setAbsorverTaxa(settings.absorverTaxa ?? false);
     } else if (open && !settings) {
       // Defaults
       setHabilitarPix(true);
       setHabilitarCartao(true);
       setMaxParcelas(12);
+      setAbsorverTaxa(false);
     }
   }, [open, settings]);
 
@@ -74,6 +78,7 @@ export function MercadoPagoSettingsModal({
         habilitarPix,
         habilitarCartao,
         maxParcelas,
+        absorverTaxa,
       });
       onOpenChange(false);
     } finally {
@@ -157,6 +162,20 @@ export function MercadoPagoSettingsModal({
               <p className="text-xs text-muted-foreground">
                 Até quantas vezes o cliente pode parcelar
               </p>
+
+              {/* Repasse de Taxas Toggle */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg mt-3">
+                <div>
+                  <p className="text-sm font-medium">Repassar taxas ao cliente</p>
+                  <p className="text-xs text-muted-foreground">
+                    {!absorverTaxa ? 'Cliente paga as taxas no parcelamento' : 'Você absorve o custo das taxas'}
+                  </p>
+                </div>
+                <Switch
+                  checked={!absorverTaxa}
+                  onCheckedChange={(checked) => setAbsorverTaxa(!checked)}
+                />
+              </div>
             </div>
           )}
 

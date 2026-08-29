@@ -52,6 +52,31 @@ export interface AccountFees {
   };
 }
 
+export const MERCADOPAGO_DEFAULT_FEES: AccountFees = {
+  creditCard: {
+    operationValue: 0,
+    detachedMonthlyFeeValue: 0,
+    installmentMonthlyFeeValue: 0,
+    tiers: [
+      { min: 1, max: 1, percentageFee: 4.98 },
+      { min: 2, max: 2, percentageFee: 7.90 },
+      { min: 3, max: 3, percentageFee: 9.20 },
+      { min: 4, max: 4, percentageFee: 10.50 },
+      { min: 5, max: 5, percentageFee: 11.80 },
+      { min: 6, max: 6, percentageFee: 13.10 },
+      { min: 7, max: 7, percentageFee: 14.50 },
+      { min: 8, max: 8, percentageFee: 15.80 },
+      { min: 9, max: 9, percentageFee: 17.10 },
+      { min: 10, max: 10, percentageFee: 18.40 },
+      { min: 11, max: 11, percentageFee: 19.70 },
+      { min: 12, max: 12, percentageFee: 21.00 },
+    ],
+  },
+  pix: {
+    fixedFeeValue: 0,
+  },
+};
+
 export interface AsaasCheckoutData {
   galeriaId?: string;
   userId: string;
@@ -198,7 +223,16 @@ export function AsaasCheckout({
   backgroundMode = 'light',
   initialAccountFees,
 }: AsaasCheckoutProps) {
-  const defaultTab = data.enabledMethods.pix ? 'pix' : 'card';
+  const computedDefaultTab = data.enabledMethods.pix ? 'pix' : (data.enabledMethods.creditCard ? 'card' : 'pix');
+  const [activeTab, setActiveTab] = useState<string>(computedDefaultTab);
+
+  useEffect(() => {
+    if (!data.enabledMethods.pix && data.enabledMethods.creditCard) {
+      setActiveTab('card');
+    } else if (data.enabledMethods.pix && !data.enabledMethods.creditCard) {
+      setActiveTab('pix');
+    }
+  }, [data.enabledMethods.pix, data.enabledMethods.creditCard]);
 
   // ——— Pré-preenchimento dos dados do pagador ———
   const initialFullName = payerHints?.fullName || '';
@@ -297,10 +331,16 @@ export function AsaasCheckout({
   const [feesLoading, setFeesLoading] = useState(false);
   const [feesError, setFeesError] = useState(false);
 
-  // Fetch fees from Asaas API on mount
+  // Fetch fees on mount
   useEffect(() => {
     if (initialAccountFees) {
       setAccountFees(initialAccountFees);
+      return;
+    }
+    if (data.provedor === 'mercadopago') {
+      setAccountFees(MERCADOPAGO_DEFAULT_FEES);
+      setFeesLoading(false);
+      setFeesError(false);
       return;
     }
     if (!data.userId || data.absorverTaxa) return; // No need to fetch fees if photographer absorbs
@@ -335,7 +375,7 @@ export function AsaasCheckout({
       });
     
     return () => { cancelled = true; };
-  }, [data.userId, data.absorverTaxa, initialAccountFees]);
+  }, [data.userId, data.absorverTaxa, data.provedor, initialAccountFees]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -899,25 +939,32 @@ export function AsaasCheckout({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-2 h-14 p-1 bg-muted/50 rounded-xl">
-            {data.enabledMethods.pix && (
-              <TabsTrigger
-                value="pix"
-                className="gap-2 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
-              >
-                <QrCode className="h-5 w-5" /> PIX
-              </TabsTrigger>
-            )}
-            {data.enabledMethods.creditCard && (
-              <TabsTrigger
-                value="card"
-                className="gap-2 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
-              >
-                <CreditCard className="h-5 w-5" /> Cartão
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {([data.enabledMethods.pix, data.enabledMethods.creditCard].filter(Boolean).length > 1) && (
+            <TabsList 
+              className="w-full grid h-14 p-1 bg-muted/50 rounded-xl"
+              style={{
+                gridTemplateColumns: `repeat(${[data.enabledMethods.pix, data.enabledMethods.creditCard].filter(Boolean).length}, 1fr)`
+              }}
+            >
+              {data.enabledMethods.pix && (
+                <TabsTrigger
+                  value="pix"
+                  className="gap-2 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                >
+                  <QrCode className="h-5 w-5" /> PIX
+                </TabsTrigger>
+              )}
+              {data.enabledMethods.creditCard && (
+                <TabsTrigger
+                  value="card"
+                  className="gap-2 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                >
+                  <CreditCard className="h-5 w-5" /> Cartão
+                </TabsTrigger>
+              )}
+            </TabsList>
+          )}
 
           {/* ——— PIX TAB ——— */}
           {data.enabledMethods.pix && (

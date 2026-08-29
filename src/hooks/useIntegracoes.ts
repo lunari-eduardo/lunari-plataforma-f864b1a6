@@ -36,6 +36,7 @@ export interface MercadoPagoSettings {
   habilitarPix: boolean;
   habilitarCartao: boolean;
   maxParcelas: number;
+  absorverTaxa?: boolean;
 }
 
 interface UseIntegracoesReturn {
@@ -136,6 +137,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
         habilitarPix: (mercadoPagoIntegration.dados_extras?.habilitarPix as boolean) !== false,
         habilitarCartao: (mercadoPagoIntegration.dados_extras?.habilitarCartao as boolean) !== false,
         maxParcelas: (mercadoPagoIntegration.dados_extras?.maxParcelas as number) || 12,
+        absorverTaxa: (mercadoPagoIntegration.dados_extras?.absorverTaxa as boolean) ?? false,
       }
     : null;
 
@@ -370,6 +372,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
         habilitarPix: (existing.dados_extras as Record<string, unknown>)?.habilitarPix !== false,
         habilitarCartao: (existing.dados_extras as Record<string, unknown>)?.habilitarCartao !== false,
         maxParcelas: ((existing.dados_extras as Record<string, unknown>)?.maxParcelas as number) || 12,
+        absorverTaxa: ((existing.dados_extras as Record<string, unknown>)?.absorverTaxa as boolean) ?? false,
       };
 
       const newSettings = { ...currentSettings, ...settings };
@@ -379,10 +382,9 @@ export function useIntegracoes(): UseIntegracoesReturn {
         .update({
           dados_extras: {
             ...(existing.dados_extras as Record<string, unknown>),
-            habilitarPix: newSettings.habilitarPix,
-            habilitarCartao: newSettings.habilitarCartao,
-            maxParcelas: newSettings.maxParcelas,
+            ...newSettings,
           },
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
 

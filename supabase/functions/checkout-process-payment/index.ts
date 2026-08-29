@@ -173,6 +173,56 @@ Deno.serve(async (req) => {
     };
 
     if (cobranca.provedor === 'mercadopago') {
+      const { data: integracao } = await supabase
+        .from("usuarios_integracoes")
+        .select("dados_extras")
+        .eq("user_id", cobranca.user_id)
+        .eq("provedor", "mercadopago")
+        .eq("status", "ativo")
+        .maybeSingle();
+
+      const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
+      const mpSettings = {
+        ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+        ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+        ...rawExtras,
+      };
+
+      const chargeOverrides = (cobranca.dados_extras || {}) as {
+        repassarTaxasProcessamento?: boolean;
+        absorverTaxa?: boolean;
+      };
+
+      const absorverTaxa = chargeOverrides.absorverTaxa !== undefined
+        ? Boolean(chargeOverrides.absorverTaxa)
+        : (chargeOverrides.repassarTaxasProcessamento !== undefined
+          ? !chargeOverrides.repassarTaxasProcessamento
+          : (mpSettings.absorverTaxa !== false));
+
+      repassarTaxas = !absorverTaxa;
+
+      if (billingType === "CREDIT_CARD" && repassarTaxas) {
+        const mpFees = [
+          { min: 1, max: 1, percentageFee: 4.98 },
+          { min: 2, max: 2, percentageFee: 7.90 },
+          { min: 3, max: 3, percentageFee: 9.20 },
+          { min: 4, max: 4, percentageFee: 10.50 },
+          { min: 5, max: 5, percentageFee: 11.80 },
+          { min: 6, max: 6, percentageFee: 13.10 },
+          { min: 7, max: 7, percentageFee: 14.50 },
+          { min: 8, max: 8, percentageFee: 15.80 },
+          { min: 9, max: 9, percentageFee: 17.10 },
+          { min: 10, max: 10, percentageFee: 18.40 },
+          { min: 11, max: 11, percentageFee: 19.70 },
+          { min: 12, max: 12, percentageFee: 21.00 },
+        ];
+        const tier = mpFees.find(t => finalInstallments >= t.min && finalInstallments <= t.max) || mpFees[mpFees.length - 1];
+        const percentage = tier?.percentageFee ?? 0;
+        taxaProcessamento = Math.round((baseValue * percentage / 100) * 100) / 100;
+        finalValue = Math.round((baseValue + taxaProcessamento) * 100) / 100;
+      }
+
+      adapterPayload.valor = finalValue;
       adapterData = await createMercadoPagoPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
       if (!adapterData.success) {
         console.error("[checkout-process-payment] Adaptador MercadoPago retornou erro:", adapterData);
@@ -293,8 +343,8 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    const asaasStatus = adapterData.dadosExtras?.status;
-    const isPaid = asaasStatus === "CONFIRMED" || asaasStatus === "RECEIVED";
+    const gatewayStatus = adapterData.dadosExtras?.status;
+    const isPaid = gatewayStatus === "CONFIRMED" || gatewayStatus === "RECEIVED" || gatewayStatus === "approved";
 
     if (billingType === "PIX") {
       updatePayload.tipo_cobranca = "pix";
@@ -315,10 +365,11 @@ Deno.serve(async (req) => {
         updatePayload.valor_liquido = Math.max(0, Math.round((cobranca.valor - (taxaAntecipacao || 0)) * 100) / 100);
       } else {
         // Fotógrafo absorveu taxas de processamento
-        if (finalInstallments && finalInstallments > 1 && adapterData.dadosExtras?.netValue != null) {
+        if (finalInstallments && finalInstallments > 1 && adapterData.dadosExtras?.netValue != null && cobranca.provedor === 'asaas') {
           // Asaas retorna netValue de UMA parcela -> líquido total é a soma das parcelas
           updatePayload.valor_liquido = Math.round(adapterData.dadosExtras.netValue * finalInstallments * 100) / 100;
         } else if (adapterData.dadosExtras?.netValue != null) {
+          // Mercado Pago retorna netValue total diretamente
           updatePayload.valor_liquido = adapterData.dadosExtras.netValue;
         } else {
           updatePayload.valor_liquido = Math.max(0, Math.round((cobranca.valor - (taxaProcessamento || 0) - (taxaAntecipacao || 0)) * 100) / 100);

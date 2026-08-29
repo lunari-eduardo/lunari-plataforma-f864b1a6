@@ -410,7 +410,13 @@ serve(async (req) => {
             .eq('provedor', cobranca.provedor)
             .eq('status', 'ativo')
             .maybeSingle();
-          const s = (integracao?.dados_extras || {}) as Record<string, any>;
+          const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
+          const s = {
+            ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+            ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+            ...rawExtras,
+          };
+          const mpPublicKey = (integracao as any)?.mp_public_key || s.mp_public_key || undefined;
           // Priorizar valor canônico: se saldo real (canônico) diverge da cobrança viva,
           // significa que a cobrança está defasada — usar canônico para não cobrar valor errado.
           const valorEfetivo = valorCanonico > 0 ? valorCanonico : Number(cobranca.valor || 0);
@@ -427,14 +433,14 @@ serve(async (req) => {
             visitorId: visitorId || undefined,
             cobrancaId: cobranca.id,
             provedor: cobranca.provedor,
-            mpPublicKey: integracao?.mp_public_key || s.mp_public_key || undefined,
+            mpPublicKey,
             enabledMethods: {
               pix: s.habilitarPix !== false,
               creditCard: s.habilitarCartao !== false,
               boleto: cobranca.provedor === 'asaas' ? s.habilitarBoleto === true : false,
             },
-            maxParcelas: s.maxParcelas || 12,
-            absorverTaxa: s.absorverTaxa || false,
+            maxParcelas: Number(s.maxParcelas) || 12,
+            absorverTaxa: s.absorverTaxa ?? false,
             snapshotFotosIncluidas: gallery.fotos_incluidas || 0,
             snapshotRegrasCongeladas: gallery.regras_congeladas,
           };
@@ -480,7 +486,13 @@ serve(async (req) => {
             .eq('provedor', provedor)
             .eq('status', 'ativo')
             .maybeSingle();
-          const s = (integracao?.dados_extras || {}) as Record<string, any>;
+          const rawExtras = (integracao?.dados_extras || {}) as Record<string, any>;
+          const s = {
+            ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+            ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+            ...rawExtras,
+          };
+          const mpPublicKey = (integracao as any)?.mp_public_key || s.mp_public_key || undefined;
           const descricao = `${qtdExtrasCanonico} foto${qtdExtrasCanonico !== 1 ? 's' : ''} extra${qtdExtrasCanonico !== 1 ? 's' : ''} - ${gallery.nome_sessao || 'Galeria'}`;
           asaasCheckoutData = {
             galeriaId: gallery.id,
@@ -493,14 +505,14 @@ serve(async (req) => {
             galleryToken: gallery.public_token,
             visitorId: visitorId || undefined,
             provedor: provedor,
-            mpPublicKey: integracao?.mp_public_key || s.mp_public_key || undefined,
+            mpPublicKey,
             enabledMethods: {
               pix: s.habilitarPix !== false,
               creditCard: s.habilitarCartao !== false,
               boleto: provedor === 'asaas' ? s.habilitarBoleto === true : false,
             },
-            maxParcelas: s.maxParcelas || 12,
-            absorverTaxa: s.absorverTaxa || false,
+            maxParcelas: Number(s.maxParcelas) || 12,
+            absorverTaxa: s.absorverTaxa ?? false,
             ireiAntecipar: s.ireiAntecipar ?? s.incluirTaxaAntecipacao ?? false,
             repassarTaxaAntecipacao: s.repassarTaxaAntecipacao ?? s.incluirTaxaAntecipacao ?? false,
             taxaAntecipacao: s.taxaAntecipacao || false,

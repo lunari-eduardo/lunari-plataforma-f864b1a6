@@ -135,6 +135,8 @@ Deno.serve(async (req) => {
         absorverTaxa: true,
       };
 
+      let accountFeesToReturn = null;
+
       if (provedor === 'mercadopago') {
         const { data: mpInteg } = await supabase
           .from('usuarios_integracoes')
@@ -145,18 +147,55 @@ Deno.serve(async (req) => {
           .maybeSingle();
           
         const rawExtras = (mpInteg?.dados_extras || {}) as Record<string, any>;
-        providerBlock.mpPublicKey = mpInteg?.mp_public_key || rawExtras?.mp_public_key || null;
+        const mpSettings = {
+          ...((rawExtras.gestao_settings as Record<string, any>) || {}),
+          ...((rawExtras.gallery_settings as Record<string, any>) || {}),
+          ...rawExtras,
+        };
+        providerBlock.mpPublicKey = mpInteg?.mp_public_key || mpSettings?.mp_public_key || null;
         
         providerBlock.initPoint = cobranca.mp_payment_link || cobranca.checkout_url || null;
         providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || cobranca.pix_copia_cola || null;
         providerBlock.pixQrCodeBase64 = cobranca.mp_qr_code_base64 || cobranca.pix_qr_code_base64 || null;
         
+        const chargeExtras = (cobranca.dados_extras || {}) as Record<string, any>;
+        const isAbsorbing = chargeExtras.absorverTaxa !== undefined
+          ? Boolean(chargeExtras.absorverTaxa)
+          : (chargeExtras.repassarTaxasProcessamento !== undefined
+            ? !chargeExtras.repassarTaxasProcessamento
+            : (mpSettings.absorverTaxa ?? false));
+
         settingsToReturn = {
-          habilitarPix: rawExtras.habilitarPix !== false,
-          habilitarCartao: rawExtras.habilitarCartao !== false,
+          habilitarPix: mpSettings.habilitarPix !== false,
+          habilitarCartao: mpSettings.habilitarCartao !== false,
           habilitarBoleto: false,
-          maxParcelas: Number(rawExtras.maxParcelas) || 12,
-          absorverTaxa: true,
+          maxParcelas: Number(mpSettings.maxParcelas) || 12,
+          absorverTaxa: isAbsorbing,
+        };
+
+        accountFeesToReturn = {
+          creditCard: {
+            operationValue: 0,
+            detachedMonthlyFeeValue: 0,
+            installmentMonthlyFeeValue: 0,
+            tiers: [
+              { min: 1, max: 1, percentageFee: 4.98 },
+              { min: 2, max: 2, percentageFee: 7.90 },
+              { min: 3, max: 3, percentageFee: 9.20 },
+              { min: 4, max: 4, percentageFee: 10.50 },
+              { min: 5, max: 5, percentageFee: 11.80 },
+              { min: 6, max: 6, percentageFee: 13.10 },
+              { min: 7, max: 7, percentageFee: 14.50 },
+              { min: 8, max: 8, percentageFee: 15.80 },
+              { min: 9, max: 9, percentageFee: 17.10 },
+              { min: 10, max: 10, percentageFee: 18.40 },
+              { min: 11, max: 11, percentageFee: 19.70 },
+              { min: 12, max: 12, percentageFee: 21.00 },
+            ],
+          },
+          pix: {
+            fixedFeeValue: 0,
+          },
         };
       } else if (provedor === 'pix_manual') {
         providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
@@ -182,7 +221,7 @@ Deno.serve(async (req) => {
             userId: cobranca.user_id,
           },
           settings: settingsToReturn,
-          accountFees: null,
+          accountFees: accountFeesToReturn,
           provider: providerBlock,
           payerHints,
           payerMissing,

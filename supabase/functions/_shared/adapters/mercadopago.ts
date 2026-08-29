@@ -147,6 +147,8 @@ export async function createMercadoPagoPayment(
         paymentId: mpData.id,
         status: mpData.status,
         statusDetail: mpData.status_detail,
+        netValue: mpData.transaction_details?.net_received_amount,
+        feeDetails: mpData.fee_details,
       }
     };
   }
@@ -221,6 +223,8 @@ export async function createMercadoPagoPayment(
         paymentId: mpData.id,
         status: mpData.status,
         statusDetail: mpData.status_detail,
+        netValue: mpData.transaction_details?.net_received_amount,
+        feeDetails: mpData.fee_details,
       }
     };
   }
