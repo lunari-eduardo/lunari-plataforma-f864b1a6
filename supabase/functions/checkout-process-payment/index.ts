@@ -98,7 +98,8 @@ Deno.serve(async (req) => {
       const patch: Record<string, string> = {};
       const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-      const candidateName = payerContact?.name?.trim() || creditCardHolderInfo?.name?.trim();
+      // Nome do cartão de crédito (titular) NUNCA deve alterar o nome do cliente no CRM
+      const candidateName = billingType === "CREDIT_CARD" ? undefined : payerContact?.name?.trim();
       const candidateEmail = payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
       const candidatePhone = payerContact?.phone?.trim() || creditCardHolderInfo?.phone?.trim();
       const candidateCpf = payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
 
     const mergedCliente: ClienteContact = {
       id: cobranca.cliente_id || undefined,
-      nome: payerContact?.name || cliente?.nome || resolvedHints.name || creditCard?.holderName || "Cliente",
+      nome: cliente?.nome || (billingType !== "CREDIT_CARD" ? payerContact?.name : undefined) || resolvedHints.name || "Cliente",
       email: payerContact?.email || cliente?.email || resolvedHints.email || creditCardHolderInfo?.email,
       telefone: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,
       whatsapp: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,

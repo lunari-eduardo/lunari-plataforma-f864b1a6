@@ -326,7 +326,7 @@ export default function PublicCheckout() {
           billingType: 'CREDIT_CARD',
           installmentCount: parseInt(cardInstallments),
           payerContact: {
-            name: payerName.trim(),
+            name: data.payerHints?.fullName || undefined,
             email: payerEmail.trim(),
             phone: payerPhone.replace(/\D/g, ''),
             cpfCnpj: payerCpf.replace(/\D/g, ''),

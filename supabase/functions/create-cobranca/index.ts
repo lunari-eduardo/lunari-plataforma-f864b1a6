@@ -276,7 +276,8 @@ Deno.serve(async (req) => {
     const patchCliente: Record<string, string> = {};
     const isEmptyField = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-    const candName = (payerContact as any)?.name?.trim() || payerContact?.nome?.trim() || creditCardHolderInfo?.name?.trim();
+    // Nome do cartão de crédito (titular) NUNCA deve alterar o nome do cliente no CRM
+    const candName = billingType === "CREDIT_CARD" ? undefined : ((payerContact as any)?.name?.trim() || payerContact?.nome?.trim());
     const candEmail = (payerContact as any)?.email?.trim() || payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
     const candPhone = (payerContact as any)?.phone?.trim() || payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim() || creditCardHolderInfo?.phone?.trim();
     const candCpf = (payerContact as any)?.cpfCnpj?.trim() || payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();

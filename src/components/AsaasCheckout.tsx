@@ -738,7 +738,7 @@ export function AsaasCheckout({
       }
 
       const payerContactPayload = {
-        name: cardName.trim(),
+        name: payerHints?.fullName || initialFullName || undefined,
         cpfCnpj: cardCpfCnpj.replace(/\D/g, ''),
         email: cardEmail.trim(),
         phone: cardPhone.replace(/\D/g, ''),
