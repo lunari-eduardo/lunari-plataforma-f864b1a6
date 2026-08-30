@@ -204,37 +204,45 @@ export function calculateCreditFees(
     return { totalValue: 0, installmentValue: 0, processingFee: 0, anticipationFee: 0 };
   }
 
-  let processingFee = 0;
-  let anticipationFee = 0;
+  const activeTiers = fees.discount?.active && fees.discount.tiers.length > 0
+    ? fees.discount.tiers
+    : fees.creditCard.tiers;
+  const tier = activeTiers.find((t) => i >= t.min && i <= t.max) || activeTiers[activeTiers.length - 1];
+  
+  const percentageStr = tier?.percentageFee ?? 0;
+  
+  const procPercent = repassarTaxas ? (percentageStr / 100) : 0;
+  const fixedFee = repassarTaxas ? fees.creditCard.operationValue : 0;
 
-  if (repassarTaxas) {
-    const activeTiers = fees.discount?.active && fees.discount.tiers.length > 0
-      ? fees.discount.tiers
-      : fees.creditCard.tiers;
-    const tier = activeTiers.find((t) => i >= t.min && i <= t.max) || activeTiers[activeTiers.length - 1];
-    const percentage = tier?.percentageFee ?? 0;
-    processingFee = (baseValue * percentage / 100) + fees.creditCard.operationValue;
-  }
+  const taxaMensal = i === 1
+    ? fees.creditCard.detachedMonthlyFeeValue
+    : fees.creditCard.installmentMonthlyFeeValue;
+    
+  const antPercent = repassarAntecipacao ? (taxaMensal / 100) : 0;
 
-  if (repassarAntecipacao) {
-    const taxaMensal = i === 1
-      ? fees.creditCard.detachedMonthlyFeeValue
-      : fees.creditCard.installmentMonthlyFeeValue;
+  // Cálculo Exato de Gross Up (de Trás para Frente)
+  // S = parcelas - (taxaMensalAntecipacao * parcelas * (parcelas + 1)) / 2
+  // Gross = ((parcelas * (Base / S)) + Fixa) / (1 - ProcPercent)
+  
+  const S = i - (antPercent * i * (i + 1)) / 2;
+  const grossValue = ((i * (baseValue / S)) + fixedFee) / (1 - procPercent);
 
-    if (taxaMensal > 0) {
-      const valorParcelaBase = baseValue / i;
-      let valorLiquidoTotal = 0;
-      for (let j = 1; j <= i; j++) {
-        const taxaTotalParcela = taxaMensal * j;
-        const liquidoParcela = valorParcelaBase * (1 - taxaTotalParcela / 100);
-        valorLiquidoTotal += liquidoParcela;
-      }
-      anticipationFee = Math.max(0, baseValue - valorLiquidoTotal);
+  const totalValue = Math.round(grossValue * 100) / 100;
+  const installmentValue = Math.round((totalValue / i) * 100) / 100;
+
+  const actualProcFee = (totalValue * (percentageStr / 100)) + fees.creditCard.operationValue;
+  const processingFee = repassarTaxas ? actualProcFee : 0;
+  
+  const netAfterProc = totalValue - actualProcFee;
+  const parcelaNet = netAfterProc / i;
+  let actualAnticipationFee = 0;
+  
+  if (taxaMensal > 0) {
+    for (let j = 1; j <= i; j++) {
+       actualAnticipationFee += parcelaNet * ((taxaMensal / 100) * j);
     }
   }
-
-  const totalValue = Math.round((baseValue + processingFee + anticipationFee) * 100) / 100;
-  const installmentValue = Math.round((totalValue / i) * 100) / 100;
+  const anticipationFee = repassarAntecipacao ? actualAnticipationFee : 0;
 
   return {
     totalValue,

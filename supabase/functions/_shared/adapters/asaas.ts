@@ -3,7 +3,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
-import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer } from "../asaas-helpers.ts";
+import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer, requestAsaasAnticipation } from "../asaas-helpers.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -278,15 +278,15 @@ export async function createAsaasPayment(
 
     // Validação de taxas server-side
     const baseValue = input.requestDadosExtras?.valorBase;
+    const chargeOverrides = input.requestDadosExtras || {};
+    const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
+      ? chargeOverrides.anteciparParcelas
+      : (settings.ireiAntecipar ?? (settings.incluirTaxaAntecipacao === true));
+      
     if (baseValue && typeof baseValue === "number" && baseValue > 0) {
-      const chargeOverrides = input.requestDadosExtras || {};
       const repassarTaxas = chargeOverrides.repassarTaxasProcessamento !== undefined
         ? chargeOverrides.repassarTaxasProcessamento
         : !settings.absorverTaxa;
-        
-      const ireiAntecipar = chargeOverrides.anteciparParcelas !== undefined
-        ? chargeOverrides.anteciparParcelas
-        : (settings.ireiAntecipar ?? (settings.incluirTaxaAntecipacao === true));
         
       const repassarAntecipacao = ireiAntecipar
         ? (chargeOverrides.repassarTaxaAntecipacao !== undefined ? chargeOverrides.repassarTaxaAntecipacao : (settings.repassarTaxaAntecipacao ?? (settings.incluirTaxaAntecipacao === true)))
@@ -344,6 +344,20 @@ export async function createAsaasPayment(
       error: payData.errors?.[0]?.description || "Erro ao processar pagamento no Asaas",
       errorCode: "ASAAS_API_ERROR",
     };
+  }
+
+  // Trigger automático de antecipação para pagamentos de cartão de crédito
+  if (billingType === "CREDIT_CARD") {
+    const chargeOverridesLocal = input.requestDadosExtras || {};
+    const shouldAnticipate = chargeOverridesLocal.anteciparParcelas !== undefined
+      ? chargeOverridesLocal.anteciparParcelas
+      : (settings.ireiAntecipar ?? (settings.incluirTaxaAntecipacao === true));
+      
+    if (shouldAnticipate && (payData.status === "CONFIRMED" || payData.status === "PENDING")) {
+      requestAsaasAnticipation(baseUrl, apiKey, payData.id, payData.installment).catch(err => {
+        console.error("[asaas-adapter] Falha ao requerer antecipação background:", err);
+      });
+    }
   }
 
   let pixCopiaCola: string | undefined;
