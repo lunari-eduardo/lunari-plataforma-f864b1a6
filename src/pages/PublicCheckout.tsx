@@ -31,7 +31,8 @@ function maskCardNumber(v: string): string {
   return v.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').trim().slice(0, 19);
 }
 function maskExpiry(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 4);
+  const d = v.replace(/\D/g, '');
+  if (d.length > 6) return `${d.slice(0, 2)}/${d.slice(2, 6)}`;
   if (d.length >= 3) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return d;
 }
@@ -334,7 +335,7 @@ export default function PublicCheckout() {
             holderName: payerName.toUpperCase(),
             number: rawCard,
             expiryMonth: expM,
-            expiryYear: `20${expY}`,
+            expiryYear: expY.length === 2 ? `20${expY}` : expY,
             ccv: cardCvv,
           },
           creditCardHolderInfo: {

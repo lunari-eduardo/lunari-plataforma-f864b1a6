@@ -97,7 +97,7 @@ export function SessionTimeline({ sessionId }: { sessionId?: string }) {
             at: c.created_at,
             title: 'Cobrança gerada',
             detail: [c.tipo_cobranca?.toUpperCase(), c.provedor].filter(Boolean).join(' • '),
-            valor: Number(c.valor) || 0,
+            valor: c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor) || 0,
             icon: CreditCard,
             tone: 'neutral',
           });
@@ -106,7 +106,7 @@ export function SessionTimeline({ sessionId }: { sessionId?: string }) {
               id: `cob-pago-${c.id}`,
               at: c.data_pagamento,
               title: 'Cobrança paga',
-              valor: Number(c.valor) || 0,
+              valor: c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor) || 0,
               icon: Receipt,
               tone: 'success',
             });

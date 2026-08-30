@@ -161,7 +161,7 @@ export function useClientSessionsRealtime(clienteId: string) {
 
             pagamentos.push({
               id: paymentId,
-              valor: Number(c.valor) || 0,
+              valor: c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor) || 0,
               data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
               forma_pagamento: c.tipo_cobranca === 'pix' ? 'Pix' : 'Link',
               observacoes: `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago${c.descricao ? ` - ${c.descricao}` : ''}`,

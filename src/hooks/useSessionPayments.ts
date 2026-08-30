@@ -454,7 +454,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                 if (addedIds.has(parcelaId)) continue;
                 addedIds.add(parcelaId);
 
-                const valorBruto = Number(parcela.valor_bruto) || 0;
+                const rawBase = parcela.valor_principal != null ? Number(parcela.valor_principal) : Number(parcela.valor_bruto);
+                const valorBruto = rawBase || 0;
                 
                 // Apply repasse logic: if taxes are passed to client, photographer sees no deduction
                 const rawLiq = parcela.valor_liquido != null ? Number(parcela.valor_liquido) : undefined;
@@ -527,7 +528,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             if (addedIds.has(paymentId)) continue;
             addedIds.add(paymentId);
 
-            const valorBruto = Number(c.valor) || 0;
+            const rawBase = c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor);
+            const valorBruto = rawBase || 0;
             const extras = dadosExtrasMap[c.id] || {};
             const repassarProc = extras.repassarTaxasProcessamento === true;
             let valorLiq: number | undefined;

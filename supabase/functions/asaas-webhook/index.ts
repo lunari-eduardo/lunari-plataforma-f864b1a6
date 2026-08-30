@@ -292,7 +292,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.externalReference) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
       .eq("id", payment.externalReference)
       .maybeSingle();
     if (data) return data;
@@ -302,7 +302,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.installment) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
       .or(`asaas_installment_id.eq.${payment.installment},provider_order_id.eq.${payment.installment}`)
       .maybeSingle();
     if (data) return data;
@@ -312,7 +312,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.id) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
       .or(`asaas_payment_id.eq.${payment.id},provider_order_id.eq.${payment.id},provider_transaction_id.eq.${payment.id},mp_payment_id.eq.${payment.id}`)
       .maybeSingle();
     if (data) return data;
@@ -326,16 +326,24 @@ async function upsertParcela(
   cobrancaId: string,
   payment: any,
   status: string,
-  cobranca?: { valor: number; total_parcelas: number | null }
+  cobranca?: { valor: number; total_parcelas: number | null; valor_principal?: number }
 ) {
   // REGRA: valor_bruto = valor nominal do fotógrafo por parcela, NUNCA payment.value (que pode estar inflado)
   let valorBruto: number;
+  let valorPrincipal = null;
+
   if (cobranca && cobranca.valor > 0) {
     const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
     valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
+    if (cobranca.valor_principal) {
+      valorPrincipal = Math.round((cobranca.valor_principal / totalParcelas) * 100) / 100;
+    } else {
+      valorPrincipal = valorBruto;
+    }
   } else {
     // Fallback: use payment.value only if we don't have cobranca data
     valorBruto = payment.value || 0;
+    valorPrincipal = valorBruto;
   }
 
   const valorLiquido = payment.netValue ?? null;
@@ -347,6 +355,7 @@ async function upsertParcela(
     numero_parcela: payment.installmentNumber || 1,
     asaas_payment_id: payment.id,
     valor_bruto: valorBruto,
+    valor_principal: valorPrincipal,
     taxa_gateway: taxaGateway,
     valor_liquido: valorLiquido,
     status,
@@ -474,6 +483,10 @@ Deno.serve(async (req) => {
             // REGRA: valor_bruto = valor nominal do fotógrafo por parcela
             const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
             const valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
+            let valorPrincipal = valorBruto;
+            if ((cobranca as any).valor_principal) {
+              valorPrincipal = Math.round(((cobranca as any).valor_principal / totalParcelas) * 100) / 100;
+            }
             const valorLiquido = payment.netValue ?? null;
             const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
 
@@ -495,6 +508,7 @@ Deno.serve(async (req) => {
                 numero_parcela: payment.installmentNumber || 1,
                 asaas_payment_id: payment.id,
                 valor_bruto: valorBruto,
+                valor_principal: valorPrincipal,
                 taxa_gateway: existingParcela?.taxa_gateway ?? taxaGateway,
                 taxa_antecipacao: taxaAntecipacao,
                 valor_liquido: valorLiquido,

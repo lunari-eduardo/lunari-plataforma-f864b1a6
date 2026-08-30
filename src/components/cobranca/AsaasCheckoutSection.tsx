@@ -66,7 +66,8 @@ function maskCardNumber(v: string): string {
 }
 
 function maskExpiry(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 4);
+  const d = v.replace(/\D/g, '');
+  if (d.length > 6) return `${d.slice(0, 2)}/${d.slice(2, 6)}`;
   if (d.length >= 3) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return d;
 }
@@ -340,7 +341,7 @@ export function AsaasCheckoutSection({
             holderName: cardName,
             number: rawCard,
             expiryMonth: expM,
-            expiryYear: `20${expY}`,
+            expiryYear: expY.length === 2 ? `20${expY}` : expY,
             ccv: cardCvv,
           },
           creditCardHolderInfo: {

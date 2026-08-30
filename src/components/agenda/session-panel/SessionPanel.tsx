@@ -289,7 +289,7 @@ export default function SessionPanel({
     [cobrancas],
   );
   const totalPagoCobrancas = useMemo(
-    () => pagoCobrancas.reduce((acc, c) => acc + (Number(c.valor) || 0), 0),
+    () => pagoCobrancas.reduce((acc, c) => acc + (c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor) || 0), 0),
     [pagoCobrancas],
   );
 
