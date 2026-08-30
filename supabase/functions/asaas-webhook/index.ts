@@ -557,17 +557,9 @@ Deno.serve(async (req) => {
               };
               if (parentStatus === "pago") {
                 cobrancaUpdate.data_pagamento = new Date().toISOString();
-                const dadosExtras = (cobranca as any).dados_extras || {};
-                const repassarTaxas = dadosExtras.repassarTaxasProcessamento === true;
-                const repassarAntecipacao = dadosExtras.repassarTaxaAntecipacao === true;
-                const taxaAntecipacao = Number(dadosExtras.taxaAntecipacao || 0);
                 const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
 
-                if (repassarTaxas && repassarAntecipacao) {
-                  cobrancaUpdate.valor_liquido = cobranca.valor;
-                } else if (repassarTaxas) {
-                  cobrancaUpdate.valor_liquido = Math.max(0, Math.round((cobranca.valor - taxaAntecipacao) * 100) / 100);
-                } else if (payment.netValue) {
+                if (payment.netValue) {
                   if (totalParcelas > 1) {
                     cobrancaUpdate.valor_liquido = Math.round(payment.netValue * totalParcelas * 100) / 100;
                   } else {
@@ -579,6 +571,45 @@ Deno.serve(async (req) => {
 
               // Disparo de e-mail de pagamento confirmado se aplicável
               if (parentStatus === "pago") {
+                // Registrar movimento de caixa (Fase 4 Financeiro) para parcelas Asaas
+                if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
+                  const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
+                  const txTotal = payment.value || ((cobranca.valor || 0) / totalParcelas);
+                  const vLiquido = payment.netValue ?? txTotal;
+                  const taxaGateway = Math.max(0, Math.round((txTotal - vLiquido) * 100) / 100);
+                  
+                  const { data: pData } = await adminClient
+                    .from("cobranca_parcelas")
+                    .select("id")
+                    .eq("cobranca_id", cobranca.id)
+                    .eq("numero_parcela", payment.installmentNumber || 1)
+                    .maybeSingle();
+
+                  await adminClient.from("gateway_cash_movements").upsert({
+                    provider: "asaas",
+                    provider_transaction_id: `payment_${payment.id}_credit`,
+                    cobranca_id: cobranca.id,
+                    parcela_id: pData?.id || null,
+                    movement_type: "credit",
+                    amount: vLiquido,
+                    movement_date: payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString(),
+                    description: `Crédito de pagamento ${payment.id}`,
+                  }, { onConflict: "provider, provider_transaction_id, movement_type" });
+                  
+                  if (taxaGateway > 0) {
+                    await adminClient.from("gateway_cash_movements").upsert({
+                      provider: "asaas",
+                      provider_transaction_id: `payment_${payment.id}_fee`,
+                      cobranca_id: cobranca.id,
+                      parcela_id: pData?.id || null,
+                      movement_type: "fee",
+                      amount: -taxaGateway,
+                      movement_date: payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString(),
+                      description: `Taxa de processamento ${payment.id}`,
+                    }, { onConflict: "provider, provider_transaction_id, movement_type" });
+                  }
+                }
+
                 try {
                   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
