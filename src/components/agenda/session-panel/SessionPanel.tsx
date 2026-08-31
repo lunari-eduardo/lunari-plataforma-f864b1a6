@@ -903,10 +903,10 @@ export default function SessionPanel({
                           ? "Desativado (cobrança via link ativa)"
                           : "0,00"
                       }
-                      disabled={cobrarAoSalvar || (isEdit && !!appointment?.paidAmount && appointment.paidAmount > 0)}
+                      disabled={cobrarAoSalvar || (isEdit && (!!appointment?.paidAmount && appointment.paidAmount > 0 || workflowInfo?.hasPayments))}
                       className={cn(
                         "h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity",
-                        (cobrarAoSalvar || (isEdit && !!appointment?.paidAmount && appointment.paidAmount > 0)) &&
+                        (cobrarAoSalvar || (isEdit && (!!appointment?.paidAmount && appointment.paidAmount > 0 || workflowInfo?.hasPayments))) &&
                           "opacity-50 cursor-not-allowed bg-muted/30",
                       )}
                     />

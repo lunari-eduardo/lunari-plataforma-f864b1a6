@@ -167,10 +167,10 @@ export const aplicarFiltrosPeriodo = (
   let resultado = [...linhas];
 
   if (dataInicio) {
-    resultado = resultado.filter(linha => linha.data >= dataInicio);
+    resultado = resultado.filter(linha => linha.data.substring(0, 10) >= dataInicio);
   }
   if (dataFim) {
-    resultado = resultado.filter(linha => linha.data <= dataFim);
+    resultado = resultado.filter(linha => linha.data.substring(0, 10) <= dataFim);
   }
 
   return resultado;

@@ -51,7 +51,10 @@ async function buildQuery(input: ListExtratoInput, opts: { count?: boolean } = {
     .order("created_at", { ascending: false });
 
   if (input.dataInicio) q = q.gte(dataColumn, input.dataInicio);
-  if (input.dataFim) q = q.lte(dataColumn, input.dataFim);
+  if (input.dataFim) {
+    const endDate = input.dataFim.length === 10 ? `${input.dataFim}T23:59:59.999Z` : input.dataFim;
+    q = q.lte(dataColumn, endDate);
+  }
   if (input.tipo && input.tipo !== "todos") q = q.eq("tipo", input.tipo);
   if (input.origem && input.origem !== "todos") q = q.eq("origem", input.origem);
   if (input.status && input.status !== "todos") q = q.eq("status", input.status);

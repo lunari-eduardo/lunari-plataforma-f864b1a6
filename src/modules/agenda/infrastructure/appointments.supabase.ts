@@ -201,6 +201,38 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
           },
         }),
       );
+
+      // NOVO: Garantir que a transação inicial (sinal) seja criada caso o trigger tenha omitido
+      if (hydrated.paidAmount > 0) {
+        setTimeout(async () => {
+          try {
+            const { data: existingTx } = await supabase
+              .from("clientes_transacoes")
+              .select("id")
+              .eq("session_id", session.id)
+              .eq("descricao", "Entrada do agendamento")
+              .maybeSingle();
+
+            if (!existingTx) {
+              const tx = {
+                user_id: userId,
+                cliente_id: session.cliente_id || hydrated.clienteId,
+                session_id: session.id,
+                tipo: "pagamento",
+                valor: hydrated.paidAmount,
+                valor_liquido: hydrated.paidAmount,
+                data_transacao: new Date().toISOString().split("T")[0],
+                descricao: "Entrada do agendamento",
+                observacoes: "Adicionado por fallback do agendamento direto",
+              };
+              await supabase.from("clientes_transacoes").insert(tx);
+              console.log("💰 [agenda.repo] Transação de sinal injetada com sucesso:", hydrated.paidAmount);
+            }
+          } catch (txError) {
+            console.error("⚠️ [agenda.repo] Erro ao injetar transação de sinal:", txError);
+          }
+        }, 1500);
+      }
     } else {
       // Fallback: tenta de novo daqui a 2s se não houver sessão para o appointment
       setTimeout(async () => {
