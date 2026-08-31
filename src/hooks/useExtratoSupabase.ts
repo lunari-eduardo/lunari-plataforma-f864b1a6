@@ -176,6 +176,28 @@ export function useExtratoSupabase({
           table: 'clientes_sessoes',
           filter: `user_id=eq.${userId}`
         }, () => debouncedInvalidate())
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'cobrancas',
+          filter: `user_id=eq.${userId}`
+        }, () => debouncedInvalidate())
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'galerias',
+          filter: `user_id=eq.${userId}`
+        }, () => debouncedInvalidate())
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'gateway_cash_movements'
+        }, () => debouncedInvalidate())
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'cobranca_parcelas'
+        }, () => debouncedInvalidate())
         .subscribe();
     };
     

@@ -59,7 +59,7 @@ export async function fetchDemonstrativo(
 
   // ====== 3. DESPESAS AGRUPADAS ======
   const saidasFinanceiro = todasLinhas.filter(
-    (l: any) => l.tipo === 'saida' && l.origem === 'financeiro'
+    (l: any) => l.tipo === 'saida' && (l.origem === 'financeiro' || l.origem === 'cartao')
   );
 
   const categorias: Array<{
@@ -85,47 +85,27 @@ export async function fetchDemonstrativo(
     categorias.push({ grupo, itens, total });
   }
 
-  // ====== 4. TAXAS DE GATEWAY ======
-  let taxasQuery = supabase
-    .from('clientes_transacoes')
-    .select(`
-      taxa_gateway,
-      taxa_antecipacao,
-      data_transacao,
-      clientes_sessoes!fk_transacoes_session_id (data_sessao)
-    `)
-    .eq('user_id', user.id)
-    .eq('tipo', 'pagamento');
+  // ====== 4. TAXAS DE GATEWAY (Extraídas diretamente do extrato unificado) ======
+  const linhasTaxasGw = todasLinhas.filter(
+    (l: any) => l.tipo === 'saida' && (l.categoria === 'Taxas de Gateway' || l.categoria === 'Despesas de Gateway')
+  );
 
-  if (regime === 'caixa') {
-    taxasQuery = taxasQuery
-      .gte('data_transacao', dataInicio)
-      .lte('data_transacao', dataFim);
-  }
+  if (linhasTaxasGw.length > 0) {
+    const itensTaxasPorNome: Record<string, number> = {};
+    linhasTaxasGw.forEach((l: any) => {
+      const nome = l.descricao || 'Taxa de Gateway';
+      itensTaxasPorNome[nome] = (itensTaxasPorNome[nome] || 0) + Number(l.valor);
+    });
 
-  const { data: taxasRaw, error: errorTaxas } = await taxasQuery;
-  if (errorTaxas) throw errorTaxas;
-
-  const taxasFiltradas = (taxasRaw || []).filter((t: any) => {
-    if (regime === 'caixa') return true;
-    const dataRef = t.clientes_sessoes?.data_sessao || t.data_transacao;
-    return dataRef >= dataInicio && dataRef <= dataFim;
-  });
-
-  const totalTaxasGw = taxasFiltradas.reduce(
-    (sum: number, t: any) => sum + Number(t.taxa_gateway || 0), 0);
-  const totalTaxasAnt = taxasFiltradas.reduce(
-    (sum: number, t: any) => sum + Number(t.taxa_antecipacao || 0), 0);
-
-  if (totalTaxasGw + totalTaxasAnt > 0) {
-    const itensTaxas: Array<{ nome: string; valor: number }> = [];
-    if (totalTaxasGw > 0) itensTaxas.push({ nome: 'Taxa Gateway', valor: totalTaxasGw });
-    if (totalTaxasAnt > 0) itensTaxas.push({ nome: 'Taxa Antecipação', valor: totalTaxasAnt });
+    const itensTaxas = Object.entries(itensTaxasPorNome)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+    const totalTaxas = itensTaxas.reduce((sum, item) => sum + item.valor, 0);
 
     categorias.push({
       grupo: 'Taxas de Gateway',
       itens: itensTaxas,
-      total: totalTaxasGw + totalTaxasAnt,
+      total: totalTaxas,
     });
   }
 

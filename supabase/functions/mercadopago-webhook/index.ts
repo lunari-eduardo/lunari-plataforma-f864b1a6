@@ -169,6 +169,19 @@ Deno.serve(async (req) => {
 
     console.log(`[mercadopago-webhook] Cobrança ${cobranca.id} atualizada com sucesso para status=${nextStatus}`);
 
+    // Finalizar galeria e sincronizar extras se aplicável
+    if (isPaymentConfirmed && (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras")) {
+      try {
+        await supabase.rpc("finalize_gallery_payment", {
+          p_cobranca_id: cobranca.id,
+          p_paid_at: updateData.data_pagamento,
+        });
+        console.log(`[mercadopago-webhook] finalize_gallery_payment executado para cobranca=${cobranca.id}`);
+      } catch (finalizeErr) {
+        console.warn("[mercadopago-webhook] finalize_gallery_payment erro não impeditivo:", finalizeErr);
+      }
+    }
+
     // Disparo de e-mail de pagamento confirmado se aplicável
     if (isPaymentConfirmed) {
       try {

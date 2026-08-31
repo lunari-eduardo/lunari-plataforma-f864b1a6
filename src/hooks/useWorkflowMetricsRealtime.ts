@@ -191,6 +191,8 @@ export function useWorkflowMetricsRealtime(
       window.addEventListener("workflow-session-updated", invalidateAndReload);
       window.addEventListener("workflow-session-deleted", invalidateAndReload);
       window.addEventListener("payment-created", invalidateAndReload);
+      window.addEventListener("cobranca-paga", invalidateAndReload);
+      window.addEventListener("gallery-payment-confirmed", invalidateAndReload);
       return () => {
         cancelled = true;
         abortCtrl.abort();
@@ -199,6 +201,8 @@ export function useWorkflowMetricsRealtime(
         window.removeEventListener("workflow-session-updated", invalidateAndReload);
         window.removeEventListener("workflow-session-deleted", invalidateAndReload);
         window.removeEventListener("payment-created", invalidateAndReload);
+        window.removeEventListener("cobranca-paga", invalidateAndReload);
+        window.removeEventListener("gallery-payment-confirmed", invalidateAndReload);
       };
     }
 
@@ -207,6 +211,10 @@ export function useWorkflowMetricsRealtime(
       .on("postgres_changes", { event: "*", schema: "public", table: "clientes_sessoes" }, invalidateAndReload)
       .on("postgres_changes", { event: "*", schema: "public", table: "clientes_transacoes" }, invalidateAndReload)
       .on("postgres_changes", { event: "*", schema: "public", table: "cliente_creditos_ledger" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "gateway_cash_movements" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cobrancas" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cobranca_parcelas" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "galerias" }, invalidateAndReload)
       .subscribe();
 
     return () => {

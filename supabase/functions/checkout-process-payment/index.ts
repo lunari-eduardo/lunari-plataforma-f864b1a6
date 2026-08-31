@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
         ? adapterData.dadosExtras.netValue
         : Math.round((updatePayload.valor_liquido / numParcelas) * 100) / 100;
 
-      await supabase.from("cobranca_parcelas").upsert({
+      const { data: pData } = await supabase.from("cobranca_parcelas").upsert({
         cobranca_id: cobranca.id,
         numero_parcela: 1,
         asaas_payment_id: adapterData.providerOrderId,
@@ -412,7 +412,34 @@ Deno.serve(async (req) => {
         data_vencimento: new Date().toISOString().split("T")[0],
         data_pagamento: isPaid ? updatePayload.data_pagamento : null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "cobranca_id, numero_parcela" }).maybeSingle();
+      }, { onConflict: "cobranca_id, numero_parcela" }).select("id").maybeSingle();
+
+      if (isPaid && cobranca.provedor === "asaas") {
+        const taxaGatewayVal = repassarTaxas ? 0 : Math.max(0, Math.round((valorBrutoParcela - valorLiqParcela) * 100) / 100);
+        await supabase.from("gateway_cash_movements").upsert({
+          provider: "asaas",
+          provider_transaction_id: `payment_${adapterData.providerOrderId}_credit`,
+          cobranca_id: cobranca.id,
+          parcela_id: pData?.id || null,
+          movement_type: "credit",
+          amount: valorBrutoParcela,
+          movement_date: updatePayload.data_pagamento || new Date().toISOString(),
+          description: `Crédito de pagamento ${adapterData.providerOrderId}`,
+        }, { onConflict: "provider, provider_transaction_id, movement_type" });
+
+        if (taxaGatewayVal > 0) {
+          await supabase.from("gateway_cash_movements").upsert({
+            provider: "asaas",
+            provider_transaction_id: `payment_${adapterData.providerOrderId}_fee`,
+            cobranca_id: cobranca.id,
+            parcela_id: pData?.id || null,
+            movement_type: "fee",
+            amount: -taxaGatewayVal,
+            movement_date: updatePayload.data_pagamento || new Date().toISOString(),
+            description: `Taxa de processamento ${adapterData.providerOrderId}`,
+          }, { onConflict: "provider, provider_transaction_id, movement_type" });
+        }
+      }
     }
 
     if (isPaid && (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras")) {

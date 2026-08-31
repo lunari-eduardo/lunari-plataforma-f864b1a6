@@ -569,8 +569,21 @@ Deno.serve(async (req) => {
               }
               await adminClient.from("cobrancas").update(cobrancaUpdate).eq("id", cobranca.id);
 
-              // Disparo de e-mail de pagamento confirmado se aplicável
+              // Disparo de e-mail e finalização de extras se aplicável
               if (parentStatus === "pago") {
+                // Invocar finalize_gallery_payment para garantir sincronização de extras
+                if ((cobranca as any).galeria_id || (cobranca as any).finalidade === "fotos_extras" || (cobranca as any).finalidade === "sessao_e_extras") {
+                  try {
+                    await adminClient.rpc("finalize_gallery_payment", {
+                      p_cobranca_id: cobranca.id,
+                      p_paid_at: cobrancaUpdate.data_pagamento || new Date().toISOString(),
+                    });
+                    console.log(`[asaas-webhook] finalize_gallery_payment executado para cobranca=${cobranca.id}`);
+                  } catch (finalizeErr) {
+                    console.warn("[asaas-webhook] finalize_gallery_payment erro não impeditivo:", finalizeErr);
+                  }
+                }
+
                 // Registrar movimento de caixa (Fase 4 Financeiro) para parcelas Asaas
                 if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
                   const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
@@ -591,7 +604,7 @@ Deno.serve(async (req) => {
                     cobranca_id: cobranca.id,
                     parcela_id: pData?.id || null,
                     movement_type: "credit",
-                    amount: vLiquido,
+                    amount: txTotal,
                     movement_date: payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString(),
                     description: `Crédito de pagamento ${payment.id}`,
                   }, { onConflict: "provider, provider_transaction_id, movement_type" });
