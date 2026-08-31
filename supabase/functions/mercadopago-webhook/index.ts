@@ -155,6 +155,14 @@ Deno.serve(async (req) => {
       if (netReceived !== null && netReceived !== undefined) {
         updateData.valor_liquido = netReceived;
       }
+      
+      // FASE 1: Populando data de crédito para camada financeira
+      if (paymentData?.money_release_date) {
+        updateData.data_credito = paymentData.money_release_date.split("T")[0];
+      }
+      if (paymentData?.money_release_status === "released") {
+        updateData.data_credito_real = new Date().toISOString();
+      }
     }
 
     const { error: updateError } = await supabase

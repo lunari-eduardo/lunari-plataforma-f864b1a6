@@ -104,6 +104,39 @@ Deno.serve(async (req) => {
       if (amountPaid) {
         updateData.valor_liquido = amountPaid;
       }
+      
+      // FASE 1: Populando data de crédito para camada financeira
+      try {
+        const { data: integ } = await supabase
+          .from("usuarios_integracoes")
+          .select("dados_extras")
+          .eq("user_id", cobranca.user_id)
+          .eq("provedor", "infinitepay")
+          .eq("status", "ativo")
+          .maybeSingle();
+        
+        const isPix = payload.capture_method === "pix";
+        // Default to padrao_d30 if not configured
+        const plano = (integ?.dados_extras as any)?.plano_recebimento || "padrao_d30";
+        
+        const paymentDate = new Date();
+        if (isPix) {
+          updateData.data_credito = paymentDate.toISOString().split("T")[0];
+          updateData.data_credito_real = paymentDate.toISOString();
+        } else if (plano === "nitro") {
+          // D+1 util (aproximação simples)
+          paymentDate.setDate(paymentDate.getDate() + 1);
+          if (paymentDate.getDay() === 0) paymentDate.setDate(paymentDate.getDate() + 1); // Domingo -> Segunda
+          if (paymentDate.getDay() === 6) paymentDate.setDate(paymentDate.getDate() + 2); // Sábado -> Segunda
+          updateData.data_credito = paymentDate.toISOString().split("T")[0];
+        } else {
+          // padrao_d30 -> D+30
+          paymentDate.setDate(paymentDate.getDate() + 30);
+          updateData.data_credito = paymentDate.toISOString().split("T")[0];
+        }
+      } catch (e) {
+        console.warn("[infinitepay-webhook] Erro ao calcular data_credito:", e);
+      }
     }
 
     const { error: updateError } = await supabase

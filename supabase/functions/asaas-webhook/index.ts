@@ -557,6 +557,15 @@ Deno.serve(async (req) => {
               };
               if (parentStatus === "pago") {
                 cobrancaUpdate.data_pagamento = new Date().toISOString();
+                
+                // FASE 1: Populando data de crédito para camada financeira
+                if (payment.creditDate || payment.estimatedCreditDate) {
+                  cobrancaUpdate.data_credito = payment.creditDate || payment.estimatedCreditDate;
+                }
+                if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED") {
+                  cobrancaUpdate.data_credito_real = new Date().toISOString();
+                }
+
                 const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
 
                 if (payment.netValue) {

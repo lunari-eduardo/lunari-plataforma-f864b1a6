@@ -574,6 +574,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
               valorLiquido: valorLiq,
               taxaTotal,
+              dataCreditoPrevista: c.data_credito || undefined,
+              dataCreditoReal: c.data_credito_real ? String(c.data_credito_real).split('T')[0] : undefined,
               cobrancaId: c.id,
               sandbox: isSandboxAsaas || undefined,
             });
