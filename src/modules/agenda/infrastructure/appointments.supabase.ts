@@ -305,7 +305,24 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       .select(`*, clientes ( nome )`)
       .single();
 
-    if (error) throw error;
+      if (error) throw error;
+
+      // Garantir a criação imediata da transação de entrada se houver valor pago
+      if ((input.paidAmount || 0) > 0 && input.status === "confirmado") {
+        const { error: txError } = await supabase.from("clientes_transacoes").insert({
+          user_id: session.user.id,
+          cliente_id: sanitizeUuid(input.clienteId),
+          session_id: sessionId,
+          tipo: "pagamento",
+          valor: input.paidAmount,
+          valor_liquido: input.paidAmount,
+          descricao: "Entrada do agendamento",
+          data_transacao: dateStr,
+        });
+        if (txError) {
+          console.error("Erro ao criar transação de entrada:", txError);
+        }
+      }
 
     const created = mapRow(data);
 
