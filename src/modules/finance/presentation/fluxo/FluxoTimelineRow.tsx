@@ -76,7 +76,10 @@ const PROVEDOR_LABEL: Record<string, string> = {
 
 function formatDate(iso: string) {
   try {
-    return format(parseISO(`${iso}T12:00:00`), 'dd/MM/yyyy');
+    // Se a string já tiver um 'T', ela já é um timestamp completo
+    const parsed = iso.includes('T') || iso.includes(' ') ? new Date(iso) : parseISO(`${iso}T12:00:00`);
+    if (isNaN(parsed.getTime())) return iso;
+    return format(parsed, 'dd/MM/yy - HH:mm');
   } catch {
     return iso;
   }

@@ -36,7 +36,7 @@ serve(async (req) => {
 
     const themeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id;
 
-    if (themeId && themeId !== 'lunari') {
+    if (themeId && themeId !== 'lunari' && themeId !== 'system') {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('primary_color')
@@ -45,7 +45,7 @@ serve(async (req) => {
       if (theme?.primary_color) customPrimaryColor = theme.primary_color;
     }
 
-    if (!customPrimaryColor && accountTheme?.theme_type === 'custom') {
+    if (!customPrimaryColor && userId) {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('primary_color')

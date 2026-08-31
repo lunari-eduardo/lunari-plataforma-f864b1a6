@@ -416,7 +416,7 @@ export function useGallerySettings() {
       // If customTheme was provided, save it to gallery_themes as well
       if (data.customTheme) {
         const t = data.customTheme;
-        const { error: themeError } = await supabase
+        const { data: savedTheme, error: themeError } = await supabase
           .from('gallery_themes')
           .upsert({
             user_id: user.id,
@@ -425,8 +425,20 @@ export function useGallerySettings() {
             primary_color: t.primaryColor || '#C6A36A',
             accent_color: t.accentColor || t.primaryColor || '#B08F55',
             emphasis_color: t.emphasisColor || t.primaryColor || '#C6A36A',
-          }, { onConflict: 'user_id' });
+          }, { onConflict: 'user_id' })
+          .select('id')
+          .single();
         if (themeError) throw themeError;
+
+        if (savedTheme?.id) {
+          await supabase
+            .from('gallery_settings')
+            .update({
+              theme_type: 'custom',
+              active_theme_id: savedTheme.id,
+            })
+            .eq('user_id', user.id);
+        }
       }
     },
     onSuccess: () => {
@@ -458,6 +470,15 @@ export function useGallerySettings() {
           .eq('user_id', user.id);
 
         if (error) throw error;
+
+        // Ensure settings are also set to custom and point to this theme
+        await supabase
+          .from('gallery_settings')
+          .update({ 
+            theme_type: 'custom',
+            active_theme_id: theme.id 
+          })
+          .eq('user_id', user.id);
       } else {
         // Create new theme (upsert to handle unique constraint)
         const { data, error } = await supabase

@@ -12,6 +12,7 @@ import { ArrowDownLeft, ArrowUpRight, ExternalLink, Trash2 } from 'lucide-react'
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { PaymentSupabaseService } from '@/services/PaymentSupabaseService';
+import { format, parseISO } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,16 @@ interface FluxoDetailSheetProps {
   onMarkPaid: (id: string) => Promise<void> | void;
   onMarkPending?: (id: string) => Promise<void> | void;
   onOpenOrigin?: (linha: LinhaExtrato) => void;
+}
+
+function formatDate(iso: string) {
+  try {
+    const parsed = iso.includes('T') || iso.includes(' ') ? new Date(iso) : parseISO(`${iso}T12:00:00`);
+    if (isNaN(parsed.getTime())) return iso;
+    return format(parsed, 'dd/MM/yy - HH:mm');
+  } catch {
+    return iso;
+  }
 }
 
 const FluxoDetailSheet = memo(function FluxoDetailSheet({
@@ -310,8 +321,8 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             Histórico
           </h4>
           <ul className="text-xs text-muted-foreground space-y-1">
-            {linha.dataCompetencia && <li>Competência: {linha.dataCompetencia}</li>}
-            {linha.dataCaixa && <li>Caixa: {linha.dataCaixa}</li>}
+            {linha.dataCompetencia && <li>Competência: {formatDate(linha.dataCompetencia)}</li>}
+            {linha.dataCaixa && <li>Caixa: {formatDate(linha.dataCaixa)}</li>}
             {linha.parcela && (
               <li>Parcela {linha.parcela.atual} de {linha.parcela.total}</li>
             )}

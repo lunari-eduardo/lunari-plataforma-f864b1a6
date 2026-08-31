@@ -157,7 +157,7 @@ serve(async (req) => {
 
     let themeData = null;
 
-    if (themeId && themeId !== 'lunari') {
+    if (themeId && themeId !== 'lunari' && themeId !== 'system') {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('*')
@@ -175,11 +175,12 @@ serve(async (req) => {
       }
     }
 
-    if (!themeData && !galleryThemeId && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
+    // Se a galeria não tiver um tema individual específico, sempre prioriza o tema personalizado do fotógrafo em gallery_themes
+    if (!themeData && !galleryThemeId && gallery.user_id) {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('*')
-        .eq('user_id', accountTheme.user_id)
+        .eq('user_id', gallery.user_id)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
