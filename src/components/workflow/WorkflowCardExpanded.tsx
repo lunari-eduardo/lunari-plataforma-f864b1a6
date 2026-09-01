@@ -76,6 +76,7 @@ export function WorkflowCardExpanded({
     | null
   >(null);
 
+  // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
   const { calc: extraCalc, resolvedGalleryId, isLoading: extraCalcLoading } =
     useGalleryExtraCalc(session.galeriaId || null, {
       sessionId: session.sessionId || null,
@@ -87,25 +88,26 @@ export function WorkflowCardExpanded({
     session.sessionId || null,
   );
 
+  const hasGaleria = fin.hasGaleria || Boolean(resolvedGalleryId);
+
   useEffect(() => {
     setDescontoValue(session.desconto || "");
     setAdicionalValue(session.valorAdicional || "");
     setObsValue(session.observacoes || "");
     setValorFotoExtraValue(session.valorFotoExtra || "");
-    
-    // Only set raw quantity if not overridden by the gallery calculation
-    if (!fin.hasGaleria && !resolvedGalleryId) {
-      setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
-    }
   }, [
     session.desconto,
     session.valorAdicional,
     session.observacoes,
     session.valorFotoExtra,
-    session.qtdFotosExtra,
-    fin.hasGaleria,
-    resolvedGalleryId,
   ]);
+
+  // Sincroniza a quantidade de fotos extras com a RPC ou dados da sessão
+  useEffect(() => {
+    if (session.extrasOverridden) return;
+    const resolvedQtd = fin.qtdExtras > 0 ? fin.qtdExtras : (Number(session.qtdFotosExtra) || 0);
+    setQtdFotosExtraValue(String(resolvedQtd));
+  }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
 
   const formatCurrency = useCallback((value: any) => {
     return `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
@@ -146,46 +148,14 @@ export function WorkflowCardExpanded({
     }
   }, [obsValue, session.observacoes, session.id, onFieldUpdate]);
 
-  // Pagamento rápido com escopo do excedente — declarado após `hasGaleria`.
-
-
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
 
-  // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
-  // `useGalleryExtraCalc` fica RESERVADO ao fluxo de cobrança (ExtraChargeModal /
-  // CombinedChargeModal) — provê `resolvedGalleryId` e `extras_necessarias/pagas`.
-  // Todo DISPLAY (totais, pendente, extras) vem de `useSessionFinancialsWithExtras`,
-  // que é a única fonte de verdade compartilhada com card colapsado, modal de
-  // pagamentos e CRM. Isso elimina divergência entre superfícies.
-  const { calc: extraCalc, resolvedGalleryId, isLoading: extraCalcLoading } =
-    useGalleryExtraCalc(session.galeriaId || null, {
-      sessionId: session.sessionId || null,
-    });
-
-  const fin = useSessionFinancialsWithExtras(
-    session.id,
-    session.galeriaId || resolvedGalleryId || null,
-    session.sessionId || null,
-  );
-
-  const hasGaleria = fin.hasGaleria || Boolean(resolvedGalleryId);
-  const extrasTotalCanonico = fin.extrasLiquido;
+  const fallbackExtrasTotal = (Number(session.qtdFotosExtra) || 0) * parseCurrency(String(session.valorFotoExtra || "0"));
+  const extrasTotalCanonico = fin.extrasLiquido > 0 ? fin.extrasLiquido : fallbackExtrasTotal;
   const extrasPagoCanonico = fin.extrasPago;
   const extrasPendente = fin.extrasPend;
   const extrasFullyPaid = fin.extrasPend <= 0.001;
   const valorFotoExtraTotal = formatCurrency(extrasTotalCanonico);
-
-  // Se o valor cru da sessão está zerado mas a RPC já resolveu a qtd pela
-  // galeria (seleção finalizada), reflete a RPC no input — o header do card
-  // já usa esse mesmo número. Só sincroniza quando NÃO há override manual.
-  useEffect(() => {
-    if (session.extrasOverridden) return;
-    const rpcQtd = fin.qtdExtras || 0;
-    const rawQtd = Number(session.qtdFotosExtra) || 0;
-    if (rpcQtd !== rawQtd) {
-      setQtdFotosExtraValue(String(rpcQtd));
-    }
-  }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
 
   // Totais visuais vêm da RPC com fallback resiliente para o snapshot local da sessão.
   const valorTotalFallback = parseCurrency(String(session.total || "0"));

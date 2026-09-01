@@ -545,6 +545,16 @@ export function useIntegracoes(): UseIntegracoesReturn {
           conectado_em: new Date().toISOString(),
         }, { onConflict: 'user_id,provedor' });
       if (error) throw error;
+      
+      // Sincronizar configuração de antecipação com a API do Asaas
+      try {
+        await supabase.functions.invoke('sync-asaas-anticipation', {
+          body: { automaticAnticipation: asaasSettingsParam.ireiAntecipar },
+        });
+      } catch (syncErr) {
+        console.warn('[useIntegracoes] sync-asaas-anticipation background error:', syncErr);
+      }
+
       toast.success('Asaas conectado com sucesso!');
       await fetchIntegracoes();
     } catch (error) {
@@ -563,11 +573,25 @@ export function useIntegracoes(): UseIntegracoesReturn {
         .eq('provedor', 'asaas')
         .single();
       if (fetchError || !existing) throw new Error('Integração Asaas não encontrada');
+      
       const { error } = await supabase
         .from('usuarios_integracoes')
         .update({ dados_extras: { ...(existing.dados_extras as Record<string, unknown>), ...newSettings } })
         .eq('id', existing.id);
       if (error) throw error;
+
+      // Sincronizar configuração de antecipação com a API do Asaas
+      try {
+        const { data: syncRes } = await supabase.functions.invoke('sync-asaas-anticipation', {
+          body: { automaticAnticipation: newSettings.ireiAntecipar },
+        });
+        if (syncRes && syncRes.error) {
+          toast.warning(`Asaas: ${syncRes.error}`);
+        }
+      } catch (syncErr) {
+        console.warn('[useIntegracoes] sync-asaas-anticipation background error:', syncErr);
+      }
+
       toast.success('Configurações do Asaas atualizadas');
       await fetchIntegracoes();
     } catch (error) {

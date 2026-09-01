@@ -1,5 +1,4 @@
-// ⚠️ PLATAFORMA LUNARI — webhook das assinaturas Lunari.
-// NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
+// ⚠️ PLATAFORMA LUNARI — webhook das assinaturas Lunari e cobranças de fotógrafos.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
 import { enrichClienteIfMissing } from "../_shared/enrich-cliente.ts";
@@ -96,7 +95,6 @@ const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
   combo_pro_select2k: { monthly: 4490, yearly: 45259 },
   combo_completo: { monthly: 6490, yearly: 66198 },
 };
-
 
 async function applyDowngrade(adminClient: any, subscription: any) {
   const newPlanType = subscription.pending_downgrade_plan;
@@ -292,7 +290,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.externalReference) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, valor_cobrado_cliente, total_parcelas, asaas_installment_id, dados_extras, user_id, galeria_id, finalidade")
       .eq("id", payment.externalReference)
       .maybeSingle();
     if (data) return data;
@@ -302,7 +300,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.installment) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, valor_cobrado_cliente, total_parcelas, asaas_installment_id, dados_extras, user_id, galeria_id, finalidade")
       .or(`asaas_installment_id.eq.${payment.installment},provider_order_id.eq.${payment.installment}`)
       .maybeSingle();
     if (data) return data;
@@ -312,7 +310,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.id) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, valor_principal, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .select("id, status, valor, valor_principal, valor_cobrado_cliente, total_parcelas, asaas_installment_id, dados_extras, user_id, galeria_id, finalidade")
       .or(`asaas_payment_id.eq.${payment.id},provider_order_id.eq.${payment.id},provider_transaction_id.eq.${payment.id},mp_payment_id.eq.${payment.id}`)
       .maybeSingle();
     if (data) return data;
@@ -321,56 +319,91 @@ async function findCobranca(adminClient: any, payment: any) {
   return null;
 }
 
+function getStatusRank(status: string | null | undefined): number {
+  switch (status?.toLowerCase()) {
+    case "pendente":
+    case "agendado":
+    case "aguardando":
+      return 1;
+    case "parcialmente_pago":
+      return 2;
+    case "confirmado":
+      return 3;
+    case "recebido":
+    case "antecipado":
+      return 4;
+    case "estornado":
+    case "restituido":
+    case "chargeback":
+    case "cancelado":
+    case "reprovado":
+      return 5;
+    default:
+      return 0;
+  }
+}
+
 async function upsertParcela(
   adminClient: any,
   cobrancaId: string,
   payment: any,
   status: string,
-  cobranca?: { valor: number; total_parcelas: number | null; valor_principal?: number }
+  cobranca?: any
 ) {
-  // REGRA: valor_bruto = valor nominal do fotógrafo por parcela, NUNCA payment.value (que pode estar inflado)
-  let valorBruto: number;
-  let valorPrincipal = null;
+  const totalParcelas = cobranca?.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
 
-  if (cobranca && cobranca.valor > 0) {
-    const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
-    valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
-    if (cobranca.valor_principal) {
-      valorPrincipal = Math.round((cobranca.valor_principal / totalParcelas) * 100) / 100;
-    } else {
-      valorPrincipal = valorBruto;
-    }
-  } else {
-    // Fallback: use payment.value only if we don't have cobranca data
-    valorBruto = payment.value || 0;
-    valorPrincipal = valorBruto;
-  }
+  // 1. Decomposição dos valores nominais e de repasse
+  const valorPrincipalCob = cobranca?.valor_principal ?? cobranca?.valor ?? payment.value ?? 0;
+  const valorCobradoCob = cobranca?.valor_cobrado_cliente ?? cobranca?.valor ?? payment.value ?? 0;
 
-  const valorLiquido = payment.netValue ?? null;
-  // When repassarTaxas=true, netValue > valorBruto → taxa = 0 (fotógrafo não paga)
-  const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
+  const valorPrincipalParcela = Math.round((Number(valorPrincipalCob) / totalParcelas) * 100) / 100;
+  const valorCobradoParcela = Math.round((Number(valorCobradoCob) / totalParcelas) * 100) / 100;
+  const valorRepassadoParcela = Math.max(0, Math.round((valorCobradoParcela - valorPrincipalParcela) * 100) / 100);
+
+  // 2. Valores reais transacionados pelo Asaas
+  const valorBrutoTransacionado = payment.value != null ? Number(payment.value) : valorCobradoParcela;
+  const valorLiquidoAsaas = payment.netValue != null ? Number(payment.netValue) : valorBrutoTransacionado;
+
+  // Taxa de processamento real retida pelo gateway
+  const taxaGatewayReal = Math.max(0, Math.round((valorBrutoTransacionado - valorLiquidoAsaas) * 100) / 100);
+
+  // 3. Guarda de ordem de status (Prevenção de downgrade por atraso de webhooks)
+  const { data: existingParcela } = await adminClient
+    .from("cobranca_parcelas")
+    .select("id, status, taxa_gateway, taxa_antecipacao, valor_liquido")
+    .eq("asaas_payment_id", payment.id)
+    .maybeSingle();
+
+  const currentRank = getStatusRank(existingParcela?.status);
+  const newRank = getStatusRank(status);
+  const finalStatus = currentRank > newRank ? existingParcela!.status : status;
 
   const parcelaData: Record<string, unknown> = {
     cobranca_id: cobrancaId,
     numero_parcela: payment.installmentNumber || 1,
     asaas_payment_id: payment.id,
-    valor_bruto: valorBruto,
-    valor_principal: valorPrincipal,
-    taxa_gateway: taxaGateway,
-    valor_liquido: valorLiquido,
-    status,
+    valor_bruto: valorPrincipalParcela, // Valor nominal comercial do serviço
+    valor_principal: valorPrincipalParcela,
+    valor_cobrado_cliente: valorCobradoParcela,
+    valor_repassado_cliente: valorRepassadoParcela,
+    taxa_gateway: taxaGatewayReal,
+    taxa_processamento_real: taxaGatewayReal,
+    valor_liquido: valorLiquidoAsaas,
+    valor_liquido_creditado: valorLiquidoAsaas,
+    status: finalStatus,
     billing_type: payment.billingType || null,
     data_vencimento: payment.dueDate || null,
     data_pagamento: payment.paymentDate || payment.confirmedDate || null,
+    data_pagamento_gateway: payment.paymentDate || payment.confirmedDate || null,
     data_credito: payment.creditDate || null,
     antecipado: payment.anticipated || false,
     updated_at: new Date().toISOString(),
   };
 
-  // Upsert by cobranca_id, numero_parcela
+  // Upsert com foco na chave única natural do Asaas
   const { error } = await adminClient
     .from("cobranca_parcelas")
-    .upsert(parcelaData, { onConflict: "cobranca_id, numero_parcela" })
+    .upsert(parcelaData, { onConflict: "asaas_payment_id" })
     .select()
     .maybeSingle();
 
@@ -378,7 +411,8 @@ async function upsertParcela(
     console.error(`Error upserting parcela ${payment.id}:`, error);
     return false;
   }
-  console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}, taxa=${taxaGateway}`);
+
+  console.log(`✅ Parcela ${payment.id} → status=${finalStatus}, principal=${valorPrincipalParcela}, repasse=${valorRepassadoParcela}, liqAsaas=${valorLiquidoAsaas}, taxa=${taxaGatewayReal}`);
   return true;
 }
 
@@ -410,19 +444,20 @@ Deno.serve(async (req) => {
     // ==========================================
     // PAYMENT EVENTS
     // ==========================================
-
     const PAYMENT_EVENTS = [
       "PAYMENT_CONFIRMED",
       "PAYMENT_RECEIVED",
       "PAYMENT_ANTICIPATED",
       "PAYMENT_REFUNDED",
+      "PAYMENT_PARTIALLY_REFUNDED",
       "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_CHARGEBACK_DISPUTE",
       "PAYMENT_DELETED",
     ];
 
     if (PAYMENT_EVENTS.includes(event) && payment) {
       if (payment.subscription) {
-        // --- SUBSCRIPTION PAYMENTS (unchanged logic) ---
+        // --- SUBSCRIPTION PAYMENTS ---
         if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
           const { data: sub } = await adminClient
             .from("subscriptions_asaas")
@@ -465,7 +500,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Find the parent cobranca
+        // Find parent cobranca
         const cobranca = await findCobranca(adminClient, payment);
 
         if (!cobranca) {
@@ -473,206 +508,149 @@ Deno.serve(async (req) => {
         } else {
           let upsertSuccess = false;
 
-          // Handle each event type
           if (event === "PAYMENT_CONFIRMED") {
             upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado", cobranca);
           } else if (event === "PAYMENT_RECEIVED") {
             upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido", cobranca);
           } else if (event === "PAYMENT_ANTICIPATED") {
-            // Update parcela with anticipation data
-            // REGRA: valor_bruto = valor nominal do fotógrafo por parcela
-            const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
-            const valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
-            let valorPrincipal = valorBruto;
-            if ((cobranca as any).valor_principal) {
-              valorPrincipal = Math.round(((cobranca as any).valor_principal / totalParcelas) * 100) / 100;
-            }
-            const valorLiquido = payment.netValue ?? null;
-            const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
-
-            const { data: existingParcela } = await adminClient
-              .from("cobranca_parcelas")
-              .select("taxa_gateway, valor_liquido")
-              .eq("asaas_payment_id", payment.id)
-              .maybeSingle();
-
-            let taxaAntecipacao = 0;
-            if (existingParcela && existingParcela.valor_liquido != null && valorLiquido != null) {
-              taxaAntecipacao = Math.max(0, Math.round((existingParcela.valor_liquido - valorLiquido) * 100) / 100);
-            }
-
-            const { error } = await adminClient
-              .from("cobranca_parcelas")
-              .upsert({
-                cobranca_id: cobranca.id,
-                numero_parcela: payment.installmentNumber || 1,
-                asaas_payment_id: payment.id,
-                valor_bruto: valorBruto,
-                valor_principal: valorPrincipal,
-                taxa_gateway: existingParcela?.taxa_gateway ?? taxaGateway,
-                taxa_antecipacao: taxaAntecipacao,
-                valor_liquido: valorLiquido,
-                status: "antecipado",
-                billing_type: payment.billingType || null,
-                data_vencimento: payment.dueDate || null,
-                data_pagamento: payment.paymentDate || null,
-                data_credito: payment.creditDate || null,
-                antecipado: true,
-                updated_at: new Date().toISOString(),
-              }, { onConflict: "cobranca_id, numero_parcela" })
-              .select()
-              .maybeSingle();
-
-            if (error) {
-              console.error(`Error upserting anticipated parcela:`, error);
-            } else {
-              console.log(`✅ Parcela ${payment.id} anticipated, taxa_antecipacao=${taxaAntecipacao}`);
-              upsertSuccess = true;
-            }
-          } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "antecipado", cobranca);
+          } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_PARTIALLY_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED" || event === "PAYMENT_CHARGEBACK_DISPUTE") {
             upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado", cobranca);
           } else if (event === "PAYMENT_DELETED") {
             upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado", cobranca);
           }
 
-          // Only mark as processed if upsert succeeded
           if (upsertSuccess && payment.id) {
             await markEventProcessed(adminClient, body.id || `${event}_${payment.id}`);
 
-            // Sincronizar status da cobranca principal
-            const parentStatus = (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED")
-              ? "pago"
-              : (event === "PAYMENT_REFUNDED")
-              ? "estornado"
-              : (event === "PAYMENT_CHARGEBACK_REQUESTED")
-              ? "chargeback"
-              : (event === "PAYMENT_DELETED")
-              ? "cancelado"
-              : null;
+            // Atualização de Metadados na Cobrança (data_credito e data_credito_real)
+            // OBS: Status e valor_liquido são consolidados pelo trigger reconcile_cobranca_from_parcelas!
+            const cobrancaMetaUpdate: Record<string, any> = {
+              updated_at: new Date().toISOString(),
+            };
+            if (payment.creditDate || payment.estimatedCreditDate) {
+              cobrancaMetaUpdate.data_credito = payment.creditDate || payment.estimatedCreditDate;
+            }
+            if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED") {
+              cobrancaMetaUpdate.data_credito_real = new Date().toISOString();
+            }
+            await adminClient.from("cobrancas").update(cobrancaMetaUpdate).eq("id", cobranca.id);
 
-            if (parentStatus) {
-              const cobrancaUpdate: Record<string, any> = {
-                status: parentStatus,
-                updated_at: new Date().toISOString(),
-              };
-              if (parentStatus === "pago") {
-                cobrancaUpdate.data_pagamento = new Date().toISOString();
-                
-                // FASE 1: Populando data de crédito para camada financeira
-                if (payment.creditDate || payment.estimatedCreditDate) {
-                  cobrancaUpdate.data_credito = payment.creditDate || payment.estimatedCreditDate;
-                }
-                if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED") {
-                  cobrancaUpdate.data_credito_real = new Date().toISOString();
-                }
+            // Gravação do Razão de Caixa do Gateway (gateway_cash_movements)
+            if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED" || event === "PAYMENT_ANTICIPATED") {
+              const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
+              const valorPrincipalCob = cobranca.valor_principal ?? cobranca.valor ?? payment.value ?? 0;
+              const valorCobradoCob = cobranca.valor_cobrado_cliente ?? cobranca.valor ?? payment.value ?? 0;
 
-                const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
+              const valorPrincipalParcela = Math.round((Number(valorPrincipalCob) / totalParcelas) * 100) / 100;
+              const valorCobradoParcela = Math.round((Number(valorCobradoCob) / totalParcelas) * 100) / 100;
+              const valorRepassadoParcela = Math.max(0, Math.round((valorCobradoParcela - valorPrincipalParcela) * 100) / 100);
 
-                if (payment.netValue) {
-                  if (totalParcelas > 1) {
-                    cobrancaUpdate.valor_liquido = Math.round(payment.netValue * totalParcelas * 100) / 100;
-                  } else {
-                    cobrancaUpdate.valor_liquido = payment.netValue;
-                  }
-                }
+              const valorBrutoTransacionado = payment.value != null ? Number(payment.value) : valorCobradoParcela;
+              const valorLiquidoAsaas = payment.netValue != null ? Number(payment.netValue) : valorBrutoTransacionado;
+              const taxaGatewayReal = Math.max(0, Math.round((valorBrutoTransacionado - valorLiquidoAsaas) * 100) / 100);
+
+              const { data: pData } = await adminClient
+                .from("cobranca_parcelas")
+                .select("id")
+                .eq("asaas_payment_id", payment.id)
+                .maybeSingle();
+
+              const movementDate = payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString();
+              const dueDate = payment.dueDate || null;
+              const competenceDate = payment.paymentDate || payment.confirmedDate || null;
+
+              // 1. Linha de Receita de Serviço (Valor Principal)
+              await adminClient.from("gateway_cash_movements").upsert({
+                provider: "asaas",
+                provider_transaction_id: `payment_${payment.id}_credit`,
+                cobranca_id: cobranca.id,
+                parcela_id: pData?.id || null,
+                movement_type: "credit",
+                amount: valorPrincipalParcela,
+                movement_date: movementDate,
+                due_date: dueDate,
+                competence_date: competenceDate,
+                description: `Crédito de serviço ${payment.id}`,
+              }, { onConflict: "provider, provider_transaction_id, movement_type" });
+
+              // 2. Linha de Repasse de Taxa Cobrado do Cliente (se houver gross-up)
+              if (valorRepassadoParcela > 0) {
+                await adminClient.from("gateway_cash_movements").upsert({
+                  provider: "asaas",
+                  provider_transaction_id: `payment_${payment.id}_pass_through`,
+                  cobranca_id: cobranca.id,
+                  parcela_id: pData?.id || null,
+                  movement_type: "pass_through",
+                  amount: valorRepassadoParcela,
+                  movement_date: movementDate,
+                  due_date: dueDate,
+                  competence_date: competenceDate,
+                  description: `Repasse de taxa cobrado do cliente ${payment.id}`,
+                }, { onConflict: "provider, provider_transaction_id, movement_type" });
               }
-              await adminClient.from("cobrancas").update(cobrancaUpdate).eq("id", cobranca.id);
 
-              // Disparo de e-mail e finalização de extras se aplicável
-              if (parentStatus === "pago") {
-                // Invocar finalize_gallery_payment para garantir sincronização de extras
-                if ((cobranca as any).galeria_id || (cobranca as any).finalidade === "fotos_extras" || (cobranca as any).finalidade === "sessao_e_extras") {
-                  try {
-                    await adminClient.rpc("finalize_gallery_payment", {
-                      p_cobranca_id: cobranca.id,
-                      p_paid_at: cobrancaUpdate.data_pagamento || new Date().toISOString(),
-                    });
-                    console.log(`[asaas-webhook] finalize_gallery_payment executado para cobranca=${cobranca.id}`);
-                  } catch (finalizeErr) {
-                    console.warn("[asaas-webhook] finalize_gallery_payment erro não impeditivo:", finalizeErr);
-                  }
-                }
-
-                // Registrar movimento de caixa (Fase 4 Financeiro) para parcelas Asaas
-                if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
-                  const totalParcelas = (cobranca as any).total_parcelas && (cobranca as any).total_parcelas > 0 ? (cobranca as any).total_parcelas : 1;
-                  const txTotal = payment.value || ((cobranca.valor || 0) / totalParcelas);
-                  const vLiquido = payment.netValue ?? txTotal;
-                  const taxaGateway = Math.max(0, Math.round((txTotal - vLiquido) * 100) / 100);
-                  
-                  const { data: pData } = await adminClient
-                    .from("cobranca_parcelas")
-                    .select("id")
-                    .eq("cobranca_id", cobranca.id)
-                    .eq("numero_parcela", payment.installmentNumber || 1)
-                    .maybeSingle();
-
-                  await adminClient.from("gateway_cash_movements").upsert({
-                    provider: "asaas",
-                    provider_transaction_id: `payment_${payment.id}_credit`,
-                    cobranca_id: cobranca.id,
-                    parcela_id: pData?.id || null,
-                    movement_type: "credit",
-                    amount: txTotal,
-                    movement_date: payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString(),
-                    description: `Crédito de pagamento ${payment.id}`,
-                  }, { onConflict: "provider, provider_transaction_id, movement_type" });
-                  
-                  if (taxaGateway > 0) {
-                    await adminClient.from("gateway_cash_movements").upsert({
-                      provider: "asaas",
-                      provider_transaction_id: `payment_${payment.id}_fee`,
-                      cobranca_id: cobranca.id,
-                      parcela_id: pData?.id || null,
-                      movement_type: "fee",
-                      amount: -taxaGateway,
-                      movement_date: payment.creditDate || payment.paymentDate || payment.confirmedDate || new Date().toISOString(),
-                      description: `Taxa de processamento ${payment.id}`,
-                    }, { onConflict: "provider, provider_transaction_id, movement_type" });
-                  }
-                }
-
-                try {
-                  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-                  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-                  fetch(`${supabaseUrl}/functions/v1/send-email`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${serviceRoleKey}`,
-                    },
-                    body: JSON.stringify({
-                      eventType: "payment_confirmed",
-                      paymentId: cobranca.id,
-                      galleryId: (cobranca as any).galeria_id || undefined,
-                    }),
-                  }).catch((e) => console.warn("[asaas-webhook] send-email async error:", e));
-                } catch (e) {
-                  console.warn("[asaas-webhook] send-email error:", e);
-                }
+              // 3. Linha de Taxa de Processamento do Gateway
+              if (taxaGatewayReal > 0) {
+                await adminClient.from("gateway_cash_movements").upsert({
+                  provider: "asaas",
+                  provider_transaction_id: `payment_${payment.id}_fee`,
+                  cobranca_id: cobranca.id,
+                  parcela_id: pData?.id || null,
+                  movement_type: "fee",
+                  amount: -taxaGatewayReal,
+                  movement_date: movementDate,
+                  due_date: dueDate,
+                  competence_date: competenceDate,
+                  description: `Taxa de processamento ${payment.id}`,
+                }, { onConflict: "provider, provider_transaction_id, movement_type" });
               }
+            }
+
+            // Disparo de finalização de extras se aplicável
+            if (cobranca.galeria_id || cobranca.finalidade === "fotos_extras" || cobranca.finalidade === "sessao_e_extras") {
+              try {
+                await adminClient.rpc("finalize_gallery_payment", {
+                  p_cobranca_id: cobranca.id,
+                  p_paid_at: new Date().toISOString(),
+                });
+                console.log(`[asaas-webhook] finalize_gallery_payment executado para cobranca=${cobranca.id}`);
+              } catch (finalizeErr) {
+                console.warn("[asaas-webhook] finalize_gallery_payment erro não impeditivo:", finalizeErr);
+              }
+            }
+
+            // Disparo de e-mail assíncrono
+            try {
+              const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+              const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+              fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${serviceRoleKey}`,
+                },
+                body: JSON.stringify({
+                  eventType: "payment_confirmed",
+                  paymentId: cobranca.id,
+                  galleryId: cobranca.galeria_id || undefined,
+                }),
+              }).catch((e) => console.warn("[asaas-webhook] send-email async error:", e));
+            } catch (e) {
+              console.warn("[asaas-webhook] send-email error:", e);
+            }
+
+            // CRM Enrich
+            if ((event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") && payment.customer && cobranca.user_id) {
+              await enrichClienteFromAsaasPayment(
+                adminClient,
+                cobranca.id,
+                payment.customer,
+                cobranca.user_id,
+              );
             }
           }
 
-          // Enrich cliente do CRM a partir do customer no Asaas (fire-and-forget)
-          if (
-            upsertSuccess &&
-            (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") &&
-            payment.customer &&
-            (cobranca as any).user_id
-          ) {
-            await enrichClienteFromAsaasPayment(
-              adminClient,
-              cobranca.id,
-              payment.customer,
-              (cobranca as any).user_id,
-            );
-          }
-
-          // Hard-fail: se identificamos a cobrança mas não conseguimos gravar
-          // a parcela (ex.: constraint faltando, RLS, timeout), retornamos 500
-          // para que o Asaas reentregue o webhook. Silenciar aqui deixa a
-          // cobrança presa em "pendente" mesmo depois do pagamento confirmado.
           if (!upsertSuccess) {
             console.error(
               `❌ Webhook ${event} não persistiu parcela | cobranca=${cobranca.id} payment=${payment.id}`,
@@ -718,7 +696,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // We need to find the related payment/installment
       const cobranca = anticipation.payment ? await findCobranca(adminClient, { id: anticipation.payment }) : null;
       let parcelaId = null;
 
@@ -726,7 +703,6 @@ Deno.serve(async (req) => {
         const { data: pData } = await adminClient
           .from("cobranca_parcelas")
           .select("id")
-          .eq("cobranca_id", cobranca.id)
           .eq("asaas_payment_id", anticipation.payment)
           .maybeSingle();
         parcelaId = pData?.id || null;
@@ -748,8 +724,8 @@ Deno.serve(async (req) => {
         cobranca_id: cobranca?.id || null,
         parcela_id: parcelaId,
         status: mappedStatus,
-        fee: anticipation.fee || 0,
-        net_value: anticipation.netValue || 0,
+        fee: Number(anticipation.fee) || 0,
+        net_value: Number(anticipation.netValue) || 0,
         request_date: anticipation.anticipationDate || null,
         credit_date: mappedStatus === "CREDITED" ? (anticipation.creditDate || new Date().toISOString()) : null,
         updated_at: new Date().toISOString(),
@@ -764,30 +740,39 @@ Deno.serve(async (req) => {
       } else {
         await markEventProcessed(adminClient, body.id || `${event}_${anticipation.id}`);
         
-        // Se creditado, gerar movimento de caixa (flag interna)
+        // Se creditado, atualizar parcela e registrar movimento de taxa de antecipação
         if (mappedStatus === "CREDITED") {
-          await adminClient.from("gateway_cash_movements").upsert({
-            provider: "asaas",
-            provider_transaction_id: `anticipation_${anticipation.id}_credit`,
-            cobranca_id: cobranca?.id || null,
-            parcela_id: parcelaId,
-            anticipation_id: null, // we'd need to query the inserted ID
-            movement_type: "credit",
-            amount: anticipation.netValue || 0,
-            movement_date: anticipation.creditDate || new Date().toISOString(),
-            description: `Crédito de antecipação ${anticipation.id}`,
-          }, { onConflict: "provider, provider_transaction_id, movement_type" });
-          
-          await adminClient.from("gateway_cash_movements").upsert({
-            provider: "asaas",
-            provider_transaction_id: `anticipation_${anticipation.id}_fee`,
-            cobranca_id: cobranca?.id || null,
-            parcela_id: parcelaId,
-            movement_type: "fee",
-            amount: -(anticipation.fee || 0),
-            movement_date: anticipation.creditDate || new Date().toISOString(),
-            description: `Taxa de antecipação ${anticipation.id}`,
-          }, { onConflict: "provider, provider_transaction_id, movement_type" });
+          const antCreditDate = anticipation.creditDate || new Date().toISOString();
+          const antFee = Number(anticipation.fee) || 0;
+
+          if (parcelaId) {
+            await adminClient
+              .from("cobranca_parcelas")
+              .update({
+                antecipado: true,
+                status: "antecipado",
+                taxa_antecipacao: antFee,
+                taxa_antecipacao_real: antFee,
+                data_credito: antCreditDate,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", parcelaId);
+          }
+
+          if (antFee > 0) {
+            await adminClient.from("gateway_cash_movements").upsert({
+              provider: "asaas",
+              provider_transaction_id: `anticipation_${anticipation.id}_fee`,
+              cobranca_id: cobranca?.id || null,
+              parcela_id: parcelaId,
+              movement_type: "fee",
+              amount: -antFee,
+              movement_date: antCreditDate,
+              due_date: null,
+              competence_date: antCreditDate,
+              description: `Taxa de antecipação ${anticipation.id}`,
+            }, { onConflict: "provider, provider_transaction_id, movement_type" });
+          }
         }
       }
     }
@@ -806,7 +791,7 @@ Deno.serve(async (req) => {
     }
 
     // ==========================================
-    // SUBSCRIPTION EVENTS (unchanged)
+    // SUBSCRIPTION EVENTS
     // ==========================================
     if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {
       const subId = subscription?.id || body.id;
@@ -843,43 +828,54 @@ Deno.serve(async (req) => {
     if (event === "SUBSCRIPTION_RENEWED") {
       const subId = subscription?.id || body.id;
       if (subId) {
-        const { data: sub } = await adminClient
-          .from("subscriptions_asaas")
-          .select("*")
-          .eq("asaas_subscription_id", subId)
-          .single();
+        const alreadyProcessed = await checkAndLogEvent(
+          adminClient,
+          event,
+          body.id || `sub_renew_${subId}_${new Date().toISOString().slice(0, 10)}`,
+          body
+        );
 
-        const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
-        const nextPeriodEnd = new Date();
-        nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
+        if (!alreadyProcessed) {
+          const { data: sub } = await adminClient
+            .from("subscriptions_asaas")
+            .select("*")
+            .eq("asaas_subscription_id", subId)
+            .single();
 
-        await adminClient
-          .from("subscriptions_asaas")
-          .update({
-            status: "ACTIVE",
-            next_due_date: nextPeriodEnd.toISOString().split("T")[0],
-          })
-          .eq("asaas_subscription_id", subId);
+          const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
+          const nextPeriodEnd = new Date();
+          nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
 
-        console.log("Subscription renewed:", subId);
+          await adminClient
+            .from("subscriptions_asaas")
+            .update({
+              status: "ACTIVE",
+              next_due_date: nextPeriodEnd.toISOString().split("T")[0],
+            })
+            .eq("asaas_subscription_id", subId);
 
-        if (sub) {
-          const subCredits = PLAN_SUBSCRIPTION_CREDITS[sub.plan_type];
-          if (subCredits && subCredits > 0) {
-            const { error: creditError } = await adminClient.rpc("renew_subscription_credits", {
-              _user_id: sub.user_id,
-              _amount: subCredits,
-            });
-            if (creditError) {
-              console.error("Failed to renew subscription credits:", creditError);
-            } else {
-              console.log(`Renewed ${subCredits} subscription credits for user ${sub.user_id}`);
+          console.log("Subscription renewed:", subId);
+
+          if (sub) {
+            const subCredits = PLAN_SUBSCRIPTION_CREDITS[sub.plan_type];
+            if (subCredits && subCredits > 0) {
+              const { error: creditError } = await adminClient.rpc("renew_subscription_credits", {
+                _user_id: sub.user_id,
+                _amount: subCredits,
+              });
+              if (creditError) {
+                console.error("Failed to renew subscription credits:", creditError);
+              } else {
+                console.log(`Renewed ${subCredits} subscription credits for user ${sub.user_id}`);
+              }
+            }
+
+            if (sub.pending_downgrade_plan) {
+              await applyDowngrade(adminClient, sub);
             }
           }
 
-          if (sub.pending_downgrade_plan) {
-            await applyDowngrade(adminClient, sub);
-          }
+          await markEventProcessed(adminClient, body.id || `sub_renew_${subId}_${new Date().toISOString().slice(0, 10)}`);
         }
       }
     }
