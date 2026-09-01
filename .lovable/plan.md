@@ -162,13 +162,13 @@ Nada é apagado. Migração em 3 passos, com tabela de backup `backup_financeiro
 Colunas novas, CHECK da invariante, `competence_date`, índice `asaas_payment_id` como conflict target, função `payment_status_rank`.
 
 **Fase 2 — Webhook (núcleo)**
-Reescrever a persistência de valores: `valor_principal`/`valor_repassado_cliente`/`valor_cobrado_cliente`/`taxa_processamento_real`/`valor_liquido_creditado`; remover cálculo de taxa por diferença; separar datas; guarda de ordem; idempotência em todos os handlers; tratar eventos hoje ignorados.
+Reescrever a persistência de valores: `valor_principal`/`valor_repassado_cliente`/`valor_cobrado_cliente`/`taxa_processamento_real`/`valor_liquido_creditado`; remover cálculo de taxa por diferença; separar datas; guarda de ordem; idempotência em todos os handlers; tratar eventos hoje ignorados. **Eliminar o escritor duplo de `cobrancas.valor_liquido`**: o webhook deixa de escrever essa coluna e o trigger `reconcile_cobranca_from_parcelas()` passa a ser a única fonte, somando `valor_liquido_creditado` das parcelas.
 
 **Fase 3 — Antecipação real**
 Edge function de sincronização de `creditCardAutomaticEnabled`; handlers `RECEIVABLE_ANTICIPATION_*` gravando `gateway_anticipations` + `anticipation_fee` em `gateway_cash_movements`; reversão em `CANCELLED`/`DEBITED`.
 
 **Fase 4 — Extrato e views**
-Reescrever `extrato_unificado`: uma única fonte de caixa (`gateway_cash_movements`), removendo os branches 1 e 3 para pagamentos de gateway; nova natureza `recuperacao_taxa`; `data` = vencimento/competência e `movement_date` exposto como "crédito previsto/real".
+Reescrever `extrato_unificado`: uma única fonte de caixa (`gateway_cash_movements`), removendo os branches 1 e 3 para pagamentos de gateway; nova natureza `recuperacao_taxa`; `data` = vencimento/competência e `movement_date` exposto como "crédito previsto/real". Corrigir `workflow_month_metrics.caixa_recebido` para somar crédito **líquido** em vez de bruto (N8).
 
 **Fase 5 — Workflow**
 Corrigir `WorkflowCardExpanded` (fallback igual ao collapsed, remover hooks duplicados). Garantir que métricas comerciais leiam **apenas** `clientes_sessoes.valor_total`.
