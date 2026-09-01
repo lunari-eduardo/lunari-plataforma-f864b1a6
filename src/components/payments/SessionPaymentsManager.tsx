@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown, Camera, Layers, ShoppingBag, Wallet } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown, ChevronUp, Camera, Layers, ShoppingBag, Wallet } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
@@ -38,7 +38,7 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** "Cobrar tudo": abre UM único modal (finalidade `sessao_e_extras`, link único). */
+  /** "Cobrar tudo": abre UM Ãºnico modal (finalidade `sessao_e_extras`, link Ãºnico). */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
@@ -73,9 +73,9 @@ export function SessionPaymentsManager({
       const obs = (p.observacoes || '').toLowerCase();
       if (!finalidade) {
         if (tipo === 'estorno' || statusPagamento === 'estornado') finalidade = 'estorno';
-        else if (origem === 'credito' || obs.includes('crédito do cliente')) finalidade = 'credito';
+        else if (origem === 'credito' || obs.includes('crÃ©dito do cliente')) finalidade = 'credito';
         else if (/(foto[s]?\s+extra|\[extras)/i.test(obs)) finalidade = 'fotos_extras';
-        else if (/(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) finalidade = 'sessao_e_extras';
+        else if (/(sess[Ã£a]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) finalidade = 'sessao_e_extras';
         else if (/(sinal|entrada|arras|reserva)/i.test(obs)) finalidade = 'sinal';
         else if (/(venda\s+avulsa|avulso)/i.test(obs)) finalidade = 'avulso';
         else finalidade = 'sessao';
@@ -117,9 +117,9 @@ export function SessionPaymentsManager({
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
-  // Painel financeiro composto — combina RPC da sessão + snapshot canônico da
-  // galeria (desconto progressivo). Mesma lógica usada nos cards do Workflow,
-  // eliminando divergências entre card e modal (fotos extras invisíveis, etc.).
+  // Painel financeiro composto â€” combina RPC da sessÃ£o + snapshot canÃ´nico da
+  // galeria (desconto progressivo). Mesma lÃ³gica usada nos cards do Workflow,
+  // eliminando divergÃªncias entre card e modal (fotos extras invisÃ­veis, etc.).
   const fin = useSessionFinancialsWithExtras(
     sessionData.id,
     sessionData.galeriaId,
@@ -147,9 +147,9 @@ export function SessionPaymentsManager({
   // Removed: useEffect that called onPaymentUpdate on every payments change.
   // valor_pago is now managed entirely by DB triggers. No frontend sync needed.
 
-  // Reconciliação de fallback: quando o painel abre, varre TODAS as cobranças
-  // pendentes/parcialmente pagas desta sessão e aciona `check-payment-status`
-  // para cada uma. Cobre o cenário em que o webhook (InfinitePay/Mercado Pago)
+  // ReconciliaÃ§Ã£o de fallback: quando o painel abre, varre TODAS as cobranÃ§as
+  // pendentes/parcialmente pagas desta sessÃ£o e aciona `check-payment-status`
+  // para cada uma. Cobre o cenÃ¡rio em que o webhook (InfinitePay/Mercado Pago)
   // falhou silenciosamente e o front continua vendo "pendente".
   useEffect(() => {
     const isVisible = displayMode === 'card' || isOpen === true;
@@ -186,7 +186,7 @@ export function SessionPaymentsManager({
     };
   }, [displayMode, isOpen, sessionData?.id, sessionData?.sessionId]);
 
-  // Badges neutros (Silent Luxury): superfície discreta + tipografia semântica.
+  // Badges neutros (Silent Luxury): superfÃ­cie discreta + tipografia semÃ¢ntica.
   const BADGE_BASE = 'border-border/20 bg-muted/40 font-medium';
   const BADGE_OK = `${BADGE_BASE} text-emerald-600 dark:text-emerald-500`;
   const BADGE_WARN = `${BADGE_BASE} text-accent-gold`;
@@ -226,12 +226,12 @@ export function SessionPaymentsManager({
   };
 
 
-  // Helper para obter a finalidade/motivo funcional do pagamento (Sinal, Sessão, Extras, etc.)
+  // Helper para obter a finalidade/motivo funcional do pagamento (Sinal, SessÃ£o, Extras, etc.)
   const getPaymentOriginInfo = (payment: SessionPaymentExtended) => {
     const finalidade = payment.finalidade;
     const obs = payment.observacoes || '';
     const isEstorno = payment.tipo === 'estorno' || payment.statusPagamento === 'estornado' || finalidade === 'estorno';
-    const isCredito = payment.origem === 'credito' || finalidade === 'credito' || obs.toLowerCase().includes('crédito do cliente');
+    const isCredito = payment.origem === 'credito' || finalidade === 'credito' || obs.toLowerCase().includes('crÃ©dito do cliente');
 
     if (isEstorno) {
       return {
@@ -242,7 +242,7 @@ export function SessionPaymentsManager({
     }
     if (isCredito) {
       return {
-        label: 'Crédito',
+        label: 'CrÃ©dito',
         badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
         icon: <CreditCard className="h-3 w-3 text-emerald-600" />
       };
@@ -254,9 +254,9 @@ export function SessionPaymentsManager({
         icon: <Images className="h-3 w-3 text-purple-600 dark:text-purple-400" />
       };
     }
-    if (finalidade === 'sessao_e_extras' || /(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) {
+    if (finalidade === 'sessao_e_extras' || /(sess[Ã£a]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) {
       return {
-        label: 'Sessão + Extras',
+        label: 'SessÃ£o + Extras',
         badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
         icon: <Layers className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
       };
@@ -281,9 +281,9 @@ export function SessionPaymentsManager({
         icon: <ShoppingBag className="h-3 w-3 text-amber-600 dark:text-amber-400" />
       };
     }
-    // Padrão: Sessão / Pacote
+    // PadrÃ£o: SessÃ£o / Pacote
     return {
-      label: 'Sessão',
+      label: 'SessÃ£o',
       badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
       icon: <Camera className="h-3 w-3 text-blue-600 dark:text-blue-400" />
     };
@@ -295,8 +295,8 @@ export function SessionPaymentsManager({
     const obs = observacoes || '';
     const forma = forma_pagamento || '';
 
-    if (origem === 'credito' || obs.toLowerCase().includes('crédito do cliente')) {
-      return { label: 'Crédito do cliente', icon: <CreditCard className="h-3 w-3 text-emerald-600" /> };
+    if (origem === 'credito' || obs.toLowerCase().includes('crÃ©dito do cliente')) {
+      return { label: 'CrÃ©dito do cliente', icon: <CreditCard className="h-3 w-3 text-emerald-600" /> };
     }
     if (origem === 'infinitepay' || obs.toLowerCase().includes('infinitepay')) {
       return { label: 'InfinitePay', icon: <Link2 className="h-3 w-3 text-green-600" /> };
@@ -330,8 +330,8 @@ export function SessionPaymentsManager({
     }
   };
 
-  // Valores autoritativos combinam DB (sessão) + RPC canônica da galeria.
-  // Fallback ao `sessionData.total` só em cold-start extremo (SSR/edge).
+  // Valores autoritativos combinam DB (sessÃ£o) + RPC canÃ´nica da galeria.
+  // Fallback ao `sessionData.total` sÃ³ em cold-start extremo (SSR/edge).
   const valorTotalFallback =
     typeof sessionData.total === 'number'
       ? sessionData.total
@@ -342,7 +342,7 @@ export function SessionPaymentsManager({
   const valorRestanteSessao = fin.totalVisual > 0 ? fin.pendenteSess : valorRestante;
 
   const showExtrasChip = fin.hasGaleria && fin.extrasIdeal > 0;
-  // Modo card (perfil do cliente): Total/Cobrado já aparecem no cabeçalho da linha.
+  // Modo card (perfil do cliente): Total/Cobrado jÃ¡ aparecem no cabeÃ§alho da linha.
   const isCard = displayMode === 'card';
   const showTotalChip = !isCard;
   const showCobradoChip = !isCard || Math.abs(totalPago - totalRecebido) > 0.001;
@@ -360,14 +360,230 @@ export function SessionPaymentsManager({
 
 
   const canCobrarSessao = valorRestanteSessao > 0.001;
-  // Extras podem existir com galeria (cálculo formal) OU sem galeria (entrada manual)
+  // Extras podem existir com galeria (cÃ¡lculo formal) OU sem galeria (entrada manual)
   const canCobrarExtras = fin.extrasPend > 0.001;
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
   const handleCobrarTudo = () => {
-    // Link único combinando sessão + extras (finalidade `sessao_e_extras`).
+    // Link Ãºnico combinando sessÃ£o + extras (finalidade `sessao_e_extras`).
     setShowCombinedChargeModal(true);
   };
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (cobrancaId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [cobrancaId]: !prev[cobrancaId] }));
+  };
+
+  const groupedPayments = useMemo(() => {
+    const result: any[] = [];
+    const groups = new Map<string, SessionPaymentExtended[]>();
+
+    const validPayments = payments.filter(p => p.valor !== undefined);
+
+    validPayments.forEach(p => {
+      if (p.cobrancaId && (p.totalParcelas || 1) > 1 && p.tipo !== 'estorno') {
+        if (!groups.has(p.cobrancaId)) {
+          groups.set(p.cobrancaId, []);
+        }
+        groups.get(p.cobrancaId)!.push(p);
+      } else {
+        result.push(p);
+      }
+    });
+
+    groups.forEach((group, cobrancaId) => {
+      const first = group[0];
+      const totalGroupValue = group.reduce((sum, p) => sum + p.valor, 0);
+      const pagas = group.filter(p => p.statusPagamento === 'pago' || p.statusPagamento === 'antecipado').length;
+      const allPaid = pagas === group.length;
+
+      result.push({
+        ...first,
+        id: `group_${cobrancaId}`,
+        cobrancaId: cobrancaId,
+        valor: totalGroupValue,
+        statusPagamento: allPaid ? 'pago' : (pagas > 0 ? 'pendente' : first.statusPagamento),
+        numeroParcela: undefined,
+        totalParcelas: group.length,
+        isGrouped: true,
+        pagasCount: pagas,
+        totalCount: group.length,
+        groupedItems: group.sort((a, b) => (a.numeroParcela || 0) - (b.numeroParcela || 0)), 
+      });
+    });
+
+    return result.sort((a, b) => {
+      const timestampA = a.createdAt || a.dataVencimento || a.data || '';
+      const timestampB = b.createdAt || b.dataVencimento || b.data || '';
+      return timestampB.localeCompare(timestampA);
+    });
+  }, [payments]);
+
+  const renderPaymentRow = (payment: any, isChild: boolean) => (
+    <TableRow key={payment.id} className={isChild ? "bg-muted/5 opacity-90 border-l-2 border-l-blue-400" : ""}>
+      <TableCell className={isChild ? "pl-8" : ""}>
+        <div className="space-y-1">
+          {(payment.statusPagamento === 'pago' || payment.tipo === 'estorno' || payment.statusPagamento === 'antecipado') && (payment.createdAt || payment.data) && (
+            <div className="flex items-center gap-1 text-sm">
+              {payment.tipo === 'estorno' ? (
+                <RotateCcw className="h-3 w-3 text-destructive" />
+              ) : (
+                <CheckCircle2 className="h-3 w-3 text-green-600" />
+              )}
+              <span className="font-medium">
+                {formatDateTimeForDisplay(payment.createdAt || payment.data)}
+              </span>
+            </div>
+          )}
+          {payment.dataVencimento && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>Venc: {formatDateForDisplay(payment.dataVencimento)}</span>
+            </div>
+          )}
+          {payment.numeroParcela && (
+            <div className="text-xs text-muted-foreground">
+              Parcela {payment.numeroParcela}/{payment.totalParcelas}
+            </div>
+          )}
+          {payment.dataCreditoPrevista && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <DollarSign className="h-3 w-3 text-primary" />
+              <span>
+                {payment.dataCreditoReal 
+                  ? `Creditado: ${formatDateForDisplay(payment.dataCreditoReal)}`
+                  : `Crédito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
+                }
+              </span>
+            </div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <span className={`font-semibold ${
+          payment.tipo === 'estorno' ? 'text-red-600 line-through' : 
+          (payment.statusPagamento === 'pago' || payment.statusPagamento === 'antecipado') ? 'text-green-600' : 'text-yellow-600'
+        }`}>
+          {payment.tipo === 'estorno' ? '-' : ''}{formatCurrency(payment.valor)}
+        </span>
+        {payment.valorLiquido != null && payment.valorLiquido < payment.valor && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Líquido: {formatCurrency(payment.valorLiquido)}
+            {payment.taxaTotal != null && payment.taxaTotal > 0 && ` (taxa: ${formatCurrency(payment.taxaTotal)})`}
+            {payment.taxaAntecipacao != null && payment.taxaAntecipacao > 0 && (
+              <span className="block">Antecipação: {formatCurrency(payment.taxaAntecipacao)}</span>
+            )}
+          </p>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          {String(payment.tipo || '').toLowerCase() !==
+            String(payment.statusPagamento || '').toLowerCase() && (
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
+              {payment.tipo}
+            </div>
+          )}
+          {getStatusBadge(payment)}
+        </div>
+      </TableCell>
+
+      <TableCell>
+        {(() => {
+          const originInfo = getPaymentOriginInfo(payment);
+          const providerInfo = getProviderInfo(payment);
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-2xs font-medium border ${originInfo.badgeClass}`}>
+                {originInfo.icon}
+                <span>{originInfo.label}</span>
+              </span>
+              <div className="flex items-center gap-1 text-2xs text-muted-foreground pl-0.5">
+                {providerInfo.icon}
+                <span>{providerInfo.label}</span>
+              </div>
+            </div>
+          );
+        })()}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          {payment.statusPagamento === 'pendente' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => markAsPaid(payment.id)}
+              className="h-8 w-8 p-0"
+            >
+              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+            </Button>
+          )}
+          {payment.editavel && payment.statusPagamento !== 'pago' && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditingPayment(payment)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => deletePayment(payment.id)}
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+            </>
+          )}
+          {payment.statusPagamento === 'pago' && payment.editavel && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditingPayment(payment)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPaymentToRefund(payment)}
+                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                title="Estornar pagamento"
+              >
+                <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => deletePayment(payment.id)}
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                title="Excluir registro (lançamento manual)"
+              >
+                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+            </>
+          )}
+          {payment.statusPagamento === 'pago' && !payment.editavel && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setPaymentToRefund(payment)}
+              className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+              title="Estornar pagamento"
+            >
+              <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+            </Button>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 
   // Shared content
   const content = (
@@ -385,7 +601,7 @@ export function SessionPaymentsManager({
             {showExtrasChip && (
               <>
                 <div>
-                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Base sessão</p>
+                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Base sessÃ£o</p>
                   <p className="font-semibold text-foreground text-xs sm:text-sm">{formatCurrency(fin.baseSessao)}</p>
                 </div>
                 <div>
@@ -394,7 +610,7 @@ export function SessionPaymentsManager({
                     {formatCurrency(fin.extrasIdeal)}
                   </p>
                   <p className="text-2xs text-muted-foreground">
-                    Pago {formatCurrency(fin.extrasPago)} · Pend {formatCurrency(fin.extrasPend)}
+                    Pago {formatCurrency(fin.extrasPago)} Â· Pend {formatCurrency(fin.extrasPend)}
                   </p>
                 </div>
               </>
@@ -431,7 +647,7 @@ export function SessionPaymentsManager({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <CardTitle className={isCard ? 'text-xs font-semibold flex items-center gap-2' : 'text-sm md:text-lg font-semibold flex items-center gap-2'}>
               <CreditCard className={isCard ? 'h-3.5 w-3.5 text-accent-gold' : 'h-4 w-4 md:h-5 md:w-5 text-primary'} />
-              Histórico de Movimentações
+              HistÃ³rico de MovimentaÃ§Ãµes
             </CardTitle>
 
             <div className="flex gap-2 w-full sm:w-auto">
@@ -456,7 +672,7 @@ export function SessionPaymentsManager({
                     >
                       <Send className="h-3.5 w-3.5 mr-2" />
                       <div className="flex-1">
-                        <div className="text-xs font-medium">Cobrar sessão</div>
+                        <div className="text-xs font-medium">Cobrar sessÃ£o</div>
                         <div className="text-2xs text-muted-foreground">{formatCurrency(valorRestanteSessao)}</div>
                       </div>
                     </DropdownMenuItem>
@@ -478,7 +694,7 @@ export function SessionPaymentsManager({
                           <div className="flex-1">
                             <div className="text-xs font-medium">Cobrar tudo</div>
                             <div className="text-2xs text-muted-foreground">
-                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 1 link único
+                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} Â· 1 link Ãºnico
                             </div>
                           </div>
                         </DropdownMenuItem>
@@ -524,7 +740,7 @@ export function SessionPaymentsManager({
             <div className="text-center py-8 text-muted-foreground">
               <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum pagamento registrado</p>
-              <p className="text-sm">Clique em "Adicionar Pagamento" para começar</p>
+              <p className="text-sm">Clique em "Adicionar Pagamento" para comeÃ§ar</p>
             </div>
           ) : (
             <div className="-mx-2 px-2 overflow-y-auto max-h-[350px]">
@@ -535,13 +751,13 @@ export function SessionPaymentsManager({
                     <TableHead className="text-xs md:text-sm">Valor</TableHead>
                     <TableHead className="text-xs md:text-sm">Tipo / Status</TableHead>
                     <TableHead className="text-xs md:text-sm">Origem</TableHead>
-                    <TableHead className="text-right text-xs md:text-sm">Ações</TableHead>
+                    <TableHead className="text-right text-xs md:text-sm">AÃ§Ãµes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payments
                     .sort((a, b) => {
-                      // Ordenar por timestamp completo (createdAt) para precisão por hora
+                      // Ordenar por timestamp completo (createdAt) para precisÃ£o por hora
                       const timestampA = a.createdAt || a.dataVencimento || a.data || '';
                       const timestampB = b.createdAt || b.dataVencimento || b.data || '';
                       return timestampB.localeCompare(timestampA);
@@ -579,7 +795,7 @@ export function SessionPaymentsManager({
                                 <span>
                                   {payment.dataCreditoReal 
                                     ? `Creditado: ${formatDateForDisplay(payment.dataCreditoReal)}`
-                                    : `Crédito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
+                                    : `CrÃ©dito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
                                   }
                                 </span>
                               </div>
@@ -595,17 +811,17 @@ export function SessionPaymentsManager({
                           </span>
                           {payment.valorLiquido != null && payment.valorLiquido < payment.valor && (
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Líquido: {formatCurrency(payment.valorLiquido)}
+                              LÃ­quido: {formatCurrency(payment.valorLiquido)}
                               {payment.taxaTotal != null && payment.taxaTotal > 0 && ` (taxa: ${formatCurrency(payment.taxaTotal)})`}
                               {payment.taxaAntecipacao != null && payment.taxaAntecipacao > 0 && (
-                                <span className="block">Antecipação: {formatCurrency(payment.taxaAntecipacao)}</span>
+                                <span className="block">AntecipaÃ§Ã£o: {formatCurrency(payment.taxaAntecipacao)}</span>
                               )}
                             </p>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            {/* Só exibe o "tipo" quando ele acrescenta informação além do badge */}
+                            {/* SÃ³ exibe o "tipo" quando ele acrescenta informaÃ§Ã£o alÃ©m do badge */}
                             {String(payment.tipo || '').toLowerCase() !==
                               String(payment.statusPagamento || '').toLowerCase() && (
                               <div className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -690,7 +906,7 @@ export function SessionPaymentsManager({
                                   variant="ghost"
                                   onClick={() => deletePayment(payment.id)}
                                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                  title="Excluir registro (lançamento manual)"
+                                  title="Excluir registro (lanÃ§amento manual)"
                                 >
                                   <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
@@ -756,7 +972,7 @@ export function SessionPaymentsManager({
         }}
       />
 
-      {/* Charge Modal (sessão isolada) */}
+      {/* Charge Modal (sessÃ£o isolada) */}
       <ChargeModal
         isOpen={showChargeModal}
         onClose={() => setShowChargeModal(false)}
@@ -782,7 +998,7 @@ export function SessionPaymentsManager({
         nomeSessao={sessionData.descricao || sessionData.categoria}
       />
 
-      {/* Combined Charge Modal — link único cobrindo sessão + extras */}
+      {/* Combined Charge Modal â€” link Ãºnico cobrindo sessÃ£o + extras */}
       {fin.resolvedGalleryId && showCombinedChargeModal && (
         <CombinedChargeModal
           isOpen={showCombinedChargeModal}
@@ -819,3 +1035,4 @@ export function SessionPaymentsManager({
 
   return <div className="space-y-6">{content}</div>;
 }
+

@@ -76,21 +76,35 @@ export function WorkflowCardExpanded({
     | null
   >(null);
 
+  const { calc: extraCalc, resolvedGalleryId, isLoading: extraCalcLoading } =
+    useGalleryExtraCalc(session.galeriaId || null, {
+      sessionId: session.sessionId || null,
+    });
+
+  const fin = useSessionFinancialsWithExtras(
+    session.id,
+    session.galeriaId || resolvedGalleryId || null,
+    session.sessionId || null,
+  );
+
   useEffect(() => {
     setDescontoValue(session.desconto || "");
     setAdicionalValue(session.valorAdicional || "");
     setObsValue(session.observacoes || "");
     setValorFotoExtraValue(session.valorFotoExtra || "");
-    // Não sobrescreve o input quando o campo cru da sessão está 0 mas a galeria
-    // já tem qtd sincronizada (RPC) — evita mostrar 0 no expandido enquanto o
-    // header mostra o número real. `fin.qtdExtras` é aplicado logo abaixo.
-    setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
+    
+    // Only set raw quantity if not overridden by the gallery calculation
+    if (!fin.hasGaleria && !resolvedGalleryId) {
+      setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
+    }
   }, [
     session.desconto,
     session.valorAdicional,
     session.observacoes,
     session.valorFotoExtra,
     session.qtdFotosExtra,
+    fin.hasGaleria,
+    resolvedGalleryId,
   ]);
 
   const formatCurrency = useCallback((value: any) => {
