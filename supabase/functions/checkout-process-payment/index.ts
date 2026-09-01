@@ -335,6 +335,9 @@ Deno.serve(async (req) => {
       pix_copia_cola: adapterData.pixCopiaCola || null,
       pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,
       mp_pix_copia_cola: adapterData.pixCopiaCola || null, // Retrocompatibilidade
+      // Decomposição financeira: base do serviço vs. total cobrado do cliente (com gross-up de taxas)
+      valor_principal: baseValue,              // ex: 90,00 — receita nominal do serviço
+      valor_cobrado_cliente: finalValue,       // ex: 96,20 — total pago pelo cliente c/ repasse
       dados_extras: {
         ...existingExtras,
         ...(adapterData.dadosExtras || {}),
@@ -359,6 +362,7 @@ Deno.serve(async (req) => {
       updatePayload.tipo_cobranca = "card";
       if (finalInstallments) updatePayload.total_parcelas = finalInstallments;
     }
+
 
     if (isPaid) {
       updatePayload.status = "pago";

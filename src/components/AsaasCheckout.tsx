@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { calcularAntecipacao } from '@/lib/anticipationUtils';
+import { calcularAntecipacao, calculateCreditFees } from '@/lib/anticipationUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { loadMercadoPagoSdk } from '@/utils/mercadopagoSdk';
 
@@ -599,35 +599,20 @@ export function AsaasCheckout({
     let label = `${i}x de R$ ${(data.valorTotal / i).toFixed(2)}`;
 
     if (!data.absorverTaxa && accountFees?.creditCard) {
-      const discountTiers = Array.isArray(accountFees.discount?.tiers) ? accountFees.discount.tiers : [];
-      const isDiscountActive = Boolean(accountFees.discount?.active && discountTiers.length > 0);
-      const creditCardTiers = Array.isArray(accountFees.creditCard?.tiers) ? accountFees.creditCard.tiers : [];
+      // Usa o mesmo calculateCreditFees do backend: gross-up inverso exato
+      const calc = calculateCreditFees(
+        data.valorTotal,
+        i,
+        accountFees,
+        true,              // repassarTaxas = true (está repassando)
+        incluirAntecipacao // repassarAntecipacao
+      );
 
-      const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
-      const tier = activeTiers.find(t => i >= t.min && i <= t.max);
-      const processingPercentage = tier?.percentageFee ?? 0;
-      const operationValue = accountFees.creditCard?.operationValue ?? 0;
-      const processingFee = (data.valorTotal * processingPercentage / 100) + operationValue;
-
-      // 2. Anticipation fee — only when enabled
-      let anticipationFee = 0;
-      if (incluirAntecipacao) {
-        const taxaMensal = i === 1
-          ? (accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
-          : (accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
-        if (taxaMensal > 0) {
-          const result = calcularAntecipacao(data.valorTotal, i, taxaMensal);
-          anticipationFee = result.totalTaxa;
-        }
-      }
-
-      totalComTaxas = data.valorTotal + processingFee + anticipationFee;
-      totalComTaxas = Math.round(totalComTaxas * 100) / 100;
-
+      totalComTaxas = calc.totalValue;
       label = `${i}x de R$ ${(totalComTaxas / i).toFixed(2)}`;
       if (totalComTaxas > data.valorTotal) label += ` (total R$ ${totalComTaxas.toFixed(2)})`;
     } else if (!data.absorverTaxa && !accountFees && !feesLoading) {
-      // Fallback to legacy fields if fees failed to load
+      // Fallback para taxas legadas quando as taxas da API não carregaram
       if (incluirAntecipacao) {
         const taxaMensal = i === 1
           ? (data.taxaAntecipacaoCreditoAvista ?? data.taxaAntecipacaoPercentual ?? 0)
@@ -643,6 +628,7 @@ export function AsaasCheckout({
 
     installmentOptions.push({ value: String(i), label, totalValue: totalComTaxas });
   }
+
 
   // Get the total value for the selected installment (for the pay button and submission)
   const selectedInstallmentOption = installmentOptions.find(o => o.value === cardInstallments);
