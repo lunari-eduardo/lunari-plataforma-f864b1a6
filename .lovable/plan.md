@@ -78,6 +78,12 @@ Se `PAYMENT_ANTICIPATED` chegar antes de CONFIRMED/RECEIVED, `existingParcela` �
 
 **N7 — Idempotência de base está OK.** Os índices `idx_gateway_events_dedup`, `idx_gateway_cash_movements_dedup` e `idx_gateway_anticipations_dedup` existem. O problema não é dedup de evento, é semântica de valor.
 
+**N8 — Métrica `caixa_recebido` inflada.** A RPC `workflow_month_metrics` calcula `caixa_recebido = Σ clientes_transacoes.valor + Σ gateway_cash_movements.amount (credit/refund/chargeback)`. Como o `credit` é o valor bruto inflado (B1), a métrica de caixa mostra R$ 53,42 onde entraram R$ 51,32. As métricas comerciais (`previsto`, `receita`, `pendente`) estão corretas — leem só `valor_total`/`valor_pago`. **O Workflow comercial não está contaminado; só o "caixa" está.**
+
+**N9 — `cobrancas.session_id` não é FK.** É um `TEXT` solto resolvido em runtime por `WHERE session_id = X OR id::text = X`, com fallback via `galerias`. Isso torna a reconciliação sessão↔cobrança dependente de string matching, sem integridade referencial.
+
+**N10 — Sem coluna de política de repasse.** Os flags `repassarTaxasProcessamento`/`repassarTaxaAntecipacao` só existem dentro de `clientes_transacoes.dados_extras` (caminho legado). Para pagamentos Asaas não há registro de qual política estava vigente no momento do checkout — `fee_policy_snapshot` existe em `cobrancas` mas nunca é preenchido.
+
 ---
 
 ## 4. Modelo financeiro recomendado
