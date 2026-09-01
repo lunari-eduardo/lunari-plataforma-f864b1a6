@@ -21,7 +21,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --frozen-lockfile
+      - run: bun install
 
       # A1 — audiência: nenhum anel interno/admin exposto ao MCP.
       - name: Guarda de audiência
