@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown, ChevronUp, Camera, Layers, ShoppingBag, Wallet } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown, ChevronUp, Camera, Layers, ShoppingBag, Wallet, Zap } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
@@ -18,6 +18,7 @@ import { ExtraChargeModal } from '@/components/cobranca/ExtraChargeModal';
 import { CombinedChargeModal } from '@/components/cobranca/CombinedChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
+import { AsaasAnticipationModal } from '@/components/payments/AsaasAnticipationModal';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
 import { supabase } from '@/integrations/supabase/client';
 interface SessionPaymentsManagerProps {
@@ -43,6 +44,7 @@ export function SessionPaymentsManager({
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
   const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
+  const [paymentToAnticipate, setPaymentToAnticipate] = useState<SessionPaymentExtended | null>(null);
   const [refundMotivo, setRefundMotivo] = useState('');
 
   // Convert existing payments to extended format
@@ -569,6 +571,18 @@ export function SessionPaymentsManager({
               </Button>
             </>
           )}
+          {/* Ação de Antecipação Asaas para parcelas pagas/confirmadas ainda não antecipadas */}
+          {payment.provedor === 'asaas' && !payment.antecipado && (payment.statusRecebimento === 'confirmado' || payment.statusPagamento === 'pago') && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setPaymentToAnticipate(payment)}
+              className="h-8 w-8 p-0 text-accent-gold hover:text-accent-gold"
+              title="Simular / Antecipar recebível no Asaas"
+            >
+              <Zap className="h-3 w-3 md:h-4 md:w-4" />
+            </Button>
+          )}
           {payment.statusPagamento === 'pago' && !payment.editavel && (
             <Button
               size="sm"
@@ -1014,6 +1028,14 @@ export function SessionPaymentsManager({
           nomeSessao={sessionData.descricao || sessionData.categoria}
         />
       )}
+
+      {/* Asaas Anticipation Modal */}
+      <AsaasAnticipationModal
+        isOpen={Boolean(paymentToAnticipate)}
+        onClose={() => setPaymentToAnticipate(null)}
+        payment={paymentToAnticipate}
+        onSuccess={() => refetch()}
+      />
     </>
   );
 
