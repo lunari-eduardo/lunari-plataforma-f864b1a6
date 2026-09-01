@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1863,6 +1863,7 @@ export type Database = {
           cliente_id: string
           cobranca_id: string | null
           created_at: string | null
+          dados_extras: Json | null
           data_transacao: string
           data_vencimento: string | null
           descricao: string | null
@@ -1881,6 +1882,7 @@ export type Database = {
           cliente_id: string
           cobranca_id?: string | null
           created_at?: string | null
+          dados_extras?: Json | null
           data_transacao: string
           data_vencimento?: string | null
           descricao?: string | null
@@ -1899,6 +1901,7 @@ export type Database = {
           cliente_id?: string
           cobranca_id?: string | null
           created_at?: string | null
+          dados_extras?: Json | null
           data_transacao?: string
           data_vencimento?: string | null
           descricao?: string | null
@@ -1972,12 +1975,18 @@ export type Database = {
           id: string
           mp_payment_id: string | null
           numero_parcela: number
+          source_event_id: string | null
           status: string
           taxa_antecipacao: number | null
+          taxa_antecipacao_real: number | null
           taxa_gateway: number | null
+          taxa_processamento_real: number | null
           updated_at: string | null
           valor_bruto: number
+          valor_cobrado_cliente: number | null
           valor_liquido: number | null
+          valor_liquido_creditado: number | null
+          valor_principal: number | null
         }
         Insert: {
           antecipado?: boolean | null
@@ -1992,12 +2001,18 @@ export type Database = {
           id?: string
           mp_payment_id?: string | null
           numero_parcela: number
+          source_event_id?: string | null
           status?: string
           taxa_antecipacao?: number | null
+          taxa_antecipacao_real?: number | null
           taxa_gateway?: number | null
+          taxa_processamento_real?: number | null
           updated_at?: string | null
           valor_bruto: number
+          valor_cobrado_cliente?: number | null
           valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
         }
         Update: {
           antecipado?: boolean | null
@@ -2012,12 +2027,18 @@ export type Database = {
           id?: string
           mp_payment_id?: string | null
           numero_parcela?: number
+          source_event_id?: string | null
           status?: string
           taxa_antecipacao?: number | null
+          taxa_antecipacao_real?: number | null
           taxa_gateway?: number | null
+          taxa_processamento_real?: number | null
           updated_at?: string | null
           valor_bruto?: number
+          valor_cobrado_cliente?: number | null
           valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
         }
         Relationships: [
           {
@@ -2048,6 +2069,13 @@ export type Database = {
             referencedRelation: "vw_cobrancas_suspeitas"
             referencedColumns: ["cobranca_id"]
           },
+          {
+            foreignKeyName: "cobranca_parcelas_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "gateway_events"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cobrancas: {
@@ -2058,10 +2086,13 @@ export type Database = {
           correlation_id: string | null
           created_at: string | null
           dados_extras: Json | null
+          data_credito: string | null
+          data_credito_real: string | null
           data_pagamento: string | null
           descricao: string | null
           error_message: string | null
           extras_contabilizados: boolean
+          fee_policy_snapshot: Json | null
           finalidade: string
           galeria_id: string | null
           id: string
@@ -2090,14 +2121,20 @@ export type Database = {
           session_id: string | null
           snapshot_fotos_incluidas: number | null
           snapshot_regras_congeladas: Json | null
+          source_event_id: string | null
           status: string | null
+          taxa_antecipacao_real: number | null
+          taxa_processamento_real: number | null
           tipo_cobranca: string
           total_parcelas: number | null
           updated_at: string | null
           user_id: string
           valor: number
+          valor_cobrado_cliente: number | null
           valor_extras_componente: number | null
           valor_liquido: number | null
+          valor_liquido_creditado: number | null
+          valor_principal: number | null
           valor_sessao_componente: number | null
           visitor_id: string | null
         }
@@ -2108,10 +2145,13 @@ export type Database = {
           correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
+          data_credito?: string | null
+          data_credito_real?: string | null
           data_pagamento?: string | null
           descricao?: string | null
           error_message?: string | null
           extras_contabilizados?: boolean
+          fee_policy_snapshot?: Json | null
           finalidade?: string
           galeria_id?: string | null
           id?: string
@@ -2140,14 +2180,20 @@ export type Database = {
           session_id?: string | null
           snapshot_fotos_incluidas?: number | null
           snapshot_regras_congeladas?: Json | null
+          source_event_id?: string | null
           status?: string | null
+          taxa_antecipacao_real?: number | null
+          taxa_processamento_real?: number | null
           tipo_cobranca: string
           total_parcelas?: number | null
           updated_at?: string | null
           user_id: string
           valor: number
+          valor_cobrado_cliente?: number | null
           valor_extras_componente?: number | null
           valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
           valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
@@ -2158,10 +2204,13 @@ export type Database = {
           correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
+          data_credito?: string | null
+          data_credito_real?: string | null
           data_pagamento?: string | null
           descricao?: string | null
           error_message?: string | null
           extras_contabilizados?: boolean
+          fee_policy_snapshot?: Json | null
           finalidade?: string
           galeria_id?: string | null
           id?: string
@@ -2190,14 +2239,20 @@ export type Database = {
           session_id?: string | null
           snapshot_fotos_incluidas?: number | null
           snapshot_regras_congeladas?: Json | null
+          source_event_id?: string | null
           status?: string | null
+          taxa_antecipacao_real?: number | null
+          taxa_processamento_real?: number | null
           tipo_cobranca?: string
           total_parcelas?: number | null
           updated_at?: string | null
           user_id?: string
           valor?: number
+          valor_cobrado_cliente?: number | null
           valor_extras_componente?: number | null
           valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
           valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
@@ -2222,6 +2277,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cobrancas_suspeitas"
             referencedColumns: ["galeria_id_candidata"]
+          },
+          {
+            foreignKeyName: "cobrancas_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "gateway_events"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "cobrancas_visitor_id_fkey"
@@ -4228,6 +4290,208 @@ export type Database = {
             referencedColumns: ["galeria_id_candidata"]
           },
         ]
+      }
+      gateway_anticipations: {
+        Row: {
+          cobranca_id: string | null
+          created_at: string | null
+          credit_date: string | null
+          fee: number
+          id: string
+          net_value: number
+          parcela_id: string | null
+          provider: string
+          provider_anticipation_id: string
+          request_date: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          cobranca_id?: string | null
+          created_at?: string | null
+          credit_date?: string | null
+          fee?: number
+          id?: string
+          net_value?: number
+          parcela_id?: string | null
+          provider: string
+          provider_anticipation_id: string
+          request_date?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          cobranca_id?: string | null
+          created_at?: string | null
+          credit_date?: string | null
+          fee?: number
+          id?: string
+          net_value?: number
+          parcela_id?: string | null
+          provider?: string
+          provider_anticipation_id?: string
+          request_date?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateway_anticipations_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_anticipations_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_anticipations_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cobrancas_extras_orfas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_anticipations_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cobrancas_suspeitas"
+            referencedColumns: ["cobranca_id"]
+          },
+          {
+            foreignKeyName: "gateway_anticipations_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "cobranca_parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gateway_cash_movements: {
+        Row: {
+          amount: number
+          anticipation_id: string | null
+          cobranca_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          movement_date: string
+          movement_type: string
+          parcela_id: string | null
+          provider: string
+          provider_transaction_id: string
+        }
+        Insert: {
+          amount: number
+          anticipation_id?: string | null
+          cobranca_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          movement_date: string
+          movement_type: string
+          parcela_id?: string | null
+          provider: string
+          provider_transaction_id: string
+        }
+        Update: {
+          amount?: number
+          anticipation_id?: string | null
+          cobranca_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          movement_date?: string
+          movement_type?: string
+          parcela_id?: string | null
+          provider?: string
+          provider_transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateway_cash_movements_anticipation_id_fkey"
+            columns: ["anticipation_id"]
+            isOneToOne: false
+            referencedRelation: "gateway_anticipations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_cash_movements_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_cash_movements_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_cash_movements_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cobrancas_extras_orfas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gateway_cash_movements_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cobrancas_suspeitas"
+            referencedColumns: ["cobranca_id"]
+          },
+          {
+            foreignKeyName: "gateway_cash_movements_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "cobranca_parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gateway_events: {
+        Row: {
+          created_at: string | null
+          error_log: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          processed_at: string | null
+          provider: string
+          provider_event_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_log?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider: string
+          provider_event_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_log?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string | null
+        }
+        Relationships: []
       }
       google_calendar_sync_queue: {
         Row: {
