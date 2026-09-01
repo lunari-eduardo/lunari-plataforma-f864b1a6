@@ -66,6 +66,7 @@ export interface ChargeModalProps {
   valorSessaoComponente?: number | null;
   valorExtrasComponente?: number | null;
   nomeSessao?: string;
+  initialTab?: 'cobrar' | 'historico';
 }
 
 interface AsaasSettingsState {
@@ -94,12 +95,19 @@ export function ChargeModal({
   valorSessaoComponente,
   valorExtrasComponente,
   nomeSessao,
+  initialTab = 'cobrar',
 }: ChargeModalProps) {
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
   const [descricao, setDescricao] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<SelectedProvider | null>(null);
-  const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
+  const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
   const [asaasSettings, setAsaasSettings] = useState<AsaasSettingsState | null>(null);
