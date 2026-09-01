@@ -1,113 +1,191 @@
-# Reconstrução do Motor de Arte — Editor de Propostas (Comercial)
+# Arquitetura Financeira Lunari — Asaas, recebíveis e antecipação
 
-## Diagnóstico (causa raiz confirmada por leitura de código)
-
-### Por que toda proposta com IA fica igual
-1. **Prompt fixo no Worker** (`workers/proposals-ai/src/index.ts` linhas 200–224): o JSON exigido é sempre o mesmo — mesmos blocos, mesma ordem, mesmos campos. A IA não tem nenhuma decisão de layout para tomar; ela só preenche texto. A única variação possível é `design_tokens`.
-2. **Sanitize destrutivo** (`workers/proposals-ai/src/sanitize.ts`): mesmo que a IA inventasse algo diferente, `sanitizeBlock` descarta tudo que não está na lista fixa de campos. `props` passa, mas o prompt nunca instrui variantes — e o renderer ignoraria.
-3. **Um renderer rígido por bloco** (`VisualRenderer.tsx`): cada tipo tem exatamente 1 layout hardcoded. `CoverBlock` é sempre o hero com blob arredondado (`rounded-[2rem]`) — é exatamente o "modelo quebrado" do print. Não existe conceito de **variante de composição**.
-4. **`EditorialComposition` invisível para a IA**: o bloco existe no frontend mas NÃO está em `BLOCK_TYPES` do worker — a IA nunca pode usá-lo.
-
-### Fotos que não respeitam orientação
-- Nenhum ponto do sistema lê `naturalWidth/naturalHeight`. Containers usam alturas fixas (`h-[400px] @md:h-[600px]`) ou `%` absolutas (`EditorialBlock` photo_a/photo_b). `object-cover` corta retratos em caixas paisagem e vice-versa.
-
-### Portfólio sem montagem automática
-- `GalleryRenderer` usa `columns-2/3/4` CSS (masonry de colunas) — **quebra a ordem das fotos** e não distribui por orientação. O modo `grid` exige `span`/`ratio` manuais por foto. O multi-upload existe no código (`AddImageTile`/`uploadMultipleProposalImages`) mas não dispara nenhum auto-layout — as fotos entram como "normal/auto" e a grade fica caótica.
-
-### Personalização tipográfica limitada
-- Tokens globais (`--pa-font-display/body`) funcionam e o preset "Editorial Lunari (PDF)" já existe, mas: não há override por bloco, não há controle de tracking/uppercase/escala, e nenhum renderer usa o estilo letterspaced wide (`tracking-[0.3em]` + uppercase) que define o look das referências (capa.jpg/pacotes.jpg).
+Documento de diagnóstico + correção. Baseado em leitura do código real e em consultas ao banco de produção (dados reais citados abaixo).
 
 ---
 
-## Estratégia: "Template-first, IA preenche" (em vez de "IA inventa layout")
+## 1. Diagnóstico atual
 
-As referências (capa.jpg, pacotes.jpg, info.jpg) são composições **estáticas e reproduzíveis** — não exigem engine generativa. A solução definitiva é:
+### 1.1 Entidades que existem hoje
 
-1. **Catálogo de variantes de composição** codificadas à mão, fiéis ao PDF, uma por `props.variant`.
-2. **A IA escolhe variantes + preenche conteúdo + extrai paleta**, nunca inventa estrutura.
-3. **Um template oficial "Lunari Editorial"** (réplica do PDF) disponível como modelo pronto.
+| Tabela | Papel real hoje |
+|---|---|
+| `clientes_sessoes` | Venda (fonte comercial do Workflow). `valor_total` recalculado por trigger; `valor_pago` recomputado por trigger a partir de `clientes_transacoes` |
+| `cobrancas` | Cobrança/checkout. Já possui `valor_principal`, `valor_cobrado_cliente`, `taxa_processamento_real`, `taxa_antecipacao_real`, `valor_liquido_creditado`, `data_credito`, `data_credito_real`, `fee_policy_snapshot`, `source_event_id` |
+| `cobranca_parcelas` | Parcela. Possui os mesmos campos "reais" + `taxa_gateway`, `taxa_antecipacao`, `antecipado`, `data_vencimento`, `data_pagamento`, `data_credito` |
+| `clientes_transacoes` | Pagamento (alimenta `valor_pago` da sessão via trigger `recompute_paid_amount`) |
+| `gateway_cash_movements` | Caixa do gateway: `movement_type` (`credit`/`fee`), `amount`, `movement_date`, `anticipation_id` |
+| `gateway_anticipations` | Antecipação: `provider_anticipation_id`, `fee`, `net_value`, `status`, `request_date`, `credit_date` — **0 linhas** |
+| `gateway_events` | Idempotência (`provider`, `provider_event_id`) — 16 linhas |
+| `webhook_logs` | Auditoria bruta — 501 linhas Asaas |
 
-```text
-HOJE: briefing → IA gera JSON fixo → sanitize corta → 1 renderer rígido → sempre igual
-NOVO: briefing → IA escolhe variantes do catálogo + tokens → sanitize valida variante
-      → renderer despacha para a composição escolhida → layouts realmente diferentes
+**A modelagem já está quase toda criada. O problema não é falta de tabela: é que o webhook não preenche os campos certos e o extrato lê o campo errado.**
+
+### 1.2 Fluxo atual (real)
+
+```
+checkout (gross-up local em src/lib/anticipationUtils.ts)
+   -> cobrancas.valor = valor cobrado do cliente (inflado)
+   -> Asaas payment
+   -> webhook PAYMENT_CONFIRMED / PAYMENT_RECEIVED
+        -> cobranca_parcelas (valor_bruto = cobranca.valor/parcelas; valor_liquido = payment.netValue)
+        -> cobrancas.status/valor_liquido (netValue x nº parcelas — extrapolação)
+        -> gateway_cash_movements: credit = payment.value ; fee = -(value - netValue)
+   -> extrato_unificado (6 branches em UNION ALL)
 ```
 
 ---
 
-## FASE 1 — Sistema de Variantes (fundação do motor)
+## 2. Bugs confirmados (com evidência de produção)
 
-**Arquivos:** `src/pages/comercial/blocks/registry.ts`, novo `src/pages/comercial/components/editor/variants/`
+**B1 — `gateway_cash_movements.credit` usa `payment.value` (valor inflado).**
+`asaas-webhook/index.ts:610-620`: `amount: txTotal` onde `txTotal = payment.value`. Contradiz a regra do próprio arquivo (`index.ts:331`: *"valor_bruto ... NUNCA payment.value"*).
+Evidência: cobrança `e42adfc3`, `valor_principal = 100`; movimento `payment_pay_9hezbtoqoteu63qo_credit` com `amount = 53.42` e `fee = -2.10`. No extrato, `53.42` entra classificado como **"Receita de Serviços"** (branch de `gateway_cash_movements`, linhas 149/153 da view).
 
-1. Adicionar `variant` ao `BlockDefinition` (campo `layoutFields` do tipo `select`, com opções nomeadas e descrição visual).
-2. Criar `variants/Cover/`, `variants/Pricing/`, `variants/Editorial/`, `variants/Gallery/` — cada renderer vira um *switch* sobre `props.variant` (fallback = variante atual, retrocompatível com propostas existentes).
-3. **CoverBlock — 3 variantes:**
-   - `poster-split` (**réplica de capa.jpg**): topo em `--pa-cream` com hairline vertical + eyebrow letterspaced → título serif gigante (`tracking-[0.12em]`, uppercase, ocupa ~30% da altura) → subtítulo letterspaced → foto full-bleed abaixo → assinatura do estúdio centrada no rodapé da capa. Mobile: mesma estrutura (já é vertical por natureza).
-   - `seam-side`: split vertical foto/fundo (usa o padrão já validado da Gallery).
-   - `minimal-center`: composição atual (mantida como fallback).
-4. **PricingTable — variante `numbered-editorial` (réplica de pacotes.jpg):**
-   - Header: eyebrow "PACOTES" letterspaced → título serif display grande (`ESTÚDIO`) → linha de apoio.
-   - Cards: número serif grande `01/02/03`, título letterspaced, hairlines duplas, features com ícones finos, bloco de preço "À VISTA / R$ X / OU Nx DE R$ Y" (campos novos: `price_cash`, `price_installments`).
-   - Suporte a foto vertical ao lado do card (usa `image_ref` já existente).
-   - Bordas finas `border` + fundo `--pa-cream`, radius 0.
-   - Manter variante `cards-classic` (atual).
-5. **EditorialBlock — variante `split-portrait` (réplica de info.jpg):** coluna de texto com parágrafos espaçados (`leading-[2]`, tracking largo) à esquerda + foto retrato 4/5 à direita. Sem blend/absolute — grid limpo.
-6. Novo tipo `DividerBlock` (hairline + rótulo letterspaced, ex.: "PACOTE — ESTÚDIO OU EXTERNO") para o ritmo de página do PDF.
+**B2 — `valor_liquido` maior que a venda.** Mesma cobrança: `valor = 100`, `valor_liquido = 102.64`. Vem de `index.ts:573-577`, que faz `netValue × total_parcelas` (extrapolação de uma parcela para todas). Cada parcela tem `valor_bruto = 50` e `valor_liquido = 51.32` — líquido > bruto, matematicamente impossível.
 
-**Critério de saída:** criar manualmente, via "Adicionar Seção", uma proposta visualmente equivalente às 3 referências.
+**B3 — Colunas "reais" existem mas nunca são escritas.** Em 100% das linhas de `cobrancas` e `cobranca_parcelas`: `taxa_processamento_real = 0`, `taxa_antecipacao_real = 0`, `valor_liquido_creditado = 0`, `valor_cobrado_cliente = NULL`. O webhook não referencia nenhuma delas. Os R$ 53,42 efetivamente cobrados **não estão gravados em lugar nenhum** — só sobrevivem como `amount` de um movimento de caixa.
 
-## FASE 2 — Template oficial "Lunari Editorial" (modelo pronto)
+**B4 — Taxa de antecipação calculada por diferença.** `index.ts:493-502`:
+```ts
+taxaAntecipacao = Math.max(0, round((existingParcela.valor_liquido - valorLiquido) * 100) / 100);
+```
+Se `PAYMENT_ANTICIPATED` chegar antes de CONFIRMED/RECEIVED, `existingParcela` é nulo e a taxa vira `0` silenciosamente, sem backfill posterior.
 
-**Arquivos:** `supabase` (insert em `proposal_templates`), `BibliotecaComercialPage.tsx`
+**B5 — Eventos `RECEIVABLE_ANTICIPATION_*` nunca chegaram.** O handler existe (`index.ts:698-790`) e lê corretamente `anticipation.id/fee/netValue`, mas `asaas_webhook_events` só registra `PAYMENT_CONFIRMED` (105) e `PAYMENT_RECEIVED` (9), e `gateway_anticipations` tem **0 linhas**. Ou os eventos não estão assinados no painel Asaas, ou nunca houve antecipação. Precisa ser verificado contra a conta.
 
-1. Compor o documento completo com as variantes da Fase 1: `CoverBlock(poster-split)` → `EditorialBlock(split-portrait)` → `DividerBlock` → `PricingTable(numbered-editorial)` → `Gallery(editorial-rows)` → `CTABlock` → `FooterTerms`.
-2. Tokens: preset "Editorial Lunari (PDF)" já existente (Cormorant Garamond + Jost, paleta areia).
-3. Persistir como template oficial em `proposal_templates` (via SQL `run_sql`, marcado `is_official`) para aparecer na biblioteca como ponto de partida em 1 clique.
-4. Botão "Usar modelo" na biblioteca clona blocos+tokens para um material novo.
+**B6 — Datas misturadas.** `movement_date` = `payment.creditDate` (`index.ts:617`). Parcela `pay_w13bwj2bb2xbr1fc`: `data_vencimento = 2026-10-01`, `movement_date = 2026-11-03`. O extrato exibe `movement_date` como a data da linha → a parcela aparece em novembro. Além disso `cobrancas.data_pagamento` e `data_credito_real` recebem `new Date()` (hora do webhook), não a data do Asaas (`index.ts:559,566`).
 
-## FASE 3 — Motor de IA orientado a variantes
+**B7 — Toggle de antecipação é apenas preferência local.** Confirmado: grava em `usuarios_integracoes.dados_extras.{ireiAntecipar, repassarTaxaAntecipacao}` via `.update()` direto (`useIntegracoes.ts:556-570`). `creditCardAutomaticEnabled` tem **zero ocorrências no repositório**. A função `gestao-asaas-anticipation` chama `/v3/anticipations/simulate` e `/v3/anticipations`, mas **nunca é invocada pelo frontend** (dead code registrado em `config.toml:108`). O toggle só alimenta gross-up local em `anticipationUtils.ts`.
 
-**Arquivos:** `workers/proposals-ai/src/index.ts`, `sanitize.ts` (e redeploy do worker)
+**B8 — Workflow: extras 6 vs 0.** `WorkflowCardCollapsed.tsx:365-367` tem fallback `fin.qtdExtras > 0 ? fin.qtdExtras : session.qtdFotosExtra`; `WorkflowCardExpanded.tsx:183-187` sincroniza com `fin.qtdExtras || 0` **sem fallback**, e o total (linha 425) usa `fin.extrasLiquido` direto. Além disso os hooks `useGalleryExtraCalc` + `useSessionFinancialsWithExtras` estão **duplicados** (linhas 79-88 e 160-169). Dados no banco estão corretos (`qtd_fotos_extra = 6`, `galerias.valor_extras = 138`) → é bug de leitura/RPC, não de dado.
 
-1. **Catálogo no prompt**: descrever cada variante com "quando usar" (ex.: `numbered-editorial` → 2–4 pacotes com foto; `poster-split` → capa com título curto e impactante). A IA devolve `props.variant` por bloco.
-2. **Diversidade real**: parâmetro `layout_pack` (`editorial-classic`, `modern-minimal`, `noir`) que pré-seleciona famílias de variantes + seed de combinações; temperature 0.9 para texto, mas variantes escolhidas por regra (não aleatório cego).
-3. **`sanitize.ts`**: incluir `EditorialComposition` e `DividerBlock` em `BLOCK_TYPES`; validar `variant` contra whitelist por tipo (inválida → default); passar `props.layout`/`variant` saneados em vez de descartar.
-4. **Referências multimodais** (já existem): reforçar instrução — "mapear a referência para a variante mais próxima e extrair hex reais para design_tokens", nunca inventar estrutura fora do catálogo.
-5. **Título da capa**: instruir a IA a devolver `title` curto (1–3 palavras) para `poster-split`, evitando quebra feia no display gigante.
+---
 
-**Critério de saída:** 3 gerações seguidas com mesmo briefing produzem composições visivelmente distintas (não só cores diferentes).
+## 3. Problemas adicionais encontrados
 
-## FASE 4 — Mídia inteligente (orientação + grid automático)
+**N1 — Dupla contagem estrutural no `extrato_unificado`.** A view tem 6 branches. O branch 1 (`clientes_transacoes`, tipo `pagamento`) e o branch 4 (`gateway_cash_movements`, `credit`) **representam o mesmo dinheiro**. A única separação é o flag textual `dados_extras->>'migrado_para_gateway' = 'true'`. Qualquer transação sem esse flag conta duas vezes.
 
-**Arquivos:** `blocks/uploadImage.ts`, `blocks/EditableImage.tsx`, `variants/Gallery/`
+**N2 — Branch de taxa duplicado.** Branch 3 já emite "Taxa Gateway / Antecipação" (`ct.valor - ct.valor_liquido`) e o branch 4 emite `movement_type='fee'`. Mesmo risco.
 
-1. **Captura de orientação no upload**: ao fazer upload, ler `naturalWidth/naturalHeight` e gravar `{ w, h }` junto ao `image_ref` (novo campo `meta` por imagem). Migração suave: imagens antigas sem meta → detectar on-load no cliente uma única vez e persistir.
-2. **Containers orientados**: `CoverBlock`/`EditorialBlock` escolhem aspect do frame pela orientação real (retrato → 4/5, paisagem → 3/2, quadrado → 1/1) salvo override manual. Fim dos cortes indesejados.
-3. **Gallery — auto-layout justificado**: substituir `columns-*` (quebra ordem) pelo padrão de **linhas justificadas** já provado no módulo Gallery (`RowMasonryGrid`): preserva ordem 1→N, altura igualada por linha, largura ∝ AR real. `span`/`ratio` manuais viram override opcional, não obrigação.
-4. **Multi-upload com montagem automática**: ao colar N fotos, o bloco distribui automaticamente (ordem preservada, linhas balanceadas) sem nenhuma configuração. Botão "Reorganizar automaticamente" para re-aplicar.
+**N3 — Conflito de chaves em `cobranca_parcelas`.** Existem dois uniques: `(cobranca_id, numero_parcela)` e `(asaas_payment_id)`. O upsert usa apenas o primeiro (`index.ts:373`). Quando `installmentNumber` vem ausente e cai no default `1` (`index.ts:355`), o upsert tenta gravar um `asaas_payment_id` diferente na parcela 1 e **viola o segundo unique**, falhando a parcela inteira.
 
-## FASE 5 — Personalização tipográfica real
+**N4 — Sem guarda de ordem.** Nenhuma comparação de status/timestamp antes do write. `PAYMENT_CONFIRMED` chegando depois de `PAYMENT_REFUNDED` reverte `cobrancas.status` de `estornado` para `pago` (`index.ts:543-556`).
 
-**Arquivos:** `blocks/design.ts`, `registry.ts`, renderers
+**N5 — `SUBSCRIPTION_RENEWED` sem idempotência.** `index.ts:843-885` chama a RPC `renew_subscription_credits` fora do `checkAndLogEvent` → redelivery duplica créditos.
 
-1. **Catálogo curado de pares de fontes** (~8 pares: Cormorant/Jost, Playfair/Inter, Fraunces/Space Grotesk, Libre Caslon/Jost, Cinzel/Jost, Italiana/Manrope, Marcellus/Inter, DM Serif/Outfit) no seletor global — `ensureFontLoaded` já injeta dinamicamente.
-2. **Tokens tipográficos estendidos**: `display_tracking` (ex.: 0.12em), `display_transform` (uppercase/none), `scale` (0.9/1/1.1) — aplicados via CSS vars nos renderers.
-3. **Override por bloco**: `props.typography` opcional por seção (herda global, sobrescreve local).
+**N6 — Eventos ignorados retornam 200.** `PAYMENT_PARTIALLY_REFUNDED`, `PAYMENT_CHARGEBACK_DISPUTE`, `PAYMENT_REPROVED_BY_RISK_ANALYSIS`, `PAYMENT_CREATED` estão assinados (`asaas-helpers.ts:315-327`) mas caem no `return {received:true}` final — o Asaas nunca reenvia.
 
-## FASE 6 — Paridade público/editor e validação
+**N7 — Idempotência de base está OK.** Os índices `idx_gateway_events_dedup`, `idx_gateway_cash_movements_dedup` e `idx_gateway_anticipations_dedup` existem. O problema não é dedup de evento, é semântica de valor.
 
-1. `PublicProposalViewer` renderiza variantes idênticas ao editor (mesmos componentes — já é o caso, garantir com a Fase 1).
-2. Fontes: preload no link público (eliminar FOIT) + `font-display: swap`.
-3. Teste de aceite: gerar link público do template oficial e comparar lado a lado com capa.jpg / pacotes.jpg / info.jpg.
-4. QA de regressão: propostas V1/V2 antigas abrem sem crash (`normalizeBlock` com variant default).
+---
 
-## Fora de escopo (conforme solicitado)
-- Limpeza/reorganização do painel lateral de edição (fica para etapa posterior).
+## 4. Modelo financeiro recomendado
 
-## Riscos e mitigações
-- **Worker precisa de redeploy** (Fase 3) — mudança de prompt/sanitize só vale após deploy; validar com geração real.
-- **Variantes novas em docs antigos** → sempre fallback para variante default; sanitize nunca rejeita bloco por variante desconhecida.
-- **Performance das fontes** → carregar apenas os pesos usados (300/400/500) e cachear via `loadedFonts` (já existe).
+Cinco conceitos, nunca misturados:
 
-## Ordem de execução proposta
-Fase 1 → Fase 2 → validação visual com você → Fase 4 → Fase 3 (worker) → Fase 5 → Fase 6.
+```
+VENDA (clientes_sessoes.valor_total)            -> métrica do Workflow. Nunca tocada por gateway.
+  └─ COBRANÇA (cobrancas)
+       valor_principal          = receita do serviço      50,00
+       valor_repassado_cliente  = acréscimo repassado       3,42   [NOVO]
+       valor_cobrado_cliente    = principal + repasse      53,42
+       └─ PARCELA (cobranca_parcelas)  [mesmos 3 campos, rateados]
+            ├─ PAGAMENTO   data_pagamento, valor_cobrado_cliente
+            ├─ RECEBÍVEL   data_credito (prevista), data_credito_real
+            ├─ ANTECIPAÇÃO gateway_anticipations (1:N por parcela)
+            └─ TAXAS       taxa_processamento_real 2,10 | taxa_antecipacao_real (do Asaas)
+                 => valor_liquido_creditado = 51,32
+```
+
+Invariante obrigatória, validada por CHECK/trigger:
+
+```
+valor_cobrado_cliente
+  - taxa_processamento_real
+  - taxa_antecipacao_real
+  = valor_liquido_creditado
+```
+
+E a decomposição do crédito:
+`51,32 = 50,00 (receita de serviço) + 1,32 (recuperação parcial do repasse)`.
+Os R$ 1,32 **não somem e não viram receita da sessão**: viram uma linha própria no extrato, natureza `recuperacao_taxa`, categoria a ser confirmada com contador. Nada é escondido, nada infla o Workflow.
+
+**Campos novos necessários** (em `cobrancas` e `cobranca_parcelas`):
+- `valor_repassado_cliente numeric default 0`
+- `data_pagamento_gateway timestamptz` (data real do Asaas, separada do carimbo de webhook)
+- `fee_policy_snapshot` — já existe, passar a preencher com a política vigente no checkout
+
+**Novo em `gateway_cash_movements`:** `movement_type` passa a admitir `credit`, `fee`, `anticipation_fee`, `refund`, `chargeback`, `anticipation_reversal`; e coluna `competence_date` (data da venda) separada de `movement_date` (data do caixa).
+
+---
+
+## 5. Arquitetura Asaas
+
+1. **Antecipação automática**: o toggle existente (`dados_extras.ireiAntecipar`) passa a ser o único, mas ganha efeito real — ao salvar, chama uma edge function que executa `PUT /v3/anticipations/configurations` com `creditCardAutomaticEnabled`. Depois lê `GET` da mesma rota e grava o estado real em `dados_extras.asaasAnticipationSync = { enabled, syncedAt, eligible, error }`. Se o Asaas recusar (elegibilidade), a UI mostra o estado real, sem mentir.
+2. **Antecipação manual**: reaproveitar `gestao-asaas-anticipation` (hoje morto), ligando-a a um botão por parcela; `simulate` antes de `request`.
+3. **Webhooks**: assinar e tratar `RECEIVABLE_ANTICIPATION_SCHEDULED/AUTHORIZED/CREDITED/DENIED/CANCELLED/DEBITED`. A taxa **sempre** vem de `anticipation.fee`; o cálculo por diferença é removido.
+4. **Reconciliação**: job diário lendo `GET /v3/payments?status=RECEIVED` e `GET /v3/anticipations` das últimas 30 dias, comparando com `cobranca_parcelas` e corrigindo divergências (fonte da verdade = Asaas para taxa/crédito; Lunari para `valor_principal`).
+
+---
+
+## 6. Idempotência
+
+- Todo handler (inclusive assinaturas e `SUBSCRIPTION_RENEWED`) passa por `checkAndLogEvent` antes de qualquer efeito colateral.
+- Chave: `body.id` do Asaas. Quando ausente, `${event}_${payment.id}_${payment.status}`.
+- `gateway_cash_movements`: `provider_transaction_id` determinístico já resolve duplicidade — mas passa a incluir o tipo de origem (`payment_X_credit`, `antecip_Y_fee`) para que CONFIRMED e RECEIVED não sobrescrevam um ao outro com valores diferentes.
+- Guarda de ordem: função `payment_status_rank()` — um write só ocorre se o rank do novo status ≥ rank do atual (`pendente < confirmado < recebido < antecipado`; `estornado`/`chargeback` são terminais).
+- `cobranca_parcelas`: upsert passa a usar `onConflict: asaas_payment_id` (chave natural do Asaas), eliminando N3.
+
+---
+
+## 7. Migração dos dados atuais
+
+Nada é apagado. Migração em 3 passos, com tabela de backup `backup_financeiro_YYYYMMDD`:
+
+1. **Backfill de `valor_cobrado_cliente`**: para cada parcela, `= valor_liquido + taxa_gateway` quando disponível, senão o `amount` do movimento `credit` correspondente (é exatamente o `payment.value` original — o dado não foi perdido).
+2. **Recálculo de taxas reais**: `taxa_processamento_real = valor_cobrado_cliente - valor_liquido_creditado`, com `valor_liquido_creditado = valor_liquido` atual (que é o `netValue` verdadeiro do Asaas).
+3. **Correção de `cobrancas.valor_liquido`**: substituir a extrapolação por `SUM(cobranca_parcelas.valor_liquido_creditado)`.
+4. **Movimentos**: `amount` do `credit` passa a ser recalculado como `valor_liquido_creditado` + linha separada de repasse; movimentos antigos ganham `legacy = true` para auditoria.
+
+---
+
+## 8. Plano de implementação por fases
+
+**Fase 1 — Banco (migração, sem código)**
+Colunas novas, CHECK da invariante, `competence_date`, índice `asaas_payment_id` como conflict target, função `payment_status_rank`.
+
+**Fase 2 — Webhook (núcleo)**
+Reescrever a persistência de valores: `valor_principal`/`valor_repassado_cliente`/`valor_cobrado_cliente`/`taxa_processamento_real`/`valor_liquido_creditado`; remover cálculo de taxa por diferença; separar datas; guarda de ordem; idempotência em todos os handlers; tratar eventos hoje ignorados.
+
+**Fase 3 — Antecipação real**
+Edge function de sincronização de `creditCardAutomaticEnabled`; handlers `RECEIVABLE_ANTICIPATION_*` gravando `gateway_anticipations` + `anticipation_fee` em `gateway_cash_movements`; reversão em `CANCELLED`/`DEBITED`.
+
+**Fase 4 — Extrato e views**
+Reescrever `extrato_unificado`: uma única fonte de caixa (`gateway_cash_movements`), removendo os branches 1 e 3 para pagamentos de gateway; nova natureza `recuperacao_taxa`; `data` = vencimento/competência e `movement_date` exposto como "crédito previsto/real".
+
+**Fase 5 — Workflow**
+Corrigir `WorkflowCardExpanded` (fallback igual ao collapsed, remover hooks duplicados). Garantir que métricas comerciais leiam **apenas** `clientes_sessoes.valor_total`.
+
+**Fase 6 — Reconciliação**
+Job diário Asaas ↔ Lunari com relatório de divergências.
+
+---
+
+## 9. Plano de testes
+
+Casos A (PIX), B (cartão sem repasse), C (cartão com repasse — o caso R$ 50/53,42/51,32), D (6x sem antecipação), E (6x com antecipação automática), F (antecipação posterior), G (antecipação parcial), H (cancelamento/estorno de antecipação).
+
+Para cada caso: fixture de payload Asaas → executar webhook → asserção sobre `cobrancas`, `cobranca_parcelas`, `gateway_anticipations`, `gateway_cash_movements` e `extrato_unificado`. Cada payload é reenviado 3x para provar idempotência, e reenviado fora de ordem para provar a guarda de rank.
+
+---
+
+## 10. Critérios de aceitação
+
+1. Para o caso real: Workflow mostra venda **R$ 50,00**; extrato mostra crédito **R$ 51,32** decomposto em 50,00 + 1,32; taxa **R$ 2,10** como despesa; nenhum valor órfão.
+2. `valor_cobrado_cliente - taxas = valor_liquido_creditado` em 100% das linhas (query de auditoria retorna zero divergências).
+3. `valor_liquido` nunca maior que `valor_cobrado_cliente`.
+4. Nenhum evento reenviado 3x altera saldo.
+5. Toggle de antecipação reflete o estado real da conta Asaas (leitura de volta da API).
+6. Taxa de antecipação sempre originada de `anticipation.fee`; zero cálculo local.
+7. Card do Workflow: extras iguais em colapsado e expandido.
