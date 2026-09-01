@@ -149,28 +149,17 @@ export class WorkflowSupabaseService {
         .maybeSingle();
 
       const paidAmount = Number(appointment.paid_amount) || 0;
-      if (paidAmount > 0 && session.session_id && session.cliente_id) {
-        const { data: existingTx } = await supabase
-          .from("clientes_transacoes")
-          .select("id")
-          .eq("session_id", session.session_id)
-          .eq("descricao", "Entrada do agendamento")
-          .is("cobranca_id", null)
-          .maybeSingle();
-
-        if (!existingTx) {
-          const dataHoje = new Date();
-          await supabase.from("clientes_transacoes").insert({
-            user_id: userId,
-            cliente_id: session.cliente_id,
-            session_id: session.session_id,
-            tipo: "pagamento",
-            valor: paidAmount,
-            valor_liquido: paidAmount,
-            descricao: "Entrada do agendamento",
-            data_transacao: formatDateForStorage(dataHoje),
-          });
-        }
+      if (session.session_id) {
+        const { syncAppointmentDepositTransaction } = await import(
+          "@/modules/agenda/infrastructure/appointments.supabase"
+        );
+        await syncAppointmentDepositTransaction(
+          userId,
+          session.cliente_id,
+          session.session_id,
+          paidAmount,
+          formatDateForStorage(appointment.date || new Date()),
+        );
       }
 
       console.log(
@@ -225,12 +214,13 @@ export class WorkflowSupabaseService {
 
         const { data: freshAppts } = await supabase
           .from("appointments")
-          .select("description")
+          .select("description, paid_amount, cliente_id, date")
           .eq("id", appointmentId)
           .eq("user_id", user.user.id)
           .limit(1);
 
-        const apptDesc = freshAppts?.[0]?.description;
+        const appt = freshAppts?.[0];
+        const apptDesc = appt?.description;
         if (apptDesc && hydrated?.descricao !== apptDesc) {
           await supabase
             .from("clientes_sessoes")
@@ -238,6 +228,21 @@ export class WorkflowSupabaseService {
             .eq("id", hydrated.id)
             .eq("user_id", user.user.id);
           hydrated.descricao = apptDesc;
+        }
+
+        // Sincronizar transação de sinal para sessão já existente
+        const paidAmount = Number(appt?.paid_amount) || 0;
+        const targetSessionId = hydrated?.session_id || existingSession.session_id;
+        const targetClienteId = hydrated?.cliente_id || existingSession.cliente_id || appt?.cliente_id;
+        if (targetSessionId) {
+          const { syncAppointmentDepositTransaction } = await import("@/modules/agenda/infrastructure/appointments.supabase");
+          await syncAppointmentDepositTransaction(
+            user.user.id,
+            targetClienteId,
+            targetSessionId,
+            paidAmount,
+            appt?.date || new Date().toISOString().split("T")[0],
+          );
         }
 
         console.log(
@@ -287,8 +292,8 @@ export class WorkflowSupabaseService {
         type: hydratedData.type,
       });
 
-      // Generate universal session ID
-      const sessionId = generateUniversalSessionId("workflow");
+      // Generate or preserve universal session ID
+      const sessionId = hydratedData.session_id || generateUniversalSessionId("workflow");
 
       // Get package details if package_id exists
       let packageData = null;
@@ -651,36 +656,24 @@ export class WorkflowSupabaseService {
       }
 
       // Create initial transaction if paid_amount > 0 (Resilient fallback)
-      const paidAmount = Number(appointmentData.paid_amount) || 0;
-      if (paidAmount > 0 && clienteId) {
-        const { data: existingTx } = await supabase
-          .from("clientes_transacoes")
-          .select("id")
-          .eq("session_id", sessionId)
-          .eq("descricao", "Entrada do agendamento")
-          .is("cobranca_id", null)
-          .maybeSingle();
-
-        if (!existingTx) {
-          const dataHoje = new Date();
-          console.log("💰 Creating initial transaction (fallback):", {
-            amount: paidAmount,
-            dateToday: formatDateForStorage(dataHoje),
-          });
-
-          await supabase.from("clientes_transacoes").insert({
-            user_id: user.user.id,
-            cliente_id: clienteId,
-            session_id: sessionId,
-            tipo: "pagamento",
-            valor: paidAmount,
-            valor_liquido: paidAmount,
-            descricao: "Entrada do agendamento",
-            data_transacao: formatDateForStorage(dataHoje),
-          });
-
-          console.log("✅ Initial transaction created (fallback).");
-        }
+      const paidAmount = Number(
+        hydratedData.paid_amount ||
+          hydratedData.paidAmount ||
+          appointmentData.paid_amount ||
+          appointmentData.paidAmount ||
+          0,
+      );
+      if (sessionId) {
+        const { syncAppointmentDepositTransaction } = await import(
+          "@/modules/agenda/infrastructure/appointments.supabase"
+        );
+        await syncAppointmentDepositTransaction(
+          user.user.id,
+          clienteId,
+          sessionId,
+          paidAmount,
+          formatDateForStorage(hydratedData.date || new Date()),
+        );
       }
 
       // Update appointment with session_id for bidirectional linking

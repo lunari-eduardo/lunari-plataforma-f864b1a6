@@ -64,6 +64,84 @@ function mapRow(row: any): DomainAppointment {
 }
 
 /**
+ * Garante que a transação de entrada (sinal manual) esteja sincronizada
+ * na tabela `clientes_transacoes` para o `session_id` (slug texto) da sessão.
+ * Idempotente: insere se não existir, atualiza se o valor mudou, ou deleta se zerado.
+ */
+export async function syncAppointmentDepositTransaction(
+  userId: string,
+  clienteId: string | null | undefined,
+  sessionId: string,
+  paidAmount: number,
+  dateStr: string,
+): Promise<void> {
+  if (!sessionId) return;
+  try {
+    const { data: existingTxList, error: searchError } = await supabase
+      .from("clientes_transacoes")
+      .select("id, valor")
+      .eq("session_id", sessionId)
+      .eq("user_id", userId)
+      .eq("tipo", "pagamento")
+      .eq("descricao", "Entrada do agendamento")
+      .is("cobranca_id", null);
+
+    if (searchError) {
+      console.error("⚠️ [agenda.repo] Erro ao buscar transação de sinal existente:", searchError);
+      return;
+    }
+
+    if (paidAmount > 0) {
+      if (existingTxList && existingTxList.length > 0) {
+        const existingTx = existingTxList[0];
+        if (Number(existingTx.valor) !== paidAmount) {
+          const { error: updateError } = await supabase
+            .from("clientes_transacoes")
+            .update({
+              valor: paidAmount,
+              valor_liquido: paidAmount,
+              data_transacao: dateStr,
+              updated_by: userId,
+            })
+            .eq("id", existingTx.id);
+
+          if (updateError) {
+            console.error("⚠️ [agenda.repo] Erro ao atualizar valor do sinal:", updateError);
+          } else {
+            console.log("💰 [agenda.repo] Transação de sinal atualizada com sucesso:", paidAmount);
+          }
+        }
+      } else {
+        const { error: insertError } = await supabase.from("clientes_transacoes").insert({
+          user_id: userId,
+          cliente_id: clienteId || null,
+          session_id: sessionId,
+          tipo: "pagamento",
+          valor: paidAmount,
+          valor_liquido: paidAmount,
+          data_transacao: dateStr,
+          descricao: "Entrada do agendamento",
+          observacoes: "Adicionado via painel de agendamento",
+        });
+
+        if (insertError) {
+          console.error("⚠️ [agenda.repo] Erro ao inserir transação de sinal:", insertError);
+        } else {
+          console.log("💰 [agenda.repo] Transação de sinal criada com sucesso:", paidAmount);
+        }
+      }
+    } else if (paidAmount === 0 && existingTxList && existingTxList.length > 0) {
+      for (const tx of existingTxList) {
+        await supabase.from("clientes_transacoes").delete().eq("id", tx.id);
+      }
+      console.log("💰 [agenda.repo] Transação de sinal removida (zerada).");
+    }
+  } catch (err) {
+    console.error("⚠️ [agenda.repo] Exceção em syncAppointmentDepositTransaction:", err);
+  }
+}
+
+/**
  * Hidrata o appointment recém-criado/atualizado e dispara a criação da
  * sessão de workflow + sync Google Calendar. Idempotente e tolerante a falhas.
  */
@@ -124,6 +202,19 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
 
     if (session) {
       console.log("🎯 [agenda.repo] Sessão criada com sucesso:", session.id);
+
+      // Sincroniza imediatamente a transação de entrada manual usando o session_id (slug texto)
+      const targetSessionId = session.session_id || fresh.session_id;
+      const targetClienteId = session.cliente_id || fresh.cliente_id || hydrated.clienteId;
+      if (targetSessionId) {
+        await syncAppointmentDepositTransaction(
+          userId,
+          targetClienteId,
+          targetSessionId,
+          Number(fresh.paid_amount) || 0,
+          fresh.date,
+        );
+      }
 
       // Patch redundante: corrigir inversão categoria/pacote, valor_base_pacote = 0,
       // valor_foto_extra ausente e regras_congeladas.pacote incompleto.
@@ -201,38 +292,6 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
           },
         }),
       );
-
-      // NOVO: Garantir que a transação inicial (sinal) seja criada caso o trigger tenha omitido
-      if (hydrated.paidAmount > 0) {
-        setTimeout(async () => {
-          try {
-            const { data: existingTx } = await supabase
-              .from("clientes_transacoes")
-              .select("id")
-              .eq("session_id", session.id)
-              .eq("descricao", "Entrada do agendamento")
-              .maybeSingle();
-
-            if (!existingTx) {
-              const tx = {
-                user_id: userId,
-                cliente_id: session.cliente_id || hydrated.clienteId,
-                session_id: session.id,
-                tipo: "pagamento",
-                valor: hydrated.paidAmount,
-                valor_liquido: hydrated.paidAmount,
-                data_transacao: new Date().toISOString().split("T")[0],
-                descricao: "Entrada do agendamento",
-                observacoes: "Adicionado por fallback do agendamento direto",
-              };
-              await supabase.from("clientes_transacoes").insert(tx);
-              console.log("💰 [agenda.repo] Transação de sinal injetada com sucesso:", hydrated.paidAmount);
-            }
-          } catch (txError) {
-            console.error("⚠️ [agenda.repo] Erro ao injetar transação de sinal:", txError);
-          }
-        }, 1500);
-      }
     } else {
       // Fallback: tenta de novo daqui a 2s se não houver sessão para o appointment
       setTimeout(async () => {
@@ -339,27 +398,10 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
 
       if (error) throw error;
 
-      // Garantir a criação imediata da transação de entrada se houver valor pago
-      if ((input.paidAmount || 0) > 0 && input.status === "confirmado") {
-        const { error: txError } = await supabase.from("clientes_transacoes").insert({
-          user_id: session.user.id,
-          cliente_id: sanitizeUuid(input.clienteId),
-          session_id: sessionId,
-          tipo: "pagamento",
-          valor: input.paidAmount,
-          valor_liquido: input.paidAmount,
-          descricao: "Entrada do agendamento",
-          data_transacao: dateStr,
-        });
-        if (txError) {
-          console.error("Erro ao criar transação de entrada:", txError);
-        }
-      }
-
     const created = mapRow(data);
 
     if (created.status === "confirmado") {
-      // dispara mas não espera — paridade com o legado (não fatal)
+      // dispara criação da sessão e sincronização da transação de entrada (não fatal)
       void handleConfirmedSideEffects(created.id, session.user.id);
     }
 
@@ -436,7 +478,19 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       }
     }
 
-    if (patch.status === "confirmado") {
+    const isConfirmedNow = patch.status === "confirmado";
+    let wasConfirmedBefore = false;
+    if (!isConfirmedNow && patch.paidAmount !== undefined) {
+      const { data: curr } = await supabase
+        .from("appointments")
+        .select("status")
+        .eq("id", id)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      wasConfirmedBefore = curr?.status === "confirmado";
+    }
+
+    if (isConfirmedNow || wasConfirmedBefore) {
       void handleConfirmedSideEffects(id, session.user.id);
     } else if (
       patch.date !== undefined ||

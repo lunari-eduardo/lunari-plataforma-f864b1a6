@@ -903,15 +903,19 @@ export default function SessionPanel({
                           ? "Desativado (cobrança via link ativa)"
                           : "0,00"
                       }
-                      disabled={cobrarAoSalvar || (isEdit && (!!appointment?.paidAmount && appointment.paidAmount > 0 || workflowInfo?.hasPayments))}
+                      disabled={cobrarAoSalvar || pagoCobrancas.length > 0}
                       className={cn(
                         "h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity",
-                        (cobrarAoSalvar || (isEdit && (!!appointment?.paidAmount && appointment.paidAmount > 0 || workflowInfo?.hasPayments))) &&
+                        (cobrarAoSalvar || pagoCobrancas.length > 0) &&
                           "opacity-50 cursor-not-allowed bg-muted/30",
                       )}
                     />
                   </div>
-                  {cobrarAoSalvar && (
+                  {pagoCobrancas.length > 0 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Entrada manual desativada pois existem cobranças processadas via link para esta sessão.
+                    </p>
+                  ) : cobrarAoSalvar ? (
                     <p className="text-[11px] text-muted-foreground">
                       Entrada manual desativada pois{" "}
                       <strong className="font-medium text-foreground">
@@ -919,7 +923,7 @@ export default function SessionPanel({
                       </strong>{" "}
                       está ativa.
                     </p>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Divisor */}
