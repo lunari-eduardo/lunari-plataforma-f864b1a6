@@ -1,197 +1,63 @@
-# Arquitetura Financeira Lunari — Asaas, recebíveis e antecipação
+# Correção: sinal manual não é salvo ao confirmar agendamento
 
-Documento de diagnóstico + correção. Baseado em leitura do código real e em consultas ao banco de produção (dados reais citados abaixo).
+## O que foi confirmado no banco (dados reais)
 
----
+Agendamentos com `paid_amount = 100` e **nenhuma** transação de entrada:
 
-## 1. Diagnóstico atual
+| Agendamento | paid_amount | sessão criada | valor_pago | transações |
+|---|---|---|---|---|
+| 86d531ef (02/09 01:47) | 100 | sim | 0 | 0 |
+| 094f24ed (01/09 14:23) | 100 | sim | 0 | 0 |
+| 0d7d73e6 (31/08 17:58) | 100 | sim | 0 | 0 |
+| 5f15ef27 (31/08 22:08) | 100 | sim | **100** | 1 |
 
-### 1.1 Entidades que existem hoje
+O único caso correto (5f15ef27) é exatamente o fluxo "criar já confirmado com sinal". Nos demais o valor foi gravado em `appointments.paid_amount`, a sessão do Workflow foi criada, mas a linha em `clientes_transacoes` (descrição "Entrada do agendamento") nunca existiu — e é ela que alimenta `clientes_sessoes.valor_pago` via trigger. Também existe uma transação órfã com `session_id` nulo (sintoma do mesmo problema).
 
-| Tabela | Papel real hoje |
-|---|---|
-| `clientes_sessoes` | Venda (fonte comercial do Workflow). `valor_total` recalculado por trigger; `valor_pago` recomputado por trigger a partir de `clientes_transacoes` |
-| `cobrancas` | Cobrança/checkout. Já possui `valor_principal`, `valor_cobrado_cliente`, `taxa_processamento_real`, `taxa_antecipacao_real`, `valor_liquido_creditado`, `data_credito`, `data_credito_real`, `fee_policy_snapshot`, `source_event_id` |
-| `cobranca_parcelas` | Parcela. Possui os mesmos campos "reais" + `taxa_gateway`, `taxa_antecipacao`, `antecipado`, `data_vencimento`, `data_pagamento`, `data_credito` |
-| `clientes_transacoes` | Pagamento (alimenta `valor_pago` da sessão via trigger `recompute_paid_amount`) |
-| `gateway_cash_movements` | Caixa do gateway: `movement_type` (`credit`/`fee`), `amount`, `movement_date`, `anticipation_id` |
-| `gateway_anticipations` | Antecipação: `provider_anticipation_id`, `fee`, `net_value`, `status`, `request_date`, `credit_date` — **0 linhas** |
-| `gateway_events` | Idempotência (`provider`, `provider_event_id`) — 16 linhas |
-| `webhook_logs` | Auditoria bruta — 501 linhas Asaas |
+## Onde está o problema
 
-**A modelagem já está quase toda criada. O problema não é falta de tabela: é que o webhook não preenche os campos certos e o extrato lê o campo errado.**
+1. **Trigger de banco cria a sessão com pagamento zerado**
+   `ensure_workflow_session_on_confirm` (dispara em `AFTER INSERT OR UPDATE OF status, paid_amount ON appointments`) insere a sessão com `valor_pago = 0` fixo e **nunca** cria transação a partir de `NEW.paid_amount`. Ele só usa o sinal para inflar `valor_total`. Ou seja: o banco confirma o agendamento no Workflow sem levar o dinheiro junto.
 
-### 1.2 Fluxo atual (real)
+2. **A criação da transação está só no frontend, duplicada em 4 lugares e com ordens diferentes**
+   - `appointments.supabase.ts` `create()` → cria sessão e **depois** sincroniza o sinal (é por isso que esse fluxo funciona).
+   - `appointments.supabase.ts` `update()` (linhas 498‑512) → sincroniza o sinal **antes** de `handleConfirmedSideEffects`, dependendo de a sessão já existir naquele instante.
+   - `WorkflowSupabaseService._createSessionInternal` (sessão nova e sessão existente) e `hydrateStubSession` → mais três chamadas concorrentes com valores possivelmente defasados.
 
-```
-checkout (gross-up local em src/lib/anticipationUtils.ts)
-   -> cobrancas.valor = valor cobrado do cliente (inflado)
-   -> Asaas payment
-   -> webhook PAYMENT_CONFIRMED / PAYMENT_RECEIVED
-        -> cobranca_parcelas (valor_bruto = cobranca.valor/parcelas; valor_liquido = payment.netValue)
-        -> cobrancas.status/valor_liquido (netValue x nº parcelas — extrapolação)
-        -> gateway_cash_movements: credit = payment.value ; fee = -(value - netValue)
-   -> extrato_unificado (6 branches em UNION ALL)
-```
+3. **Toda falha é silenciosa**
+   `syncAppointmentDepositTransaction` (linhas 71‑142) faz `return` em qualquer erro de busca e apenas `console.error` em erro de insert/update. Existe FK `fk_transacoes_session_id → clientes_sessoes(session_id)`: se a sessão ainda não existe no momento do insert, o banco rejeita e o usuário não recebe nenhum aviso — o painel fecha como se tivesse salvo.
 
----
+4. **Regra de apagar quando zero**
+   Na mesma função, `paidAmount === 0` **deleta** a transação de entrada. Como várias chamadas concorrentes usam leituras diferentes de `paid_amount` (memória, `currAppt`, `hydratedData`), uma chamada defasada com 0 apaga o sinal recém-criado, sem log de auditoria.
 
-## 2. Bugs confirmados (com evidência de produção)
+5. **O painel bloqueia a correção manual**
+   `SessionPanel.isConfirmedWithDeposit` (linhas 301‑307) desabilita o campo "Registro de entrada manual" assim que o agendamento está confirmado e tem sessão no Workflow. Depois da falha, o usuário não consegue reinserir o valor pela Agenda — que é a experiência relatada.
 
-**B1 — `gateway_cash_movements.credit` usa `payment.value` (valor inflado).**
-`asaas-webhook/index.ts:610-620`: `amount: txTotal` onde `txTotal = payment.value`. Contradiz a regra do próprio arquivo (`index.ts:331`: *"valor_bruto ... NUNCA payment.value"*).
-Evidência: cobrança `e42adfc3`, `valor_principal = 100`; movimento `payment_pay_9hezbtoqoteu63qo_credit` com `amount = 53.42` e `fee = -2.10`. No extrato, `53.42` entra classificado como **"Receita de Serviços"** (branch de `gateway_cash_movements`, linhas 149/153 da view).
+## Como resolver
 
-**B2 — `valor_liquido` maior que a venda.** Mesma cobrança: `valor = 100`, `valor_liquido = 102.64`. Duas origens somadas: (a) `index.ts:573-577` faz `netValue × total_parcelas` (extrapolação de uma parcela para todas); (b) o trigger `reconcile_cobranca_from_parcelas()` (AFTER INSERT/UPDATE em `cobranca_parcelas`) **também** grava `cobrancas.valor_liquido` e `status`, como somatório das parcelas. São **dois escritores concorrentes** para a mesma coluna, sem coordenação. Cada parcela tem `valor_bruto = 50` e `valor_liquido = 51.32` — líquido > bruto, matematicamente impossível.
+### Fase 1 — Tornar o banco a fonte de verdade (migração)
+- Nova função `public.sync_appointment_deposit_transaction()` + trigger em `appointments` `AFTER INSERT OR UPDATE OF paid_amount, status, session_id`, nomeado para executar **depois** de `trg_ensure_workflow_session_on_confirm` (ordem alfabética de trigger), garantindo que a sessão já exista:
+  - só age quando `status = 'confirmado'`, `session_id` e `cliente_id` presentes;
+  - `paid_amount > 0`: insere ou atualiza a transação única (`tipo='pagamento'`, `descricao='Entrada do agendamento'`, `cobranca_id IS NULL`) daquele `session_id`;
+  - `paid_amount = 0` **e** o valor anterior era maior que zero: remove a transação (nunca apagar por leitura defasada);
+  - índice único parcial em `clientes_transacoes (session_id)` para essa descrição com `cobranca_id IS NULL`, tornando a operação idempotente.
+- Ajustar `ensure_workflow_session_on_confirm` para não gravar `valor_pago = 0` fixo: ao final, chamar `recompute_session_paid(NEW.session_id)`.
+- Backfill: para todo `appointments` confirmado com `paid_amount > 0` sem transação de entrada, criar a transação e recomputar `valor_pago` (corrige os 3 agendamentos acima). Ligar a transação órfã com `session_id` nulo ou removê-la.
 
-**B3 — Colunas "reais" existem mas nunca são escritas.** Em 100% das linhas de `cobrancas` e `cobranca_parcelas`: `taxa_processamento_real = 0`, `taxa_antecipacao_real = 0`, `valor_liquido_creditado = 0`, `valor_cobrado_cliente = NULL`. O webhook não referencia nenhuma delas. Os R$ 53,42 efetivamente cobrados **não estão gravados em lugar nenhum** — só sobrevivem como `amount` de um movimento de caixa.
+### Fase 2 — Simplificar o frontend
+- Remover as chamadas de `syncAppointmentDepositTransaction` de `WorkflowSupabaseService` (3 pontos) e de `appointments.supabase.ts` `create()`/`update()`. O banco passa a ser o único responsável.
+- Manter a função apenas como utilitário legado ou excluí-la; se mantida, trocar os `console.error` silenciosos por erro propagado.
+- Em `update()`, propagar falha ao usuário: se o `UPDATE` do agendamento falhar, exibir toast de erro (hoje só o `throw` do supabase é tratado).
 
-**B4 — Taxa de antecipação calculada por diferença.** `index.ts:493-502`:
-```ts
-taxaAntecipacao = Math.max(0, round((existingParcela.valor_liquido - valorLiquido) * 100) / 100);
-```
-Se `PAYMENT_ANTICIPATED` chegar antes de CONFIRMED/RECEIVED, `existingParcela` é nulo e a taxa vira `0` silenciosamente, sem backfill posterior.
+### Fase 3 — Painel de agendamento
+- `isConfirmedWithDeposit`: manter o bloqueio apenas quando existir cobrança paga por link (`pagoCobrancas.length > 0`) ou quando o valor já estiver registrado (`valor_pago > 0` na sessão). Com sessão criada mas sem pagamento algum, o campo deve continuar editável para permitir o registro/correção.
+- Após salvar, invalidar/refetch da sessão para o card do Workflow refletir "Pago" imediatamente (hoje o evento `workflow-cache-silent-refresh` é disparado antes de a transação existir).
 
-**B5 — Eventos `RECEIVABLE_ANTICIPATION_*` nunca chegaram.** O handler existe (`index.ts:698-790`) e lê corretamente `anticipation.id/fee/netValue`, mas `asaas_webhook_events` só registra `PAYMENT_CONFIRMED` (105) e `PAYMENT_RECEIVED` (9), e `gateway_anticipations` tem **0 linhas**. Ou os eventos não estão assinados no painel Asaas, ou nunca houve antecipação. Precisa ser verificado contra a conta.
+### Fase 4 — Verificação
+Reproduzir os três fluxos e conferir no banco `clientes_transacoes` + `clientes_sessoes.valor_pago`:
+1. pendente salvo → reabrir → sinal + confirmar → salvar;
+2. pendente salvo já com sinal → editar para confirmado;
+3. confirmado com sinal na primeira gravação (regressão);
+4. alterar o sinal de 100 para 150 e depois para 0.
 
-**B6 — Datas misturadas.** `movement_date` = `payment.creditDate` (`index.ts:617`). Parcela `pay_w13bwj2bb2xbr1fc`: `data_vencimento = 2026-10-01`, `movement_date = 2026-11-03`. O extrato exibe `movement_date` como a data da linha → a parcela aparece em novembro. Além disso `cobrancas.data_pagamento` e `data_credito_real` recebem `new Date()` (hora do webhook), não a data do Asaas (`index.ts:559,566`).
-
-**B7 — Toggle de antecipação é apenas preferência local.** Confirmado: grava em `usuarios_integracoes.dados_extras.{ireiAntecipar, repassarTaxaAntecipacao}` via `.update()` direto (`useIntegracoes.ts:556-570`). `creditCardAutomaticEnabled` tem **zero ocorrências no repositório**. A função `gestao-asaas-anticipation` chama `/v3/anticipations/simulate` e `/v3/anticipations`, mas **nunca é invocada pelo frontend** (dead code registrado em `config.toml:108`). O toggle só alimenta gross-up local em `anticipationUtils.ts`.
-
-**B8 — Workflow: extras 6 vs 0.** `WorkflowCardCollapsed.tsx:365-367` tem fallback `fin.qtdExtras > 0 ? fin.qtdExtras : session.qtdFotosExtra`; `WorkflowCardExpanded.tsx:183-187` sincroniza com `fin.qtdExtras || 0` **sem fallback**, e o total (linha 425) usa `fin.extrasLiquido` direto. Além disso os hooks `useGalleryExtraCalc` + `useSessionFinancialsWithExtras` estão **duplicados** (linhas 79-88 e 160-169). Dados no banco estão corretos (`qtd_fotos_extra = 6`, `galerias.valor_extras = 138`) → é bug de leitura/RPC, não de dado.
-
----
-
-## 3. Problemas adicionais encontrados
-
-**N1 — Dupla contagem estrutural no `extrato_unificado`.** A view tem 6 branches. O branch 1 (`clientes_transacoes`, tipo `pagamento`) e o branch 4 (`gateway_cash_movements`, `credit`) **representam o mesmo dinheiro**. A única separação é o flag textual `dados_extras->>'migrado_para_gateway' = 'true'`. Qualquer transação sem esse flag conta duas vezes.
-
-**N2 — Branch de taxa duplicado.** Branch 3 já emite "Taxa Gateway / Antecipação" (`ct.valor - ct.valor_liquido`) e o branch 4 emite `movement_type='fee'`. Mesmo risco.
-
-**N3 — Conflito de chaves em `cobranca_parcelas`.** Existem dois uniques: `(cobranca_id, numero_parcela)` e `(asaas_payment_id)`. O upsert usa apenas o primeiro (`index.ts:373`). Quando `installmentNumber` vem ausente e cai no default `1` (`index.ts:355`), o upsert tenta gravar um `asaas_payment_id` diferente na parcela 1 e **viola o segundo unique**, falhando a parcela inteira.
-
-**N4 — Sem guarda de ordem.** Nenhuma comparação de status/timestamp antes do write. `PAYMENT_CONFIRMED` chegando depois de `PAYMENT_REFUNDED` reverte `cobrancas.status` de `estornado` para `pago` (`index.ts:543-556`).
-
-**N5 — `SUBSCRIPTION_RENEWED` sem idempotência.** `index.ts:843-885` chama a RPC `renew_subscription_credits` fora do `checkAndLogEvent` → redelivery duplica créditos.
-
-**N6 — Eventos ignorados retornam 200.** `PAYMENT_PARTIALLY_REFUNDED`, `PAYMENT_CHARGEBACK_DISPUTE`, `PAYMENT_REPROVED_BY_RISK_ANALYSIS`, `PAYMENT_CREATED` estão assinados (`asaas-helpers.ts:315-327`) mas caem no `return {received:true}` final — o Asaas nunca reenvia.
-
-**N7 — Idempotência de base está OK.** Os índices `idx_gateway_events_dedup`, `idx_gateway_cash_movements_dedup` e `idx_gateway_anticipations_dedup` existem. O problema não é dedup de evento, é semântica de valor.
-
-**N8 — Métrica `caixa_recebido` inflada.** A RPC `workflow_month_metrics` calcula `caixa_recebido = Σ clientes_transacoes.valor + Σ gateway_cash_movements.amount (credit/refund/chargeback)`. Como o `credit` é o valor bruto inflado (B1), a métrica de caixa mostra R$ 53,42 onde entraram R$ 51,32. As métricas comerciais (`previsto`, `receita`, `pendente`) estão corretas — leem só `valor_total`/`valor_pago`. **O Workflow comercial não está contaminado; só o "caixa" está.**
-
-**N9 — `cobrancas.session_id` não é FK.** É um `TEXT` solto resolvido em runtime por `WHERE session_id = X OR id::text = X`, com fallback via `galerias`. Isso torna a reconciliação sessão↔cobrança dependente de string matching, sem integridade referencial.
-
-**N10 — Sem coluna de política de repasse.** Os flags `repassarTaxasProcessamento`/`repassarTaxaAntecipacao` só existem dentro de `clientes_transacoes.dados_extras` (caminho legado). Para pagamentos Asaas não há registro de qual política estava vigente no momento do checkout — `fee_policy_snapshot` existe em `cobrancas` mas nunca é preenchido.
-
----
-
-## 4. Modelo financeiro recomendado
-
-Cinco conceitos, nunca misturados:
-
-```
-VENDA (clientes_sessoes.valor_total)            -> métrica do Workflow. Nunca tocada por gateway.
-  └─ COBRANÇA (cobrancas)
-       valor_principal          = receita do serviço      50,00
-       valor_repassado_cliente  = acréscimo repassado       3,42   [NOVO]
-       valor_cobrado_cliente    = principal + repasse      53,42
-       └─ PARCELA (cobranca_parcelas)  [mesmos 3 campos, rateados]
-            ├─ PAGAMENTO   data_pagamento, valor_cobrado_cliente
-            ├─ RECEBÍVEL   data_credito (prevista), data_credito_real
-            ├─ ANTECIPAÇÃO gateway_anticipations (1:N por parcela)
-            └─ TAXAS       taxa_processamento_real 2,10 | taxa_antecipacao_real (do Asaas)
-                 => valor_liquido_creditado = 51,32
-```
-
-Invariante obrigatória, validada por CHECK/trigger:
-
-```
-valor_cobrado_cliente
-  - taxa_processamento_real
-  - taxa_antecipacao_real
-  = valor_liquido_creditado
-```
-
-E a decomposição do crédito:
-`51,32 = 50,00 (receita de serviço) + 1,32 (recuperação parcial do repasse)`.
-Os R$ 1,32 **não somem e não viram receita da sessão**: viram uma linha própria no extrato, natureza `recuperacao_taxa`, categoria a ser confirmada com contador. Nada é escondido, nada infla o Workflow.
-
-**Campos novos necessários** (em `cobrancas` e `cobranca_parcelas`):
-- `valor_repassado_cliente numeric default 0`
-- `data_pagamento_gateway timestamptz` (data real do Asaas, separada do carimbo de webhook)
-- `fee_policy_snapshot` — já existe, passar a preencher com a política vigente no checkout
-
-**Novo em `gateway_cash_movements`:** `movement_type` passa a admitir `credit`, `fee`, `anticipation_fee`, `refund`, `chargeback`, `anticipation_reversal`; e coluna `competence_date` (data da venda) separada de `movement_date` (data do caixa).
-
----
-
-## 5. Arquitetura Asaas
-
-1. **Antecipação automática**: o toggle existente (`dados_extras.ireiAntecipar`) passa a ser o único, mas ganha efeito real — ao salvar, chama uma edge function que executa `PUT /v3/anticipations/configurations` com `creditCardAutomaticEnabled`. Depois lê `GET` da mesma rota e grava o estado real em `dados_extras.asaasAnticipationSync = { enabled, syncedAt, eligible, error }`. Se o Asaas recusar (elegibilidade), a UI mostra o estado real, sem mentir.
-2. **Antecipação manual**: reaproveitar `gestao-asaas-anticipation` (hoje morto), ligando-a a um botão por parcela; `simulate` antes de `request`.
-3. **Webhooks**: assinar e tratar `RECEIVABLE_ANTICIPATION_SCHEDULED/AUTHORIZED/CREDITED/DENIED/CANCELLED/DEBITED`. A taxa **sempre** vem de `anticipation.fee`; o cálculo por diferença é removido.
-4. **Reconciliação**: job diário lendo `GET /v3/payments?status=RECEIVED` e `GET /v3/anticipations` das últimas 30 dias, comparando com `cobranca_parcelas` e corrigindo divergências (fonte da verdade = Asaas para taxa/crédito; Lunari para `valor_principal`).
-
----
-
-## 6. Idempotência
-
-- Todo handler (inclusive assinaturas e `SUBSCRIPTION_RENEWED`) passa por `checkAndLogEvent` antes de qualquer efeito colateral.
-- Chave: `body.id` do Asaas. Quando ausente, `${event}_${payment.id}_${payment.status}`.
-- `gateway_cash_movements`: `provider_transaction_id` determinístico já resolve duplicidade — mas passa a incluir o tipo de origem (`payment_X_credit`, `antecip_Y_fee`) para que CONFIRMED e RECEIVED não sobrescrevam um ao outro com valores diferentes.
-- Guarda de ordem: função `payment_status_rank()` — um write só ocorre se o rank do novo status ≥ rank do atual (`pendente < confirmado < recebido < antecipado`; `estornado`/`chargeback` são terminais).
-- `cobranca_parcelas`: upsert passa a usar `onConflict: asaas_payment_id` (chave natural do Asaas), eliminando N3.
-
----
-
-## 7. Migração dos dados atuais
-
-Nada é apagado. Migração em 3 passos, com tabela de backup `backup_financeiro_YYYYMMDD`:
-
-1. **Backfill de `valor_cobrado_cliente`**: para cada parcela, `= valor_liquido + taxa_gateway` quando disponível, senão o `amount` do movimento `credit` correspondente (é exatamente o `payment.value` original — o dado não foi perdido).
-2. **Recálculo de taxas reais**: `taxa_processamento_real = valor_cobrado_cliente - valor_liquido_creditado`, com `valor_liquido_creditado = valor_liquido` atual (que é o `netValue` verdadeiro do Asaas).
-3. **Correção de `cobrancas.valor_liquido`**: substituir a extrapolação por `SUM(cobranca_parcelas.valor_liquido_creditado)`.
-4. **Movimentos**: `amount` do `credit` passa a ser recalculado como `valor_liquido_creditado` + linha separada de repasse; movimentos antigos ganham `legacy = true` para auditoria.
-
----
-
-## 8. Plano de implementação por fases
-
-**Fase 1 — Banco (migração, sem código)**
-Colunas novas, CHECK da invariante, `competence_date`, índice `asaas_payment_id` como conflict target, função `payment_status_rank`.
-
-**Fase 2 — Webhook (núcleo)**
-Reescrever a persistência de valores: `valor_principal`/`valor_repassado_cliente`/`valor_cobrado_cliente`/`taxa_processamento_real`/`valor_liquido_creditado`; remover cálculo de taxa por diferença; separar datas; guarda de ordem; idempotência em todos os handlers; tratar eventos hoje ignorados. **Eliminar o escritor duplo de `cobrancas.valor_liquido`**: o webhook deixa de escrever essa coluna e o trigger `reconcile_cobranca_from_parcelas()` passa a ser a única fonte, somando `valor_liquido_creditado` das parcelas.
-
-**Fase 3 — Antecipação real**
-Edge function de sincronização de `creditCardAutomaticEnabled`; handlers `RECEIVABLE_ANTICIPATION_*` gravando `gateway_anticipations` + `anticipation_fee` em `gateway_cash_movements`; reversão em `CANCELLED`/`DEBITED`.
-
-**Fase 4 — Extrato e views**
-Reescrever `extrato_unificado`: uma única fonte de caixa (`gateway_cash_movements`), removendo os branches 1 e 3 para pagamentos de gateway; nova natureza `recuperacao_taxa`; `data` = vencimento/competência e `movement_date` exposto como "crédito previsto/real". Corrigir `workflow_month_metrics.caixa_recebido` para somar crédito **líquido** em vez de bruto (N8).
-
-**Fase 5 — Workflow**
-Corrigir `WorkflowCardExpanded` (fallback igual ao collapsed, remover hooks duplicados). Garantir que métricas comerciais leiam **apenas** `clientes_sessoes.valor_total`.
-
-**Fase 6 — Reconciliação**
-Job diário Asaas ↔ Lunari com relatório de divergências.
-
----
-
-## 9. Plano de testes
-
-Casos A (PIX), B (cartão sem repasse), C (cartão com repasse — o caso R$ 50/53,42/51,32), D (6x sem antecipação), E (6x com antecipação automática), F (antecipação posterior), G (antecipação parcial), H (cancelamento/estorno de antecipação).
-
-Para cada caso: fixture de payload Asaas → executar webhook → asserção sobre `cobrancas`, `cobranca_parcelas`, `gateway_anticipations`, `gateway_cash_movements` e `extrato_unificado`. Cada payload é reenviado 3x para provar idempotência, e reenviado fora de ordem para provar a guarda de rank.
-
----
-
-## 10. Critérios de aceitação
-
-1. Para o caso real: Workflow mostra venda **R$ 50,00**; extrato mostra crédito **R$ 51,32** decomposto em 50,00 + 1,32; taxa **R$ 2,10** como despesa; nenhum valor órfão.
-2. `valor_cobrado_cliente - taxas = valor_liquido_creditado` em 100% das linhas (query de auditoria retorna zero divergências).
-3. `valor_liquido` nunca maior que `valor_cobrado_cliente`.
-4. Nenhum evento reenviado 3x altera saldo.
-5. Toggle de antecipação reflete o estado real da conta Asaas (leitura de volta da API).
-6. Taxa de antecipação sempre originada de `anticipation.fee`; zero cálculo local.
-7. Card do Workflow: extras iguais em colapsado e expandido.
+## Observação fora do escopo
+O build atual está quebrando por erros de TypeScript pré-existentes (`ChargeModal`/`allowChangeValor`, `PublicCheckout.mpPublicKey`, status de cobrança). Precisam ser corrigidos para o preview compilar — posso incluir na mesma execução se você quiser.
