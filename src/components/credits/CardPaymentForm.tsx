@@ -18,6 +18,7 @@ declare global {
         identificationType: string;
         identificationNumber: string;
       }) => Promise<{ id: string } | { cause: Array<{ code: string; description: string }> }>;
+      getPaymentMethods: (args: { bin: string }) => Promise<{ results?: Array<{ id: string }> }>;
     };
   }
 }
