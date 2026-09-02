@@ -293,6 +293,19 @@ export default function SessionPanel({
     [pagoCobrancas],
   );
 
+  /**
+   * Agendamento confirmado que já tem sinal registrado manualmente OU sessão no Workflow.
+   * Nesse estado, o campo de entrada manual e os botões de cobrança devem ser bloqueados:
+   * o gerenciamento financeiro acontece exclusivamente no Workflow.
+   */
+  const isConfirmedWithDeposit = useMemo(
+    () =>
+      isEdit &&
+      form.status === "confirmado" &&
+      ((appointment?.paidAmount ?? 0) > 0 || workflowInfo.hasSession),
+    [isEdit, form.status, appointment?.paidAmount, workflowInfo.hasSession],
+  );
+
   const cobrancaPendente = pendenteCobrancas[0] || null;
   const cobrancaPendenteLink = cobrancaPendente
     ? cobrancaPendente.id
@@ -864,7 +877,7 @@ export default function SessionPanel({
               icon={DollarSign}
               title="Financeiro"
               action={
-                isEdit && form.clienteId ? (
+                isEdit && form.clienteId && !isConfirmedWithDeposit ? (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -899,19 +912,24 @@ export default function SessionPanel({
                       onChange={paidInput.handleChange}
                       onFocus={paidInput.handleFocus}
                       placeholder={
-                        cobrarAoSalvar
-                          ? "Desativado (cobrança via link ativa)"
+                        cobrarAoSalvar || isConfirmedWithDeposit
+                          ? "Gerenciado pelo Workflow"
                           : "0,00"
                       }
-                      disabled={cobrarAoSalvar || pagoCobrancas.length > 0}
+                      disabled={cobrarAoSalvar || pagoCobrancas.length > 0 || isConfirmedWithDeposit}
                       className={cn(
                         "h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity",
-                        (cobrarAoSalvar || pagoCobrancas.length > 0) &&
+                        (cobrarAoSalvar || pagoCobrancas.length > 0 || isConfirmedWithDeposit) &&
                           "opacity-50 cursor-not-allowed bg-muted/30",
                       )}
                     />
                   </div>
-                  {pagoCobrancas.length > 0 ? (
+                  {isConfirmedWithDeposit ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Agendamento confirmado. Gerencie pagamentos e cobranças pelo{" "}
+                      <strong className="font-medium text-foreground">Workflow</strong>.
+                    </p>
+                  ) : pagoCobrancas.length > 0 ? (
                     <p className="text-[11px] text-muted-foreground">
                       Entrada manual desativada pois existem cobranças processadas via link para esta sessão.
                     </p>
@@ -982,7 +1000,7 @@ export default function SessionPanel({
                         </p>
                       ) : null}
                     </div>
-                  ) : !cobranca ? (
+                  ) : isConfirmedWithDeposit ? null : !cobranca ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-3 py-1">
                         <div className="min-w-0">
@@ -1004,6 +1022,7 @@ export default function SessionPanel({
                       </div>
                     </div>
                   ) : pagoCobrancas.length > 0 ? (
+
                     <div className="space-y-2">
                       <span className="block text-xs font-semibold text-foreground">
                         Cobrança via link

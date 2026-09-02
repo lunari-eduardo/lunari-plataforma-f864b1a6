@@ -417,6 +417,16 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       return clean.length > 0 ? clean : null;
     };
 
+    // ✅ CRÍTICO: Capturar estado ANTES do UPDATE para evitar race condition.
+    // Se buscarmos paid_amount DEPOIS do UPDATE, podemos pegar o valor já atualizado
+    // e ainda assim ter latência de replicação — usando dados in-memory somos determinísticos.
+    const { data: currAppt } = await supabase
+      .from("appointments")
+      .select("status, paid_amount, session_id, cliente_id, date")
+      .eq("id", id)
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
     const updateData: Record<string, any> = {};
     if (patch.title !== undefined) updateData.title = patch.title;
     if (patch.date !== undefined) updateData.date = assertIsoDate(patch.date);
@@ -445,20 +455,14 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
 
     if (patch.description !== undefined) {
       try {
-        const { data: appt } = await supabase
-          .from("appointments")
-          .select("session_id")
-          .eq("id", id)
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
+        const sessionId = currAppt?.session_id;
         let query = supabase
           .from("clientes_sessoes")
           .update({ descricao: patch.description || "", updated_by: session.user.id })
           .eq("user_id", session.user.id);
 
-        if (appt?.session_id) {
-          query = query.or(`appointment_id.eq.${id},session_id.eq.${appt.session_id}`);
+        if (sessionId) {
+          query = query.or(`appointment_id.eq.${id},session_id.eq.${sessionId}`);
         } else {
           query = query.eq("appointment_id", id);
         }
@@ -479,18 +483,32 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
     }
 
     const isConfirmedNow = patch.status === "confirmado";
-    let wasConfirmedBefore = false;
-    if (!isConfirmedNow && patch.paidAmount !== undefined) {
-      const { data: curr } = await supabase
-        .from("appointments")
-        .select("status")
-        .eq("id", id)
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      wasConfirmedBefore = curr?.status === "confirmado";
-    }
+    const wasConfirmedBefore = currAppt?.status === "confirmado";
+
+    // Determinar o paid_amount final com base nos dados em memória (sem nova query ao banco)
+    const newPaidAmount = patch.paidAmount !== undefined
+      ? patch.paidAmount
+      : Number(currAppt?.paid_amount) || 0;
+    const sessionIdForSync = currAppt?.session_id;
+    const clienteIdForSync = patch.clienteId ?? currAppt?.cliente_id ?? null;
+    const dateForSync = patch.date
+      ? assertIsoDate(patch.date)
+      : currAppt?.date ?? new Date().toISOString().split("T")[0];
 
     if (isConfirmedNow || wasConfirmedBefore) {
+      // Sincronizar sinal de forma síncrona antes do handleConfirmedSideEffects
+      // para garantir que a transação existe independente de latência de replicação
+      if (sessionIdForSync) {
+        await syncAppointmentDepositTransaction(
+          session.user.id,
+          clienteIdForSync,
+          sessionIdForSync,
+          newPaidAmount,
+          dateForSync,
+        );
+      }
+
+      // Criar/hidratar sessão no Workflow (fire-and-forget, não fatal)
       void handleConfirmedSideEffects(id, session.user.id);
     } else if (
       patch.date !== undefined ||
@@ -512,6 +530,7 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       }
     }
   }
+
 
   async delete(id: string, action?: DeletionAction): Promise<void> {
     const session = await requireSession();

@@ -75,8 +75,6 @@ export class WorkflowSupabaseService {
         Number(session?.valor_base_pacote || 0) === 0 ||
         session?.categoria === session?.pacote;
 
-      if (!isStub) return session;
-
       const { data: appointments } = await supabase
         .from("appointments")
         .select("package_id, description, date, time, paid_amount")
@@ -85,6 +83,27 @@ export class WorkflowSupabaseService {
         .limit(1);
 
       const appointment = appointments?.[0] || null;
+
+      // ✅ CRÍTICO: Sempre sincronizar o sinal, independente de isStub.
+      // Isso garante que ao confirmar um agendamento com sinal já registrado,
+      // a transação seja criada mesmo que a sessão já exista e não seja stub.
+      const paidAmount = Number(appointment?.paid_amount) || 0;
+      if (session.session_id) {
+        const { syncAppointmentDepositTransaction } = await import(
+          "@/modules/agenda/infrastructure/appointments.supabase"
+        );
+        await syncAppointmentDepositTransaction(
+          userId,
+          session.cliente_id,
+          session.session_id,
+          paidAmount,
+          formatDateForStorage(appointment?.date || new Date()),
+        );
+      }
+
+      // Se a sessão já está completa, não precisa de hidratação de pacote
+      if (!isStub) return session;
+
       if (!appointment?.package_id) return session;
 
       const { data: pkg } = await supabase
@@ -148,20 +167,6 @@ export class WorkflowSupabaseService {
         .select("*")
         .maybeSingle();
 
-      const paidAmount = Number(appointment.paid_amount) || 0;
-      if (session.session_id) {
-        const { syncAppointmentDepositTransaction } = await import(
-          "@/modules/agenda/infrastructure/appointments.supabase"
-        );
-        await syncAppointmentDepositTransaction(
-          userId,
-          session.cliente_id,
-          session.session_id,
-          paidAmount,
-          formatDateForStorage(appointment.date || new Date()),
-        );
-      }
-
       console.log(
         "🩹 [Workflow] Sessão stub hidratada com dados do pacote:",
         session.id,
@@ -172,6 +177,7 @@ export class WorkflowSupabaseService {
       return session;
     }
   }
+
 
   /**
    * Internal method for session creation (called by lock mechanism)
