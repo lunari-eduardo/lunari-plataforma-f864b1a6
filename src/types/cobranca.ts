@@ -66,6 +66,8 @@ export interface CobrancaResponse {
   qrCode?: string;
   qrCodeBase64?: string;
   pixCopiaCola?: string;
+  pixQrCodeBase64?: string;
+  pixQrCodeMissing?: boolean;
   // PIX Manual specific
   pixPayload?: string;
   // Link specific

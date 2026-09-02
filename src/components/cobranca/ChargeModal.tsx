@@ -52,7 +52,7 @@ export interface ChargeModalProps {
   isOpen: boolean;
   onClose: () => void;
   clienteId: string;
-  clienteNome: string;
+  clienteNome?: string;
   clienteWhatsapp?: string;
   sessionId?: string;
   valorSugerido: number;
@@ -67,6 +67,10 @@ export interface ChargeModalProps {
   valorExtrasComponente?: number | null;
   nomeSessao?: string;
   initialTab?: 'cobrar' | 'historico';
+  /** Bloqueia a edição do valor (fluxos com valor fechado, ex.: venda avulsa). */
+  allowChangeValor?: boolean;
+  /** Descrição inicial da cobrança. */
+  descricao?: string;
 }
 
 interface AsaasSettingsState {
@@ -96,10 +100,12 @@ export function ChargeModal({
   valorExtrasComponente,
   nomeSessao,
   initialTab = 'cobrar',
+  allowChangeValor = true,
+  descricao: descricaoInicial,
 }: ChargeModalProps) {
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
-  const [descricao, setDescricao] = useState('');
+  const [descricao, setDescricao] = useState(descricaoInicial ?? '');
   const [selectedProvider, setSelectedProvider] = useState<SelectedProvider | null>(null);
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>(initialTab);
 
@@ -314,7 +320,7 @@ export function ChargeModal({
         const legacyAntecipar = d.incluirTaxaAntecipacao === true;
         const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
         const repassarTaxaAntecipacao = (d.repassarTaxaAntecipacao as boolean) ?? legacyAntecipar;
-        const absorverTaxa = d.absorverTaxa ?? true;
+        const absorverTaxa = (d.absorverTaxa as boolean | undefined) ?? true;
 
         setAsaasSettings({
           habilitarPix: d.habilitarPix !== false,
@@ -506,6 +512,7 @@ export function ChargeModal({
         descricao: descricao || undefined,
         provedor: 'asaas',
         finalidade: binding.finalidade,
+        tipoCobranca: 'pix',
       });
 
       if (result.success) {
@@ -715,7 +722,7 @@ export function ChargeModal({
                       onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
                       onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
                       className="pl-12 h-12 text-lg font-bold bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
-                      disabled={valorType === 'total'}
+                      disabled={!allowChangeValor || valorType === 'total'}
                       placeholder="0,00"
                     />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
@@ -822,8 +829,8 @@ export function ChargeModal({
       <AsaasPixModal 
         isOpen={asaasPixModalOpen}
         onClose={() => setAsaasPixModalOpen(false)}
-        qrCodeBase64={asaasPixQrCode}
-        copiaECola={asaasPixCopiaECola}
+        pixQrCode={asaasPixQrCode}
+        pixCopiaECola={asaasPixCopiaECola}
         valor={valor}
       />
 
