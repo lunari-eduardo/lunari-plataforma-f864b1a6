@@ -34,6 +34,7 @@ export interface ProviderBlock {
   pixCopiaECola?: string | null;
   pixQrCodeBase64?: string | null;
   checkoutUrl?: string | null;
+  mpPublicKey?: string | null;
 }
 
 interface Props {

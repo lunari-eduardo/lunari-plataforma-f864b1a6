@@ -5,7 +5,7 @@ export interface SessionPaymentExtended {
   dataVencimento?: string;
   createdAt?: string; // Timestamp completo para ordenação e exibição (YYYY-MM-DDTHH:MM:SS)
   tipo: 'pago' | 'agendado' | 'parcelado' | 'estorno';
-  statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'estornado';
+  statusPagamento: 'pendente' | 'pago' | 'antecipado' | 'atrasado' | 'cancelado' | 'estornado';
   numeroParcela?: number;
   totalParcelas?: number;
   origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado' | 'supabase' | 'mercadopago' | 'infinitepay' | 'asaas' | 'credito';

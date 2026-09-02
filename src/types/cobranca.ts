@@ -28,6 +28,8 @@ export interface Cobranca {
   // Common fields
   dataPagamento?: string;
   valorLiquido?: number;
+  /** Valor principal (coluna do banco, usada em leituras diretas). */
+  valor_principal?: number | null;
   createdAt: string;
   updatedAt: string;
   // Installment fields

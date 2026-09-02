@@ -974,7 +974,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         observacoes: `Estorno${motivoFinal ? `: ${motivoFinal}` : ''}`
       };
       setPayments(prev => prev.map(p => 
-        p.id === paymentId ? { ...p, statusPagamento: 'estornado' } : p
+        p.id === paymentId ? { ...p, statusPagamento: 'estornado' as const } : p
       ).concat(estorno));
 
       // Notifica card/footer para invalidar financeiros imediatamente.
