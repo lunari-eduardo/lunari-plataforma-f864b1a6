@@ -75,6 +75,9 @@ export class WorkflowSupabaseService {
         Number(session?.valor_base_pacote || 0) === 0 ||
         session?.categoria === session?.pacote;
 
+      // Se a sessão já está completa, não precisa de hidratação de pacote
+      if (!isStub) return session;
+
       const { data: appointments } = await supabase
         .from("appointments")
         .select("package_id, description, date, time, paid_amount")
@@ -83,26 +86,6 @@ export class WorkflowSupabaseService {
         .limit(1);
 
       const appointment = appointments?.[0] || null;
-
-      // ✅ CRÍTICO: Sempre sincronizar o sinal, independente de isStub.
-      // Isso garante que ao confirmar um agendamento com sinal já registrado,
-      // a transação seja criada mesmo que a sessão já exista e não seja stub.
-      const paidAmount = Number(appointment?.paid_amount) || 0;
-      if (session.session_id) {
-        const { syncAppointmentDepositTransaction } = await import(
-          "@/modules/agenda/infrastructure/appointments.supabase"
-        );
-        await syncAppointmentDepositTransaction(
-          userId,
-          session.cliente_id,
-          session.session_id,
-          paidAmount,
-          formatDateForStorage(appointment?.date || new Date()),
-        );
-      }
-
-      // Se a sessão já está completa, não precisa de hidratação de pacote
-      if (!isStub) return session;
 
       if (!appointment?.package_id) return session;
 
@@ -234,21 +217,6 @@ export class WorkflowSupabaseService {
             .eq("id", hydrated.id)
             .eq("user_id", user.user.id);
           hydrated.descricao = apptDesc;
-        }
-
-        // Sincronizar transação de sinal para sessão já existente
-        const paidAmount = Number(appt?.paid_amount) || 0;
-        const targetSessionId = hydrated?.session_id || existingSession.session_id;
-        const targetClienteId = hydrated?.cliente_id || existingSession.cliente_id || appt?.cliente_id;
-        if (targetSessionId) {
-          const { syncAppointmentDepositTransaction } = await import("@/modules/agenda/infrastructure/appointments.supabase");
-          await syncAppointmentDepositTransaction(
-            user.user.id,
-            targetClienteId,
-            targetSessionId,
-            paidAmount,
-            appt?.date || new Date().toISOString().split("T")[0],
-          );
         }
 
         console.log(
@@ -659,27 +627,6 @@ export class WorkflowSupabaseService {
           return existing;
         }
         throw error;
-      }
-
-      // Create initial transaction if paid_amount > 0 (Resilient fallback)
-      const paidAmount = Number(
-        hydratedData.paid_amount ||
-          hydratedData.paidAmount ||
-          appointmentData.paid_amount ||
-          appointmentData.paidAmount ||
-          0,
-      );
-      if (sessionId) {
-        const { syncAppointmentDepositTransaction } = await import(
-          "@/modules/agenda/infrastructure/appointments.supabase"
-        );
-        await syncAppointmentDepositTransaction(
-          user.user.id,
-          clienteId,
-          sessionId,
-          paidAmount,
-          formatDateForStorage(hydratedData.date || new Date()),
-        );
       }
 
       // Update appointment with session_id for bidirectional linking

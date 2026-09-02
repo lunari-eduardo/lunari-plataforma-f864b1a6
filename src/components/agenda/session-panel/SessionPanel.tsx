@@ -294,16 +294,18 @@ export default function SessionPanel({
   );
 
   /**
-   * Agendamento confirmado que já tem sinal registrado manualmente OU sessão no Workflow.
-   * Nesse estado, o campo de entrada manual e os botões de cobrança devem ser bloqueados:
+   * Agendamento confirmado que já tem pagamento comprovado (via link ou transação no Workflow).
+   * Nesse estado, o campo de entrada manual e os botões de cobrança são desabilitados:
    * o gerenciamento financeiro acontece exclusivamente no Workflow.
+   * Se a sessão existir mas sem nenhum valor pago registrado, o campo continua editável
+   * para permitir a inserção/correção manual do sinal.
    */
   const isConfirmedWithDeposit = useMemo(
     () =>
       isEdit &&
       form.status === "confirmado" &&
-      ((appointment?.paidAmount ?? 0) > 0 || workflowInfo.hasSession),
-    [isEdit, form.status, appointment?.paidAmount, workflowInfo.hasSession],
+      (pagoCobrancas.length > 0 || (workflowInfo.totalPaid ?? 0) > 0),
+    [isEdit, form.status, pagoCobrancas.length, workflowInfo.totalPaid],
   );
 
   const cobrancaPendente = pendenteCobrancas[0] || null;

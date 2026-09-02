@@ -204,19 +204,6 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
     if (session) {
       console.log("🎯 [agenda.repo] Sessão criada com sucesso:", session.id);
 
-      // Sincroniza imediatamente a transação de entrada manual usando o session_id (slug texto)
-      const targetSessionId = session.session_id || fresh.session_id;
-      const targetClienteId = session.cliente_id || fresh.cliente_id || hydrated.clienteId;
-      if (targetSessionId) {
-        await syncAppointmentDepositTransaction(
-          userId,
-          targetClienteId,
-          targetSessionId,
-          Number(fresh.paid_amount) || 0,
-          fresh.date,
-        );
-      }
-
       // Patch redundante: corrigir inversão categoria/pacote, valor_base_pacote = 0,
       // valor_foto_extra ausente e regras_congeladas.pacote incompleto.
       setTimeout(async () => {
@@ -497,19 +484,7 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       : currAppt?.date ?? new Date().toISOString().split("T")[0];
 
     if (isConfirmedNow || wasConfirmedBefore) {
-      // Sincronizar sinal de forma síncrona antes do handleConfirmedSideEffects
-      // para garantir que a transação existe independente de latência de replicação
-      if (sessionIdForSync) {
-        await syncAppointmentDepositTransaction(
-          session.user.id,
-          clienteIdForSync,
-          sessionIdForSync,
-          newPaidAmount,
-          dateForSync,
-        );
-      }
-
-      // Criar/hidratar sessão no Workflow (fire-and-forget, não fatal)
+      // Criar/hidratar sessão no Workflow e sincronizar Google Calendar (fire-and-forget, não fatal)
       void handleConfirmedSideEffects(id, session.user.id);
     } else if (
       patch.date !== undefined ||
