@@ -112,6 +112,8 @@ export async function syncAppointmentDepositTransaction(
           }
         }
       } else {
+        // ⚠️ Não incluir campos inexistentes (ex.: `observacoes`) — o insert inteiro é
+        // rejeitado pelo PostgREST e o sinal some silenciosamente.
         const { error: insertError } = await supabase.from("clientes_transacoes").insert({
           user_id: userId,
           cliente_id: clienteId || null,
@@ -121,7 +123,6 @@ export async function syncAppointmentDepositTransaction(
           valor_liquido: paidAmount,
           data_transacao: dateStr,
           descricao: "Entrada do agendamento",
-          observacoes: "Adicionado via painel de agendamento",
         });
 
         if (insertError) {

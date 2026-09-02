@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.sync_appointment_deposit_transaction() FROM PUBLIC, anon, authenticated;

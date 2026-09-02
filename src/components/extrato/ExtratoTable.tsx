@@ -166,7 +166,7 @@ export default function ExtratoTable({
                           
                           <TableCell>
                             {(() => {
-                              let label = ORIGEM_LABELS[linha.origem] || 'Studio';
+                              let label: string = ORIGEM_LABELS[linha.origem] || 'Studio';
                               let badgeClass: string = ORIGEM_COLORS[linha.origem] || 'bg-muted/40 text-muted-foreground border-border/40';
 
                               if (linha.tipo === 'entrada') {
@@ -206,7 +206,7 @@ export default function ExtratoTable({
                                     label = 'Estorno';
                                     badgeClass = 'bg-destructive/10 text-destructive border-destructive/20';
                                   } else {
-                                    label = ORIGEM_LABELS[linha.origem] || 'Despesa';
+                                    label = (ORIGEM_LABELS[linha.origem] as string) || 'Despesa';
                                     badgeClass = ORIGEM_COLORS[linha.origem] || 'bg-muted/40 text-muted-foreground border-border/40';
                                   }
                                 }
