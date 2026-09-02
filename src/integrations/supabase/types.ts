@@ -952,6 +952,189 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_cobrancas_20260902: {
+        Row: {
+          asaas_installment_id: string | null
+          checkout_url: string | null
+          cliente_id: string | null
+          correlation_id: string | null
+          created_at: string | null
+          dados_extras: Json | null
+          data_credito: string | null
+          data_credito_real: string | null
+          data_pagamento: string | null
+          descricao: string | null
+          error_message: string | null
+          extras_contabilizados: boolean | null
+          fee_policy_snapshot: Json | null
+          finalidade: string | null
+          galeria_id: string | null
+          id: string | null
+          idempotency_key: string | null
+          ip_checkout_url: string | null
+          ip_invoice_slug: string | null
+          ip_order_nsu: string | null
+          ip_receipt_url: string | null
+          ip_transaction_nsu: string | null
+          metodo_manual: string | null
+          mp_expiration_date: string | null
+          mp_payment_id: string | null
+          mp_payment_link: string | null
+          mp_pix_copia_cola: string | null
+          mp_preference_id: string | null
+          mp_qr_code: string | null
+          mp_qr_code_base64: string | null
+          obs_manual: string | null
+          parcelas_pagas: number | null
+          pix_copia_cola: string | null
+          pix_qr_code_base64: string | null
+          provedor: string | null
+          provider_order_id: string | null
+          provider_transaction_id: string | null
+          qtd_fotos: number | null
+          session_id: string | null
+          snapshot_fotos_incluidas: number | null
+          snapshot_regras_congeladas: Json | null
+          source_event_id: string | null
+          status: string | null
+          taxa_antecipacao_real: number | null
+          taxa_processamento_real: number | null
+          tipo_cobranca: string | null
+          total_parcelas: number | null
+          updated_at: string | null
+          user_id: string | null
+          valor: number | null
+          valor_cobrado_cliente: number | null
+          valor_extras_componente: number | null
+          valor_liquido: number | null
+          valor_liquido_creditado: number | null
+          valor_principal: number | null
+          valor_repassado_cliente: number | null
+          valor_sessao_componente: number | null
+          visitor_id: string | null
+        }
+        Insert: {
+          asaas_installment_id?: string | null
+          checkout_url?: string | null
+          cliente_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          dados_extras?: Json | null
+          data_credito?: string | null
+          data_credito_real?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          error_message?: string | null
+          extras_contabilizados?: boolean | null
+          fee_policy_snapshot?: Json | null
+          finalidade?: string | null
+          galeria_id?: string | null
+          id?: string | null
+          idempotency_key?: string | null
+          ip_checkout_url?: string | null
+          ip_invoice_slug?: string | null
+          ip_order_nsu?: string | null
+          ip_receipt_url?: string | null
+          ip_transaction_nsu?: string | null
+          metodo_manual?: string | null
+          mp_expiration_date?: string | null
+          mp_payment_id?: string | null
+          mp_payment_link?: string | null
+          mp_pix_copia_cola?: string | null
+          mp_preference_id?: string | null
+          mp_qr_code?: string | null
+          mp_qr_code_base64?: string | null
+          obs_manual?: string | null
+          parcelas_pagas?: number | null
+          pix_copia_cola?: string | null
+          pix_qr_code_base64?: string | null
+          provedor?: string | null
+          provider_order_id?: string | null
+          provider_transaction_id?: string | null
+          qtd_fotos?: number | null
+          session_id?: string | null
+          snapshot_fotos_incluidas?: number | null
+          snapshot_regras_congeladas?: Json | null
+          source_event_id?: string | null
+          status?: string | null
+          taxa_antecipacao_real?: number | null
+          taxa_processamento_real?: number | null
+          tipo_cobranca?: string | null
+          total_parcelas?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor?: number | null
+          valor_cobrado_cliente?: number | null
+          valor_extras_componente?: number | null
+          valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
+          valor_repassado_cliente?: number | null
+          valor_sessao_componente?: number | null
+          visitor_id?: string | null
+        }
+        Update: {
+          asaas_installment_id?: string | null
+          checkout_url?: string | null
+          cliente_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          dados_extras?: Json | null
+          data_credito?: string | null
+          data_credito_real?: string | null
+          data_pagamento?: string | null
+          descricao?: string | null
+          error_message?: string | null
+          extras_contabilizados?: boolean | null
+          fee_policy_snapshot?: Json | null
+          finalidade?: string | null
+          galeria_id?: string | null
+          id?: string | null
+          idempotency_key?: string | null
+          ip_checkout_url?: string | null
+          ip_invoice_slug?: string | null
+          ip_order_nsu?: string | null
+          ip_receipt_url?: string | null
+          ip_transaction_nsu?: string | null
+          metodo_manual?: string | null
+          mp_expiration_date?: string | null
+          mp_payment_id?: string | null
+          mp_payment_link?: string | null
+          mp_pix_copia_cola?: string | null
+          mp_preference_id?: string | null
+          mp_qr_code?: string | null
+          mp_qr_code_base64?: string | null
+          obs_manual?: string | null
+          parcelas_pagas?: number | null
+          pix_copia_cola?: string | null
+          pix_qr_code_base64?: string | null
+          provedor?: string | null
+          provider_order_id?: string | null
+          provider_transaction_id?: string | null
+          qtd_fotos?: number | null
+          session_id?: string | null
+          snapshot_fotos_incluidas?: number | null
+          snapshot_regras_congeladas?: Json | null
+          source_event_id?: string | null
+          status?: string | null
+          taxa_antecipacao_real?: number | null
+          taxa_processamento_real?: number | null
+          tipo_cobranca?: string | null
+          total_parcelas?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor?: number | null
+          valor_cobrado_cliente?: number | null
+          valor_extras_componente?: number | null
+          valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
+          valor_repassado_cliente?: number | null
+          valor_sessao_componente?: number | null
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       backup_extras_backfill_20260713: {
         Row: {
           backup_at: string | null
@@ -1012,6 +1195,141 @@ export type Database = {
           valor_foto_extra_antes?: number | null
           valor_pago?: number | null
           valor_total_foto_extra_antes?: number | null
+        }
+        Relationships: []
+      }
+      backup_movements_20260902: {
+        Row: {
+          amount: number | null
+          anticipation_id: string | null
+          cobranca_id: string | null
+          competence_date: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string | null
+          movement_date: string | null
+          movement_type: string | null
+          parcela_id: string | null
+          provider: string | null
+          provider_transaction_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          anticipation_id?: string | null
+          cobranca_id?: string | null
+          competence_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string | null
+          movement_date?: string | null
+          movement_type?: string | null
+          parcela_id?: string | null
+          provider?: string | null
+          provider_transaction_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          anticipation_id?: string | null
+          cobranca_id?: string | null
+          competence_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string | null
+          movement_date?: string | null
+          movement_type?: string | null
+          parcela_id?: string | null
+          provider?: string | null
+          provider_transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_parcelas_20260902: {
+        Row: {
+          antecipado: boolean | null
+          asaas_payment_id: string | null
+          billing_type: string | null
+          cobranca_id: string | null
+          created_at: string | null
+          data_credito: string | null
+          data_credito_real: string | null
+          data_pagamento: string | null
+          data_pagamento_gateway: string | null
+          data_vencimento: string | null
+          id: string | null
+          mp_payment_id: string | null
+          numero_parcela: number | null
+          source_event_id: string | null
+          status: string | null
+          taxa_antecipacao: number | null
+          taxa_antecipacao_real: number | null
+          taxa_gateway: number | null
+          taxa_processamento_real: number | null
+          updated_at: string | null
+          valor_bruto: number | null
+          valor_cobrado_cliente: number | null
+          valor_liquido: number | null
+          valor_liquido_creditado: number | null
+          valor_principal: number | null
+          valor_repassado_cliente: number | null
+        }
+        Insert: {
+          antecipado?: boolean | null
+          asaas_payment_id?: string | null
+          billing_type?: string | null
+          cobranca_id?: string | null
+          created_at?: string | null
+          data_credito?: string | null
+          data_credito_real?: string | null
+          data_pagamento?: string | null
+          data_pagamento_gateway?: string | null
+          data_vencimento?: string | null
+          id?: string | null
+          mp_payment_id?: string | null
+          numero_parcela?: number | null
+          source_event_id?: string | null
+          status?: string | null
+          taxa_antecipacao?: number | null
+          taxa_antecipacao_real?: number | null
+          taxa_gateway?: number | null
+          taxa_processamento_real?: number | null
+          updated_at?: string | null
+          valor_bruto?: number | null
+          valor_cobrado_cliente?: number | null
+          valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
+          valor_repassado_cliente?: number | null
+        }
+        Update: {
+          antecipado?: boolean | null
+          asaas_payment_id?: string | null
+          billing_type?: string | null
+          cobranca_id?: string | null
+          created_at?: string | null
+          data_credito?: string | null
+          data_credito_real?: string | null
+          data_pagamento?: string | null
+          data_pagamento_gateway?: string | null
+          data_vencimento?: string | null
+          id?: string | null
+          mp_payment_id?: string | null
+          numero_parcela?: number | null
+          source_event_id?: string | null
+          status?: string | null
+          taxa_antecipacao?: number | null
+          taxa_antecipacao_real?: number | null
+          taxa_gateway?: number | null
+          taxa_processamento_real?: number | null
+          updated_at?: string | null
+          valor_bruto?: number | null
+          valor_cobrado_cliente?: number | null
+          valor_liquido?: number | null
+          valor_liquido_creditado?: number | null
+          valor_principal?: number | null
+          valor_repassado_cliente?: number | null
         }
         Relationships: []
       }
@@ -1971,6 +2289,7 @@ export type Database = {
           data_credito: string | null
           data_credito_real: string | null
           data_pagamento: string | null
+          data_pagamento_gateway: string | null
           data_vencimento: string | null
           id: string
           mp_payment_id: string | null
@@ -1987,6 +2306,7 @@ export type Database = {
           valor_liquido: number | null
           valor_liquido_creditado: number | null
           valor_principal: number | null
+          valor_repassado_cliente: number | null
         }
         Insert: {
           antecipado?: boolean | null
@@ -1997,6 +2317,7 @@ export type Database = {
           data_credito?: string | null
           data_credito_real?: string | null
           data_pagamento?: string | null
+          data_pagamento_gateway?: string | null
           data_vencimento?: string | null
           id?: string
           mp_payment_id?: string | null
@@ -2013,6 +2334,7 @@ export type Database = {
           valor_liquido?: number | null
           valor_liquido_creditado?: number | null
           valor_principal?: number | null
+          valor_repassado_cliente?: number | null
         }
         Update: {
           antecipado?: boolean | null
@@ -2023,6 +2345,7 @@ export type Database = {
           data_credito?: string | null
           data_credito_real?: string | null
           data_pagamento?: string | null
+          data_pagamento_gateway?: string | null
           data_vencimento?: string | null
           id?: string
           mp_payment_id?: string | null
@@ -2039,6 +2362,7 @@ export type Database = {
           valor_liquido?: number | null
           valor_liquido_creditado?: number | null
           valor_principal?: number | null
+          valor_repassado_cliente?: number | null
         }
         Relationships: [
           {
@@ -2135,6 +2459,7 @@ export type Database = {
           valor_liquido: number | null
           valor_liquido_creditado: number | null
           valor_principal: number | null
+          valor_repassado_cliente: number | null
           valor_sessao_componente: number | null
           visitor_id: string | null
         }
@@ -2194,6 +2519,7 @@ export type Database = {
           valor_liquido?: number | null
           valor_liquido_creditado?: number | null
           valor_principal?: number | null
+          valor_repassado_cliente?: number | null
           valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
@@ -2253,6 +2579,7 @@ export type Database = {
           valor_liquido?: number | null
           valor_liquido_creditado?: number | null
           valor_principal?: number | null
+          valor_repassado_cliente?: number | null
           valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
@@ -4377,8 +4704,10 @@ export type Database = {
           amount: number
           anticipation_id: string | null
           cobranca_id: string | null
+          competence_date: string | null
           created_at: string | null
           description: string | null
+          due_date: string | null
           id: string
           movement_date: string
           movement_type: string
@@ -4390,8 +4719,10 @@ export type Database = {
           amount: number
           anticipation_id?: string | null
           cobranca_id?: string | null
+          competence_date?: string | null
           created_at?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           movement_date: string
           movement_type: string
@@ -4403,8 +4734,10 @@ export type Database = {
           amount?: number
           anticipation_id?: string | null
           cobranca_id?: string | null
+          competence_date?: string | null
           created_at?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           movement_date?: string
           movement_type?: string
@@ -7948,6 +8281,7 @@ export type Database = {
           title: string
         }[]
       }
+      payment_status_rank: { Args: { p_status: string }; Returns: number }
       prepare_gallery_share: {
         Args: { p_gallery_id: string; p_mark_as_sent?: boolean }
         Returns: Json
