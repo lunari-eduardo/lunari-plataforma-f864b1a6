@@ -353,11 +353,24 @@ async function upsertParcela(
   const totalParcelas = cobranca?.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
 
   // 1. Decomposição dos valores nominais e de repasse
-  const valorPrincipalCob = cobranca?.valor_principal ?? cobranca?.valor ?? payment.value ?? 0;
-  const valorCobradoCob = cobranca?.valor_cobrado_cliente ?? cobranca?.valor ?? payment.value ?? 0;
+  // valorPrincipal é estritamente o valor comercial da venda
+  const valorPrincipalCob = Number(
+    cobranca?.valor_principal ?? 
+    cobranca?.dados_extras?.valorBase ?? 
+    cobranca?.valor ?? 
+    payment.value ?? 
+    0
+  );
+  // valorCobrado é o valor total com taxas transacionado no gateway
+  const valorCobradoCob = Number(
+    payment.value ?? 
+    cobranca?.valor_cobrado_cliente ?? 
+    cobranca?.dados_extras?.valorComTaxas ?? 
+    valorPrincipalCob
+  );
 
-  const valorPrincipalParcela = Math.round((Number(valorPrincipalCob) / totalParcelas) * 100) / 100;
-  const valorCobradoParcela = Math.round((Number(valorCobradoCob) / totalParcelas) * 100) / 100;
+  const valorPrincipalParcela = Math.round((valorPrincipalCob / totalParcelas) * 100) / 100;
+  const valorCobradoParcela = Math.round((valorCobradoCob / totalParcelas) * 100) / 100;
   const valorRepassadoParcela = Math.max(0, Math.round((valorCobradoParcela - valorPrincipalParcela) * 100) / 100);
 
   // 2. Valores reais transacionados pelo Asaas
@@ -719,11 +732,22 @@ Deno.serve(async (req) => {
             // Gravação do Razão de Caixa do Gateway (gateway_cash_movements)
             if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED" || event === "PAYMENT_ANTICIPATED") {
               const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
-              const valorPrincipalCob = cobranca.valor_principal ?? cobranca.valor ?? payment.value ?? 0;
-              const valorCobradoCob = cobranca.valor_cobrado_cliente ?? cobranca.valor ?? payment.value ?? 0;
+              const valorPrincipalCob = Number(
+                cobranca.valor_principal ?? 
+                cobranca.dados_extras?.valorBase ?? 
+                cobranca.valor ?? 
+                payment.value ?? 
+                0
+              );
+              const valorCobradoCob = Number(
+                payment.value ?? 
+                cobranca.valor_cobrado_cliente ?? 
+                cobranca.dados_extras?.valorComTaxas ?? 
+                valorPrincipalCob
+              );
 
-              const valorPrincipalParcela = Math.round((Number(valorPrincipalCob) / totalParcelas) * 100) / 100;
-              const valorCobradoParcela = Math.round((Number(valorCobradoCob) / totalParcelas) * 100) / 100;
+              const valorPrincipalParcela = Math.round((valorPrincipalCob / totalParcelas) * 100) / 100;
+              const valorCobradoParcela = Math.round((valorCobradoCob / totalParcelas) * 100) / 100;
               const valorRepassadoParcela = Math.max(0, Math.round((valorCobradoParcela - valorPrincipalParcela) * 100) / 100);
 
               const valorBrutoTransacionado = payment.value != null ? Number(payment.value) : valorCobradoParcela;
