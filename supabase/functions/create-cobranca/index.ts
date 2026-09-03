@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
     // 6. Buscar e mesclar dados do cliente
     const { data: clienteDb } = await supabase
       .from("clientes")
-      .select("nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, numero, complemento, bairro, cidade, estado")
+      .select("nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf")
       .eq("id", clienteId)
       .maybeSingle();
 
@@ -276,23 +276,22 @@ Deno.serve(async (req) => {
     const patchCliente: Record<string, string> = {};
     const isEmptyField = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-    // Nome do cartão de crédito (titular) NUNCA deve alterar o nome do cliente no CRM
+    // Dados do titular do cartão (nome, CPF) NUNCA devem alterar o perfil do cliente no CRM
+    // pois o pagador pode estar usando cartão de terceiros (cônjuge, pais, empresa).
     const candName = billingType === "CREDIT_CARD" ? undefined : ((payerContact as any)?.name?.trim() || payerContact?.nome?.trim());
-    const candEmail = (payerContact as any)?.email?.trim() || payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
-    const candPhone = (payerContact as any)?.phone?.trim() || payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim() || creditCardHolderInfo?.phone?.trim();
-    const candCpf = (payerContact as any)?.cpfCnpj?.trim() || payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
-    const candCep = (payerContact as any)?.cep?.trim() || payerContact?.cep?.trim() || creditCardHolderInfo?.postalCode?.trim();
+    const candCpf = billingType === "CREDIT_CARD" ? undefined : ((payerContact as any)?.cpfCnpj?.trim() || payerContact?.cpfCnpj?.trim());
+    const candEmail = (payerContact as any)?.email?.trim() || payerContact?.email?.trim();
+    const candPhone = (payerContact as any)?.phone?.trim() || payerContact?.whatsapp?.trim() || payerContact?.telefone?.trim();
 
     if (candName && isEmptyField(clienteDb?.nome)) patchCliente.nome = candName;
     if (candEmail && isEmptyField(clienteDb?.email)) patchCliente.email = candEmail.toLowerCase();
     if (candPhone && isEmptyField(clienteDb?.whatsapp) && isEmptyField(clienteDb?.telefone)) {
-      patchCliente.whatsapp = candPhone.replace(/\D/g, "");
+      const phoneDigits = candPhone.replace(/\D/g, "");
+      patchCliente.whatsapp = phoneDigits;
+      patchCliente.telefone = phoneDigits;
     }
     if (candCpf && isEmptyField(clienteDb?.cpf_cnpj)) {
       patchCliente.cpf_cnpj = candCpf.replace(/\D/g, "");
-    }
-    if (candCep && isEmptyField(clienteDb?.cep)) {
-      patchCliente.cep = candCep.replace(/\D/g, "");
     }
 
     if (Object.keys(patchCliente).length > 0) {
@@ -303,17 +302,17 @@ Deno.serve(async (req) => {
     const mergedCliente: ClienteContact = {
       id: clienteId,
       nome: clienteDb?.nome || candName || "Cliente",
-      email: clienteDb?.email || candEmail,
-      telefone: clienteDb?.telefone || candPhone,
-      whatsapp: clienteDb?.whatsapp || candPhone,
-      cpfCnpj: clienteDb?.cpf_cnpj || candCpf,
-      cep: clienteDb?.cep || candCep,
+      email: clienteDb?.email || candEmail || creditCardHolderInfo?.email,
+      telefone: clienteDb?.telefone || candPhone || creditCardHolderInfo?.phone,
+      whatsapp: clienteDb?.whatsapp || candPhone || creditCardHolderInfo?.phone,
+      cpfCnpj: (billingType !== "CREDIT_CARD" ? candCpf : undefined) || clienteDb?.cpf_cnpj || creditCardHolderInfo?.cpfCnpj,
+      cep: clienteDb?.cep || creditCardHolderInfo?.postalCode,
       endereco: clienteDb?.endereco || payerContact?.endereco,
-      numero: clienteDb?.numero || payerContact?.numero || creditCardHolderInfo?.addressNumber,
-      complemento: clienteDb?.complemento || payerContact?.complemento,
+      numero: clienteDb?.endereco_numero || payerContact?.numero || creditCardHolderInfo?.addressNumber,
+      complemento: clienteDb?.endereco_complemento || payerContact?.complemento,
       bairro: clienteDb?.bairro || payerContact?.bairro,
       cidade: clienteDb?.cidade || payerContact?.cidade,
-      uf: clienteDb?.estado || payerContact?.uf,
+      uf: clienteDb?.uf || payerContact?.uf,
     };
 
     // 7. CASO ESPECIAL: PIX MANUAL (processado localmente)

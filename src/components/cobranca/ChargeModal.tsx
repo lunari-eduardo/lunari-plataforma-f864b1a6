@@ -56,6 +56,8 @@ export interface ChargeModalProps {
   clienteWhatsapp?: string;
   sessionId?: string;
   valorSugerido: number;
+  /** Valor de entrada ou sinal pré-configurado */
+  valorSinal?: number;
   /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
   step?: import('./ChargeStepBadge').ChargeStep | null;
   /** Finalidade da cobrança: sessão (padrão), fotos extras ou combinada */
@@ -91,6 +93,7 @@ export function ChargeModal({
   clienteWhatsapp,
   sessionId,
   valorSugerido,
+  valorSinal,
   step,
   finalidade = 'sessao',
   galeriaId,
@@ -108,6 +111,20 @@ export function ChargeModal({
   const [descricao, setDescricao] = useState(descricaoInicial ?? '');
   const [selectedProvider, setSelectedProvider] = useState<SelectedProvider | null>(null);
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>(initialTab);
+
+  const handleSelectValorType = (type: 'total' | 'parcial') => {
+    setValorType(type);
+    if (type === 'total') {
+      setValor(valorSugerido);
+    } else if (type === 'parcial') {
+      if (valorSinal && valorSinal > 0) {
+        setValor(valorSinal);
+        if (!descricao || descricao.trim() === '') {
+          setDescricao('Entrada / Sinal');
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -690,44 +707,77 @@ export function ChargeModal({
                   </div>
                 )}
 
-                {/* VALOR E TIPO DA COBRANÇA */}
-                <div className="space-y-1.5">
+                {/* VALOR E TIPO DA COBRANÇA COM DESTAQUE */}
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Valor da cobrança
+                    <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Calculator className="h-3.5 w-3.5 text-primary" />
+                      Valor a cobrar
                     </Label>
-                    <RadioGroup
-                      value={valorType}
-                      onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-1.5">
-                        <RadioGroupItem value="total" id="total" />
-                        <Label htmlFor="total" className="text-xs font-medium cursor-pointer">Total</Label>
-                      </div>
-                      <div className="flex items-center space-x-1.5">
-                        <RadioGroupItem value="parcial" id="parcial" />
-                        <Label htmlFor="parcial" className="text-xs font-medium cursor-pointer">Parcial</Label>
-                      </div>
-                    </RadioGroup>
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      {valorType === 'total' ? 'Cobrança integral' : 'Cobrança parcial / sinal'}
+                    </span>
                   </div>
 
+                  {/* Seletor Segmentado com Destaque */}
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted/60 rounded-lg border border-border/40">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectValorType('total')}
+                      className={cn(
+                        "flex flex-col items-center justify-center py-2 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer",
+                        valorType === 'total'
+                          ? "bg-background text-foreground shadow-xs border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <span>Valor Total</span>
+                      <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                        R$ {Number(valorSugerido || 0).toFixed(2).replace('.', ',')}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectValorType('parcial')}
+                      className={cn(
+                        "flex flex-col items-center justify-center py-2 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer",
+                        valorType === 'parcial'
+                          ? "bg-background text-primary shadow-xs border border-primary/30"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <span>{valorSinal && valorSinal > 0 ? "Sinal / Entrada" : "Valor Parcial"}</span>
+                      <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                        {valorSinal && valorSinal > 0
+                          ? `R$ ${Number(valorSinal).toFixed(2).replace('.', ',')}`
+                          : "Personalizar"}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Input de Valor em Destaque */}
                   <div className="relative">
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
                       <span className="text-base font-bold text-muted-foreground">R$</span>
                     </div>
                     <Input
                       type="number"
+                      step="0.01"
+                      min="0.01"
                       value={valor || ''}
-                      onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                        setValor(val);
+                        if (val !== valorSugerido && valorType === 'total') {
+                          setValorType('parcial');
+                        }
+                      }}
                       onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
-                      className="pl-12 h-12 text-lg font-bold bg-muted/30 border-border/60 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/50"
-                      disabled={!allowChangeValor || valorType === 'total'}
+                      className="pl-11 h-12 text-xl font-bold text-foreground bg-background border-border/70 rounded-lg focus-visible:ring-1 focus-visible:ring-primary/50 tracking-tight"
+                      disabled={!allowChangeValor}
                       placeholder="0,00"
                     />
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                      <Calculator className="h-4 w-4 text-muted-foreground/50" />
-                    </div>
                   </div>
                 </div>
 

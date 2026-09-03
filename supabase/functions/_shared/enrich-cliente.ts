@@ -31,7 +31,7 @@ export async function enrichClienteIfMissing(
   const { data: current } = await supabase
     .from("clientes")
     .select(
-      "email, telefone, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf",
+      "email, telefone, whatsapp, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf",
     )
     .eq("id", clienteId)
     .maybeSingle();
@@ -59,6 +59,11 @@ export async function enrichClienteIfMissing(
     if (isEmpty((current as Record<string, unknown>)[key])) {
       updates[key] = value;
     }
+  }
+
+  // Se telefone foi informado e whatsapp estiver vazio no CRM, preenche também o whatsapp
+  if (norm.telefone && isEmpty((current as any).whatsapp)) {
+    updates.whatsapp = norm.telefone;
   }
 
   if (Object.keys(updates).length === 0) {

@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     const { data: cliente } = effectiveClienteId ? await supabase
       .from("clientes")
-      .select("id, nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, numero, complemento, bairro, cidade, estado")
+      .select("id, nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf")
       .eq("id", effectiveClienteId)
       .maybeSingle() : { data: null };
 
@@ -98,23 +98,22 @@ Deno.serve(async (req) => {
       const patch: Record<string, string> = {};
       const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
 
-      // Nome do cartão de crédito (titular) NUNCA deve alterar o nome do cliente no CRM
+      // Dados do titular do cartão (nome, CPF) NUNCA devem alterar o perfil do cliente no CRM
+      // pois o pagador pode estar usando cartão de terceiros (cônjuge, pais, empresa).
       const candidateName = billingType === "CREDIT_CARD" ? undefined : payerContact?.name?.trim();
-      const candidateEmail = payerContact?.email?.trim() || creditCardHolderInfo?.email?.trim();
-      const candidatePhone = payerContact?.phone?.trim() || creditCardHolderInfo?.phone?.trim();
-      const candidateCpf = payerContact?.cpfCnpj?.trim() || creditCardHolderInfo?.cpfCnpj?.trim();
-      const candidateCep = creditCardHolderInfo?.postalCode?.trim();
+      const candidateCpf = billingType === "CREDIT_CARD" ? undefined : payerContact?.cpfCnpj?.trim();
+      const candidateEmail = payerContact?.email?.trim();
+      const candidatePhone = payerContact?.phone?.trim();
 
       if (candidateName && isEmpty(cliente?.nome)) patch.nome = candidateName;
       if (candidateEmail && isEmpty(cliente?.email)) patch.email = candidateEmail.toLowerCase();
       if (candidatePhone && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
-        patch.whatsapp = candidatePhone.replace(/\D/g, "");
+        const phoneDigits = candidatePhone.replace(/\D/g, "");
+        patch.whatsapp = phoneDigits;
+        patch.telefone = phoneDigits;
       }
       if (candidateCpf && isEmpty(cliente?.cpf_cnpj)) {
         patch.cpf_cnpj = candidateCpf.replace(/\D/g, "");
-      }
-      if (candidateCep && isEmpty(cliente?.cep)) {
-        patch.cep = candidateCep.replace(/\D/g, "");
       }
 
       if (Object.keys(patch).length > 0) {
@@ -137,14 +136,14 @@ Deno.serve(async (req) => {
       email: payerContact?.email || cliente?.email || resolvedHints.email || creditCardHolderInfo?.email,
       telefone: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,
       whatsapp: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || resolvedHints.phone || creditCardHolderInfo?.phone,
-      cpfCnpj: payerContact?.cpfCnpj || cliente?.cpf_cnpj || resolvedHints.cpfCnpj || creditCardHolderInfo?.cpfCnpj,
+      cpfCnpj: (billingType !== "CREDIT_CARD" ? payerContact?.cpfCnpj : undefined) || cliente?.cpf_cnpj || resolvedHints.cpfCnpj || creditCardHolderInfo?.cpfCnpj,
       cep: cliente?.cep || resolvedHints.postalCode || creditCardHolderInfo?.postalCode,
-      endereco: cliente?.endereco,
-      numero: cliente?.numero || creditCardHolderInfo?.addressNumber,
-      complemento: cliente?.complemento,
-      bairro: cliente?.bairro,
-      cidade: cliente?.cidade,
-      uf: cliente?.estado,
+      endereco: cliente?.endereco || resolvedHints.address,
+      numero: cliente?.endereco_numero || resolvedHints.addressNumber || creditCardHolderInfo?.addressNumber,
+      complemento: cliente?.endereco_complemento || resolvedHints.complement,
+      bairro: cliente?.bairro || resolvedHints.province,
+      cidade: cliente?.cidade || resolvedHints.cityName,
+      uf: cliente?.uf || resolvedHints.state,
     };
 
     // 3. Resolução de taxas e processamento por provedor

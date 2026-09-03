@@ -1402,6 +1402,7 @@ export default function SessionPanel({
           clienteWhatsapp={cliente?.telefone}
           sessionId={chargeSessionId || appointment?.sessionId}
           valorSugerido={valorPacote > 0 ? valorPacote : form.paidAmount || 0}
+          valorSinal={form.paidAmount > 0 && form.paidAmount < valorPacote ? form.paidAmount : undefined}
         />
       )}
 

@@ -247,12 +247,22 @@ serve(async (req) => {
         .single();
 
       clienteId = newGuest?.id || null;
+      if (clienteId && galleryId) {
+        await supabase
+          .from("galerias")
+          .update({ cliente_id: clienteId })
+          .eq("id", galleryId);
+        console.log(`[gallery-create-payment] Galeria=${galleryId} vinculada ao novo cliente=${clienteId}`);
+      }
     } else if (clienteId && (payer?.cpfCnpj || payer?.email || payer?.phone)) {
       // Se recebemos novos dados do cliente (ex: CPF preenchido no checkout), atualizar no CRM se estava vazio
       const patchData: Record<string, string> = {};
       if (payer.cpfCnpj && !hints.cpfCnpj) patchData.cpf_cnpj = payer.cpfCnpj;
       if (payer.email && !hints.email) patchData.email = payer.email;
-      if (payer.phone && !hints.phone) patchData.telefone = payer.phone;
+      if (payer.phone && !hints.phone) {
+        patchData.telefone = payer.phone;
+        patchData.whatsapp = payer.phone;
+      }
       if (Object.keys(patchData).length > 0) {
         await supabase.from("clientes").update(patchData).eq("id", clienteId);
       }
