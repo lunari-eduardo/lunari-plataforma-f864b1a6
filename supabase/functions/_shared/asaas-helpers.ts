@@ -324,13 +324,22 @@ export const ASAAS_WEBHOOK_EVENTS = [
   "PAYMENT_CHARGEBACK_REQUESTED",
   "PAYMENT_CHARGEBACK_DISPUTE",
   "PAYMENT_REPROVED_BY_RISK_ANALYSIS",
+  "RECEIVABLE_ANTICIPATION_PENDING",
+  "RECEIVABLE_ANTICIPATION_SCHEDULED",
+  "RECEIVABLE_ANTICIPATION_AUTHORIZED",
+  "RECEIVABLE_ANTICIPATION_CREDITED",
+  "RECEIVABLE_ANTICIPATION_DENIED",
+  "RECEIVABLE_ANTICIPATION_CANCELLED",
+  "RECEIVABLE_ANTICIPATION_DEBITED",
+  "RECEIVABLE_ANTICIPATION_OVERDUE",
 ];
 
 export async function ensureAsaasWebhookSubscription(
   baseUrl: string,
   apiKey: string,
   webhookUrl: string,
-  email?: string
+  email?: string,
+  authToken?: string
 ): Promise<{ ok: boolean; webhookId?: string; error?: string }> {
   try {
     const listRes = await fetch(`${baseUrl}/v3/webhooks`, {
@@ -347,7 +356,9 @@ export async function ensureAsaasWebhookSubscription(
       ? listData.data.find((w: any) => w.url === webhookUrl || w.name === "Lunari Studio Webhook" || w.name === "Lunari Gallery")
       : null;
 
-    const payload = {
+    const effectiveToken = authToken || Deno.env.get("ASAAS_WEBHOOK_SECRET");
+
+    const payload: Record<string, any> = {
       name: "Lunari Studio Webhook",
       url: webhookUrl,
       email: email || "contato@lunarihub.com",
@@ -358,8 +369,19 @@ export async function ensureAsaasWebhookSubscription(
       events: ASAAS_WEBHOOK_EVENTS,
     };
 
+    if (effectiveToken) {
+      payload.authToken = effectiveToken;
+    }
+
     if (existing) {
-      if (!existing.enabled || existing.interrupted || existing.url !== webhookUrl) {
+      const needsUpdate =
+        !existing.enabled ||
+        existing.interrupted ||
+        existing.url !== webhookUrl ||
+        (effectiveToken && existing.authToken !== effectiveToken) ||
+        !existing.events?.includes("RECEIVABLE_ANTICIPATION_CREDITED");
+
+      if (needsUpdate) {
         console.log(`[asaas-webhook-sync] Atualizando/Reativando webhook ${existing.id}...`);
         const putRes = await fetch(`${baseUrl}/v3/webhooks/${existing.id}`, {
           method: "PUT",

@@ -362,21 +362,35 @@ async function upsertParcela(
 
   // 2. Valores reais transacionados pelo Asaas
   const valorBrutoTransacionado = payment.value != null ? Number(payment.value) : valorCobradoParcela;
-  const valorLiquidoAsaas = payment.netValue != null ? Number(payment.netValue) : valorBrutoTransacionado;
+  let valorLiquidoAsaas = payment.netValue != null ? Number(payment.netValue) : valorBrutoTransacionado;
 
   // Taxa de processamento real retida pelo gateway
-  const taxaGatewayReal = Math.max(0, Math.round((valorBrutoTransacionado - valorLiquidoAsaas) * 100) / 100);
+  let taxaGatewayReal = Math.max(0, Math.round((valorBrutoTransacionado - valorLiquidoAsaas) * 100) / 100);
 
-  // 3. Guarda de ordem de status (Prevenção de downgrade por atraso de webhooks)
+  // 3. Guarda de ordem de status e preservação de taxas históricas
   const { data: existingParcela } = await adminClient
     .from("cobranca_parcelas")
-    .select("id, status, taxa_gateway, taxa_antecipacao, valor_liquido")
+    .select("id, status, taxa_gateway, taxa_processamento_real, taxa_antecipacao, taxa_antecipacao_real, valor_liquido, valor_liquido_creditado, data_credito_real")
     .eq("asaas_payment_id", payment.id)
     .maybeSingle();
+
+  // Se o webhook atual enviou netValue == value (comum em PAYMENT_ANTICIPATED) mas já temos taxa_processamento confirmada, preserva!
+  if (taxaGatewayReal === 0 && Number(existingParcela?.taxa_processamento_real || existingParcela?.taxa_gateway || 0) > 0) {
+    taxaGatewayReal = Number(existingParcela.taxa_processamento_real || existingParcela.taxa_gateway);
+    valorLiquidoAsaas = Math.max(0, Math.round((valorBrutoTransacionado - taxaGatewayReal) * 100) / 100);
+  }
 
   const currentRank = getStatusRank(existingParcela?.status);
   const newRank = getStatusRank(status);
   const finalStatus = currentRank > newRank ? existingParcela!.status : status;
+
+  const existingAntFee = Number(existingParcela?.taxa_antecipacao_real ?? existingParcela?.taxa_antecipacao ?? 0);
+  const existingCreditReal = existingParcela?.data_credito_real || (finalStatus === "recebido" ? (payment.creditDate || null) : null);
+  
+  // Líquido efetivamente creditado após todas as taxas conhecidas
+  const finalLiquidoCreditado = existingAntFee > 0
+    ? Math.max(0, Math.round((valorLiquidoAsaas - existingAntFee) * 100) / 100)
+    : valorLiquidoAsaas;
 
   const parcelaData: Record<string, unknown> = {
     cobranca_id: cobrancaId,
@@ -388,15 +402,18 @@ async function upsertParcela(
     valor_repassado_cliente: valorRepassadoParcela,
     taxa_gateway: taxaGatewayReal,
     taxa_processamento_real: taxaGatewayReal,
+    taxa_antecipacao: existingAntFee,
+    taxa_antecipacao_real: existingAntFee,
     valor_liquido: valorLiquidoAsaas,
-    valor_liquido_creditado: valorLiquidoAsaas,
+    valor_liquido_creditado: finalLiquidoCreditado,
     status: finalStatus,
     billing_type: payment.billingType || null,
     data_vencimento: payment.dueDate || null,
     data_pagamento: payment.paymentDate || payment.confirmedDate || null,
     data_pagamento_gateway: payment.paymentDate || payment.confirmedDate || null,
     data_credito: payment.creditDate || null,
-    antecipado: payment.anticipated || false,
+    data_credito_real: existingCreditReal,
+    antecipado: payment.anticipated || existingParcela?.status === "antecipado" || false,
     updated_at: new Date().toISOString(),
   };
 
@@ -412,8 +429,160 @@ async function upsertParcela(
     return false;
   }
 
-  console.log(`✅ Parcela ${payment.id} → status=${finalStatus}, principal=${valorPrincipalParcela}, repasse=${valorRepassadoParcela}, liqAsaas=${valorLiquidoAsaas}, taxa=${taxaGatewayReal}`);
+  console.log(`✅ Parcela ${payment.id} → status=${finalStatus}, principal=${valorPrincipalParcela}, repasse=${valorRepassadoParcela}, liqAsaas=${valorLiquidoAsaas}, taxaProc=${taxaGatewayReal}, taxaAnt=${existingAntFee}`);
   return true;
+}
+
+/**
+ * Sincroniza antecipações Asaas: consulta a API para payloads incompletos,
+ * grava em gateway_anticipations, atualiza cobranca_parcelas (data_credito_real,
+ * taxa_antecipacao_real, valor_liquido_creditado) e alinha o razão de caixa.
+ */
+async function syncAnticipationForPayment(
+  adminClient: any,
+  cobranca: any,
+  payment: any,
+  parcelaId: string,
+  providedAnticipation?: any
+) {
+  try {
+    let anticipation = providedAnticipation;
+
+    // Se não foi fornecido no payload, consultar API do Asaas com a chave do fotógrafo
+    if (!anticipation && cobranca?.user_id && payment?.id) {
+      const { data: integ } = await adminClient
+        .from("usuarios_integracoes")
+        .select("access_token, dados_extras")
+        .eq("user_id", cobranca.user_id)
+        .eq("provedor", "asaas")
+        .eq("status", "ativo")
+        .order("is_default", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (integ?.access_token) {
+        const env = (integ.dados_extras as any)?.environment === "production" ? "production" : "sandbox";
+        const baseUrl = env === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
+
+        const antRes = await fetch(`${baseUrl}/v3/anticipations?payment=${payment.id}&limit=10`, {
+          headers: { access_token: integ.access_token },
+        });
+
+        if (antRes.ok) {
+          const antData = await antRes.json();
+          const list = Array.isArray(antData.data) ? antData.data : [];
+          anticipation = list.find((a: any) => a.status === "CREDITED") || list[0] || null;
+        } else {
+          console.warn(`[syncAnticipation] Falha ao consultar antecipações Asaas: status ${antRes.status}`);
+        }
+      }
+    }
+
+    if (!anticipation) {
+      console.log(`[syncAnticipation] Nenhuma antecipação encontrada para payment ${payment.id}`);
+      return;
+    }
+
+    const antStatus = anticipation.status || "CREDITED";
+    const antFee = Number(anticipation.fee) || 0;
+    const antNetValue = Number(anticipation.netValue) || 0;
+    const antCreditDate = antStatus === "CREDITED" 
+      ? (anticipation.creditDate || payment.confirmedDate || new Date().toISOString())
+      : null;
+
+    // 1. Gravar em gateway_anticipations
+    const { data: antRecord } = await adminClient
+      .from("gateway_anticipations")
+      .upsert({
+        provider: "asaas",
+        provider_anticipation_id: anticipation.id,
+        cobranca_id: cobranca?.id || null,
+        parcela_id: parcelaId,
+        status: antStatus,
+        fee: antFee,
+        net_value: antNetValue,
+        request_date: anticipation.anticipationDate || anticipation.requestDate || null,
+        credit_date: antCreditDate,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "provider, provider_anticipation_id" })
+      .select("id")
+      .maybeSingle();
+
+    const antId = antRecord?.id || null;
+
+    // 2. Se creditada, atualizar parcela e ajustar datas dos movimentos
+    if (antStatus === "CREDITED" && antCreditDate) {
+      const { data: currentParcela } = await adminClient
+        .from("cobranca_parcelas")
+        .select("valor_bruto, valor_principal, taxa_processamento_real, taxa_gateway")
+        .eq("id", parcelaId)
+        .maybeSingle();
+
+      const procFee = Number(currentParcela?.taxa_processamento_real ?? currentParcela?.taxa_gateway ?? 0);
+      const bruto = Number(currentParcela?.valor_principal ?? currentParcela?.valor_bruto ?? payment.value ?? 0);
+      const finalNetValue = antNetValue > 0 ? antNetValue : Math.max(0, bruto - procFee - antFee);
+
+      await adminClient
+        .from("cobranca_parcelas")
+        .update({
+          antecipado: true,
+          status: "antecipado",
+          taxa_antecipacao: antFee,
+          taxa_antecipacao_real: antFee,
+          valor_liquido_creditado: finalNetValue,
+          data_credito_real: antCreditDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", parcelaId);
+
+      // Atualizar data de crédito real na cobrança pai
+      if (cobranca?.id) {
+        await adminClient
+          .from("cobrancas")
+          .update({
+            data_credito_real: antCreditDate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cobranca.id);
+      }
+
+      // Alinhar a data dos movimentos de crédito e repasse existentes para a data real de crédito
+      await adminClient
+        .from("gateway_cash_movements")
+        .update({ movement_date: antCreditDate })
+        .eq("parcela_id", parcelaId)
+        .in("movement_type", ["credit", "pass_through"]);
+
+      // Alinhar a taxa de processamento do gateway para a data real do crédito
+      await adminClient
+        .from("gateway_cash_movements")
+        .update({ movement_date: antCreditDate })
+        .eq("parcela_id", parcelaId)
+        .eq("provider_transaction_id", `payment_${payment.id}_fee`);
+
+      // 3. Upsert do movimento da taxa de antecipação
+      if (antFee > 0) {
+        await adminClient.from("gateway_cash_movements").upsert({
+          provider: "asaas",
+          provider_transaction_id: `anticipation_${anticipation.id}_fee`,
+          cobranca_id: cobranca?.id || null,
+          parcela_id: parcelaId,
+          anticipation_id: antId,
+          movement_type: "fee",
+          amount: -antFee,
+          movement_date: antCreditDate,
+          due_date: null,
+          competence_date: antCreditDate,
+          description: `Taxa de antecipação ${anticipation.id}`,
+        }, { onConflict: "provider, provider_transaction_id, movement_type" });
+      }
+
+      console.log(`✅ [syncAnticipation] Antecipação ${anticipation.id} liquidada: antFee=${antFee}, net=${finalNetValue}, data=${antCreditDate}`);
+    }
+  } catch (err) {
+    console.error("[syncAnticipation] Erro ao sincronizar antecipação:", err);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -422,6 +591,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // 🛡️ Validação de Segurança do Webhook Asaas (Header asaas-access-token)
+    const asaasWebhookSecret = Deno.env.get("ASAAS_WEBHOOK_SECRET");
+    const receivedToken = req.headers.get("asaas-access-token");
+    if (asaasWebhookSecret && receivedToken && receivedToken !== asaasWebhookSecret) {
+      console.warn("[asaas-webhook] Rejeitado: cabeçalho asaas-access-token inválido.");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const event = body.event;
     const payment = body.payment;
@@ -605,6 +785,13 @@ Deno.serve(async (req) => {
                   description: `Taxa de processamento ${payment.id}`,
                 }, { onConflict: "provider, provider_transaction_id, movement_type" });
               }
+
+              // Sincronização e liquidação automática da antecipação se aplicável
+              if (event === "PAYMENT_ANTICIPATED" || payment.anticipated === true) {
+                if (pData?.id) {
+                  await syncAnticipationForPayment(adminClient, cobranca, payment, pData.id);
+                }
+              }
             }
 
             // Disparo de finalização de extras se aplicável
@@ -671,14 +858,17 @@ Deno.serve(async (req) => {
     }
 
     // ==========================================
-    // ANTICIPATION EVENTS
+    // ANTICIPATION EVENTS (RECEIVABLE_ANTICIPATION_*)
     // ==========================================
     const ANTICIPATION_EVENTS = [
+      "RECEIVABLE_ANTICIPATION_PENDING",
       "RECEIVABLE_ANTICIPATION_SCHEDULED",
       "RECEIVABLE_ANTICIPATION_AUTHORIZED",
       "RECEIVABLE_ANTICIPATION_CREDITED",
       "RECEIVABLE_ANTICIPATION_DENIED",
       "RECEIVABLE_ANTICIPATION_CANCELLED",
+      "RECEIVABLE_ANTICIPATION_DEBITED",
+      "RECEIVABLE_ANTICIPATION_OVERDUE",
     ];
 
     if (ANTICIPATION_EVENTS.includes(event) && body.anticipation) {
@@ -708,73 +898,17 @@ Deno.serve(async (req) => {
         parcelaId = pData?.id || null;
       }
 
-      const statusMap: Record<string, string> = {
-        "RECEIVABLE_ANTICIPATION_SCHEDULED": "SCHEDULED",
-        "RECEIVABLE_ANTICIPATION_AUTHORIZED": "AUTHORIZED",
-        "RECEIVABLE_ANTICIPATION_CREDITED": "CREDITED",
-        "RECEIVABLE_ANTICIPATION_DENIED": "DENIED",
-        "RECEIVABLE_ANTICIPATION_CANCELLED": "CANCELLED",
-      };
-
-      const mappedStatus = statusMap[event] || "PENDING";
-
-      const anticipationPayload = {
-        provider: "asaas",
-        provider_anticipation_id: anticipation.id,
-        cobranca_id: cobranca?.id || null,
-        parcela_id: parcelaId,
-        status: mappedStatus,
-        fee: Number(anticipation.fee) || 0,
-        net_value: Number(anticipation.netValue) || 0,
-        request_date: anticipation.anticipationDate || null,
-        credit_date: mappedStatus === "CREDITED" ? (anticipation.creditDate || new Date().toISOString()) : null,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error: antError } = await adminClient
-        .from("gateway_anticipations")
-        .upsert(anticipationPayload, { onConflict: "provider, provider_anticipation_id" });
-
-      if (antError) {
-        console.error("Error upserting anticipation:", antError);
-      } else {
-        await markEventProcessed(adminClient, body.id || `${event}_${anticipation.id}`);
-        
-        // Se creditado, atualizar parcela e registrar movimento de taxa de antecipação
-        if (mappedStatus === "CREDITED") {
-          const antCreditDate = anticipation.creditDate || new Date().toISOString();
-          const antFee = Number(anticipation.fee) || 0;
-
-          if (parcelaId) {
-            await adminClient
-              .from("cobranca_parcelas")
-              .update({
-                antecipado: true,
-                status: "antecipado",
-                taxa_antecipacao: antFee,
-                taxa_antecipacao_real: antFee,
-                data_credito: antCreditDate,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", parcelaId);
-          }
-
-          if (antFee > 0) {
-            await adminClient.from("gateway_cash_movements").upsert({
-              provider: "asaas",
-              provider_transaction_id: `anticipation_${anticipation.id}_fee`,
-              cobranca_id: cobranca?.id || null,
-              parcela_id: parcelaId,
-              movement_type: "fee",
-              amount: -antFee,
-              movement_date: antCreditDate,
-              due_date: null,
-              competence_date: antCreditDate,
-              description: `Taxa de antecipação ${anticipation.id}`,
-            }, { onConflict: "provider, provider_transaction_id, movement_type" });
-          }
-        }
+      if (parcelaId) {
+        await syncAnticipationForPayment(
+          adminClient,
+          cobranca,
+          { id: anticipation.payment },
+          parcelaId,
+          anticipation
+        );
       }
+
+      await markEventProcessed(adminClient, body.id || `${event}_${anticipation.id}`);
     }
 
     // ==========================================

@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,6 +59,7 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
   const [observacoes, setObservacoes] = useState('');
   const [saving, setSaving] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>('');
+  const [gatewayInfo, setGatewayInfo] = useState<any>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isCharging, setIsCharging] = useState(false);
@@ -79,6 +81,37 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             setSessionClienteId(binding.cliente_id);
           }
         });
+      }
+
+      if (linha.meioPagamento === 'asaas' || linha.origem === 'workflow' || linha.origem === 'gallery') {
+        const fetchGateway = async () => {
+          try {
+            const { data: gm } = await supabase
+              .from('gateway_cash_movements')
+              .select(`
+                id,
+                movement_type,
+                amount,
+                movement_date,
+                description,
+                cobrancas(id, valor, valor_principal, valor_cobrado_cliente, taxa_processamento_real, taxa_antecipacao_real, valor_liquido_creditado, data_credito, data_credito_real, status),
+                cobranca_parcelas(id, valor_principal, valor_cobrado_cliente, taxa_processamento_real, taxa_antecipacao_real, valor_liquido_creditado, data_credito, data_credito_real, status, antecipado)
+              `)
+              .eq('id', linha.referenciaId)
+              .maybeSingle();
+
+            if (gm) {
+              setGatewayInfo(gm);
+            } else {
+              setGatewayInfo(null);
+            }
+          } catch {
+            setGatewayInfo(null);
+          }
+        };
+        fetchGateway();
+      } else {
+        setGatewayInfo(null);
       }
     }
   }, [linha]);
@@ -315,6 +348,76 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             />
           </div>
         </section>
+
+        {gatewayInfo && (gatewayInfo.cobranca_parcelas || gatewayInfo.cobrancas) && (
+          <section className="space-y-2.5 rounded-lg border border-border bg-muted/20 p-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+                Composição do Gateway (Asaas)
+              </h4>
+              {gatewayInfo.cobranca_parcelas?.antecipado && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                  Antecipado
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Valor Bruto:</span>
+                <span className="font-medium text-foreground">
+                  {formatCurrency(
+                    Number(gatewayInfo.cobranca_parcelas?.valor_principal ?? gatewayInfo.cobrancas?.valor_principal ?? linha.valor)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Líquido Creditado:</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(
+                    Number(gatewayInfo.cobranca_parcelas?.valor_liquido_creditado ?? gatewayInfo.cobrancas?.valor_liquido_creditado ?? 0)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Taxa de Processamento:</span>
+                <span className="text-destructive font-medium">
+                  - {formatCurrency(
+                    Number(gatewayInfo.cobranca_parcelas?.taxa_processamento_real ?? gatewayInfo.cobrancas?.taxa_processamento_real ?? 0)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Taxa de Antecipação:</span>
+                <span className={cn(
+                  "font-medium",
+                  Number(gatewayInfo.cobranca_parcelas?.taxa_antecipacao_real ?? gatewayInfo.cobrancas?.taxa_antecipacao_real ?? 0) > 0
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+                )}>
+                  {Number(gatewayInfo.cobranca_parcelas?.taxa_antecipacao_real ?? gatewayInfo.cobrancas?.taxa_antecipacao_real ?? 0) > 0
+                    ? `- ${formatCurrency(Number(gatewayInfo.cobranca_parcelas?.taxa_antecipacao_real ?? gatewayInfo.cobrancas?.taxa_antecipacao_real))}`
+                    : "R$ 0,00"}
+                </span>
+              </div>
+            </div>
+
+            {(gatewayInfo.cobranca_parcelas?.data_credito_real || gatewayInfo.cobrancas?.data_credito_real) && (
+              <div className="text-[11px] text-muted-foreground pt-2 border-t border-border/50 flex flex-col gap-0.5">
+                <div>
+                  <strong className="text-foreground/80">Crédito efetivo no banco:</strong>{' '}
+                  {formatDate(gatewayInfo.cobranca_parcelas?.data_credito_real || gatewayInfo.cobrancas?.data_credito_real)}
+                </div>
+                {(gatewayInfo.cobranca_parcelas?.data_credito || gatewayInfo.cobrancas?.data_credito) && (
+                  <div className="text-[10.5px]">
+                    Previsão original a termo:{' '}
+                    {formatDate(gatewayInfo.cobranca_parcelas?.data_credito || gatewayInfo.cobrancas?.data_credito)}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="space-y-2">
           <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
