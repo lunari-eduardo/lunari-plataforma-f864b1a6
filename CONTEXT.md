@@ -375,4 +375,5 @@ BrowserRouter
 - A tabela `unified_plans` e a unica fonte de verdade para precos -- nao hardcodar valores.
 - `profiles.studio_trial_ends_at` controla o trial -- ativado via RPC `start_studio_trial()`.
 - Nunca usar foreign key para `auth.users` -- usar `profiles` com `user_id`.
+- **PWA Precache & ChunkLoadError (CRÍTICO):** NUNCA permitir que chunks dinâmicos pesados (como `mermaid-*.js`, `wasm-*.js`, gramáticas shiki) entrem no precache do Service Worker (`globIgnores` em `vite.config.ts`). Ao alterar dependências ou lazy imports, verificar o impacto no tamanho dos chunks e no ServiceWorker (`sw.js`). O `RootErrorBoundary` deve sempre auto-recuperar chunks obsoletos pós-deploy limpando `CacheStorage` e desregistrando Service Workers sem apagar os tokens de autenticação do Supabase (`sb-*`).
 
