@@ -41,28 +41,45 @@ export class RootErrorBoundary extends React.Component<Props, State> {
       const key = 'chunk_auto_reload_ts';
       const last = Number(sessionStorage.getItem(key) || '0');
       
-      // Aumentado para 30s para evitar loops infinitos se o arquivo estiver permanentemente quebrado
-      if (Date.now() - last > 30_000) {
+      // Se não tentou auto-recuperar nos últimos 15s, executa a recuperação completa
+      if (Date.now() - last > 15_000) {
         sessionStorage.setItem(key, String(Date.now()));
-        
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            // Desregistra o SW antigo para garantir que o reload busque os arquivos mais recentes da Vercel
-            Promise.all(regs.map(r => r.unregister())).finally(() => {
-              window.location.reload();
-            });
-          }).catch(() => window.location.reload());
-        } else {
-          window.location.reload();
-        }
+        this.handleRefresh();
       }
     }
   }
 
+  handleRefresh = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+    } catch (e) {
+      console.warn('Erro ao atualizar workers/caches:', e);
+    } finally {
+      window.location.href = window.location.origin + window.location.pathname + '?_v=' + Date.now();
+    }
+  };
+
   handleClearCacheAndReload = async () => {
     try {
+      // Preserva tokens de autenticação do Supabase para não deslogar o fotógrafo
+      const authBackup: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('sb-') || k.includes('auth-token') || k.includes('supabase'))) {
+          authBackup[k] = localStorage.getItem(k) || '';
+        }
+      }
       localStorage.clear();
+      Object.entries(authBackup).forEach(([k, v]) => localStorage.setItem(k, v));
       sessionStorage.clear();
+
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
@@ -74,7 +91,7 @@ export class RootErrorBoundary extends React.Component<Props, State> {
     } catch (e) {
       console.warn('Erro ao limpar caches:', e);
     } finally {
-      window.location.reload();
+      window.location.href = window.location.origin + window.location.pathname + '?_v=' + Date.now();
     }
   };
 
@@ -94,7 +111,7 @@ export class RootErrorBoundary extends React.Component<Props, State> {
               : 'O aplicativo encontrou um erro inesperado ao carregar. Por favor, recarregue a página.'}
           </p>
           <div className="flex gap-4">
-            <Button onClick={() => window.location.reload()} className="gap-2">
+            <Button onClick={this.handleRefresh} className="gap-2">
               <RefreshCw className="h-4 w-4" />
               {isChunk ? 'Atualizar Agora' : 'Recarregar'}
             </Button>

@@ -91,8 +91,16 @@ export default defineConfig(({ mode }) => ({
         navigationPreload: false,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Chunks pesados e carregados sob demanda não entram no precache.
-        globIgnores: ['**/emacs-lisp-*.js', '**/cpp-*.js', '**/cynefin-*.js'],
+        // Chunks pesados e carregados sob demanda não entram no precache do Service Worker.
+        globIgnores: [
+          '**/mermaid-*.js',
+          '**/emacs-lisp-*.js',
+          '**/cpp-*.js',
+          '**/cynefin-*.js',
+          '**/wasm-*.js',
+          '**/wolfram-*.js',
+          '**/highlighted-body-*.js',
+        ],
         navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//, /^\/pay\//, /^\/l\//],
       },
       devOptions: {
