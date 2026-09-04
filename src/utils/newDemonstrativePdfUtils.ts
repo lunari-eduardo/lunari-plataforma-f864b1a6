@@ -16,14 +16,52 @@ export interface DemonstrativeExportData {
   regime?: 'caixa' | 'competencia';
 }
 
-export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
+/**
+ * Converte uma URL de imagem para base64 data URI de forma segura.
+ * Se falhar (ex: CORS, offline, timeout), retorna undefined sem travar a geração.
+ */
+async function toDataUrlSafe(url: string, timeoutMs = 2500): Promise<string | undefined> {
+  if (!url) return undefined;
+  if (url.startsWith('data:')) return url;
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), timeoutMs);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(url);
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve(dataUrl);
+      } catch {
+        resolve(url);
+      }
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(undefined);
+    };
+    img.src = url;
+  });
+}
+
+export const getDemonstrativeHTML = (
+  data: DemonstrativeExportData, 
+  resolvedLogoUrl?: string
+): string => {
   const { profile, branding, period, demonstrativo, regime = 'caixa' } = data;
   const { receitas, despesas, resumoFinal } = demonstrativo;
-  const logoUrl = profile?.logo_url || branding?.logoUrl;
+  const logoUrl = resolvedLogoUrl || profile?.logo_url || branding?.logoUrl;
   const regimeLabel = regime === 'competencia' ? 'Regime de Competência' : 'Regime de Caixa';
 
   return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; background-color: #ffffff; padding: 24px 28px; line-height: 1.45; font-size: 13px;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; background-color: #ffffff; width: 750px; margin: 0 auto; padding: 24px 28px; box-sizing: border-box; line-height: 1.45; font-size: 13px;">
       
       <!-- Cabeçalho com Empresa e Logo -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 18px; margin-bottom: 20px;">
@@ -47,7 +85,7 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
       </div>
 
       <!-- Banner de Título do Relatório -->
-      <div style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <div>
           <h1 style="margin: 0; font-size: 18px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.03em;">
             Demonstrativo Financeiro (DRE)
@@ -66,17 +104,17 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
         </div>
       </div>
 
-      <!-- Grid de Receitas e Despesas -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+      <!-- Duas Colunas: Receitas e Despesas lado a lado -->
+      <div style="display: flex; gap: 20px; margin-bottom: 24px; align-items: stretch;">
         
         <!-- CARD RECEITAS -->
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="flex: 1; min-width: 0; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
           <div style="background-color: #059669; color: #ffffff; padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
             <span>📈 RECEITAS</span>
             <span style="font-size: 11px; opacity: 0.9;">Créditos</span>
           </div>
 
-          <div style="padding: 12px 14px;">
+          <div style="padding: 12px 14px; display: flex; flex-direction: column; flex: 1;">
             <div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f1f5f9;">
               <span style="color: #475569;">Receita com sessões</span>
               <span style="font-weight: 600; color: #0f172a;">${formatCurrency(receitas.sessoes)}</span>
@@ -95,21 +133,23 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
             </div>
 
             <!-- Box Total Receitas -->
-            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px 12px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 700; color: #065f46; font-size: 12px; text-transform: uppercase;">Total de Receitas</span>
-              <span style="font-weight: 800; font-size: 15px; color: #047857;">${formatCurrency(receitas.totalReceitas)}</span>
+            <div style="margin-top: auto; padding-top: 14px;">
+              <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; color: #065f46; font-size: 12px; text-transform: uppercase;">Total de Receitas</span>
+                <span style="font-weight: 800; font-size: 15px; color: #047857;">${formatCurrency(receitas.totalReceitas)}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- CARD DESPESAS -->
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="flex: 1; min-width: 0; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
           <div style="background-color: #dc2626; color: #ffffff; padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
             <span>📉 DESPESAS</span>
             <span style="font-size: 11px; opacity: 0.9;">Débitos</span>
           </div>
 
-          <div style="padding: 12px 14px;">
+          <div style="padding: 12px 14px; display: flex; flex-direction: column; flex: 1;">
             ${despesas.categorias.length === 0 ? `
               <div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
                 Nenhuma despesa registrada no período
@@ -135,9 +175,11 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
             `).join('')}
 
             <!-- Box Total Despesas -->
-            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 12px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 700; color: #991b1b; font-size: 12px; text-transform: uppercase;">Total de Despesas</span>
-              <span style="font-weight: 800; font-size: 15px; color: #b91c1c;">${formatCurrency(despesas.totalDespesas)}</span>
+            <div style="margin-top: auto; padding-top: 14px;">
+              <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; color: #991b1b; font-size: 12px; text-transform: uppercase;">Total de Despesas</span>
+                <span style="font-weight: 800; font-size: 15px; color: #b91c1c;">${formatCurrency(despesas.totalDespesas)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -145,27 +187,28 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
       </div>
 
       <!-- CARD RESUMO FINAL (DRE) -->
-      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;">
+      <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;">
         <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.02em; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
           💰 Resumo do Desempenho (DRE)
         </h3>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+        <!-- Métricas em 3 colunas Flexbox -->
+        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+          <div style="flex: 1; min-width: 0; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
             <div style="font-size: 11px; color: #64748b;">Receita Total</div>
             <div style="font-size: 15px; font-weight: 700; color: #047857; margin-top: 2px;">
               ${formatCurrency(resumoFinal.receitaTotal)}
             </div>
           </div>
 
-          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+          <div style="flex: 1; min-width: 0; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
             <div style="font-size: 11px; color: #64748b;">(-) Despesas Totais</div>
             <div style="font-size: 15px; font-weight: 700; color: #b91c1c; margin-top: 2px;">
               ${formatCurrency(resumoFinal.despesaTotal)}
             </div>
           </div>
 
-          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+          <div style="flex: 1; min-width: 0; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
             <div style="font-size: 11px; color: #64748b;">Margem Líquida</div>
             <div style="font-size: 15px; font-weight: 700; color: #2563eb; margin-top: 2px;">
               ${resumoFinal.margemLiquida.toFixed(1)}%
@@ -174,7 +217,7 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
         </div>
 
         <!-- Bloco Hero: Resultado Líquido -->
-        <div style="background: ${resumoFinal.resultadoLiquido >= 0 ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'}; border: 2px solid ${resumoFinal.resultadoLiquido >= 0 ? '#10b981' : '#ef4444'}; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background-color: ${resumoFinal.resultadoLiquido >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 2px solid ${resumoFinal.resultadoLiquido >= 0 ? '#10b981' : '#ef4444'}; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-size: 13px; font-weight: 700; color: ${resumoFinal.resultadoLiquido >= 0 ? '#065f46' : '#991b1b'}; text-transform: uppercase;">
               = Resultado Líquido do Período
@@ -199,42 +242,19 @@ export const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
 };
 
 export async function generateDemonstrativePDF(data: DemonstrativeExportData): Promise<void> {
-  // 1. Criar container isolado montado no DOM para garantir que html2canvas aplique 100% do layout e cores
-  const container = document.createElement('div');
-  container.id = 'pdf-export-temp-container';
-  container.style.position = 'fixed';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = '794px'; // Largura exata A4 (96 DPI)
-  container.style.backgroundColor = '#ffffff';
-  container.style.zIndex = '-9999';
-  container.innerHTML = getDemonstrativeHTML(data);
-  document.body.appendChild(container);
+  // 1. Pré-converter logotipo para Base64 de forma resiliente para não travar html2canvas com CORS ou delay
+  const rawLogoUrl = data.profile?.logo_url || data.branding?.logoUrl;
+  const resolvedLogoUrl = rawLogoUrl ? await toDataUrlSafe(rawLogoUrl) : undefined;
 
-  // 2. Aguardar carregamento do logotipo se houver
-  const images = Array.from(container.querySelectorAll('img'));
-  await Promise.all(
-    images.map(
-      (img) =>
-        new Promise<void>((resolve) => {
-          if (img.complete) return resolve();
-          img.onload = () => resolve();
-          img.onerror = () => resolve(); // não trava se a imagem falhar
-        })
-    )
-  );
-
-  // 3. Aguardar estabilização do layout no DOM
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-  );
+  // 2. Gerar o HTML seguro
+  const htmlContent = getDemonstrativeHTML(data, resolvedLogoUrl);
 
   const startDateStr = formatDateForPDF(data.period.startDate).replace(/\//g, '-');
   const endDateStr = formatDateForPDF(data.period.endDate).replace(/\//g, '-');
   const filename = `demonstrativo-${startDateStr}-a-${endDateStr}.pdf`;
 
   const opt = {
-    margin: [6, 6, 6, 6],
+    margin: [8, 8, 8, 8],
     filename,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: {
@@ -243,7 +263,6 @@ export async function generateDemonstrativePDF(data: DemonstrativeExportData): P
       letterRendering: true,
       backgroundColor: '#ffffff',
       logging: false,
-      windowWidth: 794,
     },
     jsPDF: {
       unit: 'mm',
@@ -255,15 +274,10 @@ export async function generateDemonstrativePDF(data: DemonstrativeExportData): P
   };
 
   try {
-    await html2pdf().set(opt as any).from(container).save();
+    // 3. O html2pdf recebe a string HTML e a renderiza em seu próprio container isolado com dimensões corretas
+    await html2pdf().set(opt as any).from(htmlContent).save();
   } catch (error) {
     console.error('Erro ao gerar PDF do demonstrativo:', error);
     throw error;
-  } finally {
-    try {
-      container.remove();
-    } catch {
-      // noop
-    }
   }
 }
