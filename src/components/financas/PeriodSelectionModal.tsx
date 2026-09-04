@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,8 +9,9 @@ import { Calendar, Download, FileText, List, AlertCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { DadosExportacaoExtrato } from '@/types/extrato';
-import { formatDateForStorage } from '@/utils/dateUtils';
+import { DadosExportacaoExtrato, RegimeContabil } from '@/types/extrato';
+import { formatDateForStorage, parseDateFromStorage } from '@/utils/dateUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PeriodSelectionModalProps {
   isOpen: boolean;
@@ -20,9 +21,10 @@ interface PeriodSelectionModalProps {
     endDate: string;
     format: 'csv' | 'pdf';
   }) => Promise<void>;
-  dadosExtrato: DadosExportacaoExtrato;
+  dadosExtrato?: DadosExportacaoExtrato;
   title: string;
   description?: string;
+  regime?: RegimeContabil;
 }
 
 export default function PeriodSelectionModal({
@@ -31,11 +33,27 @@ export default function PeriodSelectionModal({
   onExport,
   dadosExtrato,
   title,
-  description
+  description,
+  regime = 'caixa'
 }: PeriodSelectionModalProps) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isExporting, setIsExporting] = useState(false);
+  const [serverCount, setServerCount] = useState<number | null>(null);
+  const [isLoadingCount, setIsLoadingCount] = useState(false);
+
+  // Inicializa com o período corrente da tela ao abrir
+  useEffect(() => {
+    if (isOpen && dadosExtrato?.periodo?.inicio && dadosExtrato?.periodo?.fim) {
+      setStartDate(parseDateFromStorage(dadosExtrato.periodo.inicio));
+      setEndDate(parseDateFromStorage(dadosExtrato.periodo.fim));
+    }
+  }, [isOpen, dadosExtrato?.periodo?.inicio, dadosExtrato?.periodo?.fim]);
+
+  // Ano de referência baseado no período atual ou ano corrente
+  const anoBase = dadosExtrato?.periodo?.inicio
+    ? parseDateFromStorage(dadosExtrato.periodo.inicio).getFullYear()
+    : new Date().getFullYear();
 
   // Quick period options
   const quickOptions = [
@@ -68,33 +86,109 @@ export default function PeriodSelectionModal({
       }
     },
     {
-      label: 'Ano atual',
+      label: `Ano todo (${anoBase})`,
       getValue: () => {
-        const hoje = new Date();
-        const inicio = new Date(hoje.getFullYear(), 0, 1);
-        const fim = new Date(hoje.getFullYear(), 11, 31);
+        const inicio = new Date(anoBase, 0, 1);
+        const fim = new Date(anoBase, 11, 31);
         return { inicio, fim };
       }
     }
   ];
 
-  // Calculate filtered transactions count
-  const filteredCount = useMemo(() => {
-    if (!startDate || !endDate) return dadosExtrato.linhas.length;
-    
-    const start = startDate.toISOString().split('T')[0];
-    const end = endDate.toISOString().split('T')[0];
-    
-    return dadosExtrato.linhas.filter(linha => 
-      linha.data >= start && linha.data <= end
-    ).length;
-  }, [startDate, endDate, dadosExtrato.linhas]);
+  // Busca a contagem real de transações do período
+  useEffect(() => {
+    if (!isOpen || !startDate || !endDate) {
+      setServerCount(null);
+      setIsLoadingCount(false);
+      return;
+    }
+
+    if (startDate > endDate) {
+      setServerCount(0);
+      setIsLoadingCount(false);
+      return;
+    }
+
+    const startStr = formatDateForStorage(startDate);
+    const endStr = formatDateForStorage(endDate);
+
+    // Se for exatamente o mesmo período da tela e tivermos as linhas em memória
+    if (
+      dadosExtrato?.periodo?.inicio === startStr &&
+      dadosExtrato?.periodo?.fim === endStr &&
+      Array.isArray(dadosExtrato?.linhas)
+    ) {
+      setServerCount(dadosExtrato.linhas.length);
+      setIsLoadingCount(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingCount(true);
+
+    const fetchCount = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          if (isMounted) {
+            const localCount = dadosExtrato?.linhas?.filter(linha => 
+              linha.data >= startStr && linha.data <= endStr
+            ).length || 0;
+            setServerCount(localCount);
+            setIsLoadingCount(false);
+          }
+          return;
+        }
+
+        const dataColumn = regime === 'competencia' ? 'data_competencia' : 'data';
+        let query = supabase
+          .from('extrato_unificado')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte(dataColumn, startStr)
+          .lte(dataColumn, endStr);
+
+        if (dadosExtrato?.filtrosAplicados?.status && dadosExtrato.filtrosAplicados.status !== 'todos') {
+          query = query.eq('status', dadosExtrato.filtrosAplicados.status);
+        } else if (regime === 'caixa') {
+          query = query.eq('status', 'Pago');
+        } else if (regime === 'competencia') {
+          query = query.in('status', ['Pago', 'Faturado']);
+        }
+
+        const { count, error } = await query;
+        if (error) throw error;
+
+        if (isMounted) {
+          setServerCount(count ?? 0);
+          setIsLoadingCount(false);
+        }
+      } catch (err) {
+        console.error('Erro ao contar transações do período:', err);
+        if (isMounted) {
+          const localCount = dadosExtrato?.linhas?.filter(linha => 
+            linha.data >= startStr && linha.data <= endStr
+          ).length || 0;
+          setServerCount(localCount);
+          setIsLoadingCount(false);
+        }
+      }
+    };
+
+    fetchCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, startDate, endDate, regime, dadosExtrato]);
 
   // Validation
   const isValidPeriod = useMemo(() => {
     if (!startDate || !endDate) return false;
-    return startDate <= endDate && filteredCount > 0;
-  }, [startDate, endDate, filteredCount]);
+    if (startDate > endDate) return false;
+    if (serverCount !== null) return serverCount > 0;
+    return true;
+  }, [startDate, endDate, serverCount]);
 
   const handleQuickSelect = (option: typeof quickOptions[0]) => {
     const { inicio, fim } = option.getValue();
@@ -221,16 +315,32 @@ export default function PeriodSelectionModal({
           {startDate && endDate && (
             <div className="bg-muted/50 p-3 rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                {isValidPeriod ? (
+                {startDate > endDate ? (
                   <>
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <span>{filteredCount} transações encontradas no período</span>
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-amber-600">
+                      A data de início deve ser anterior ou igual à data fim
+                    </span>
+                  </>
+                ) : isLoadingCount ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span className="text-muted-foreground">
+                      Contando transações no período...
+                    </span>
+                  </>
+                ) : isValidPeriod && (serverCount === null || serverCount > 0) ? (
+                  <>
+                    <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                      {(serverCount ?? 0).toLocaleString('pt-BR')} {(serverCount ?? 0) === 1 ? 'transação encontrada' : 'transações encontradas'} no período
+                    </span>
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
                     <span className="text-amber-600">
-                      {filteredCount === 0 ? 'Nenhuma transação encontrada' : 'Período inválido'}
+                      Nenhuma transação encontrada no período
                     </span>
                   </>
                 )}
@@ -252,7 +362,7 @@ export default function PeriodSelectionModal({
               <Button
                 variant="outline"
                 onClick={() => handleExport('csv')}
-                disabled={!isValidPeriod || isExporting}
+                disabled={!isValidPeriod || isExporting || isLoadingCount}
                 className="flex-1"
               >
                 {isExporting ? (
@@ -267,7 +377,7 @@ export default function PeriodSelectionModal({
               
               <Button
                 onClick={() => handleExport('pdf')}
-                disabled={!isValidPeriod || isExporting}
+                disabled={!isValidPeriod || isExporting || isLoadingCount}
                 className="flex-1"
               >
                 {isExporting ? (

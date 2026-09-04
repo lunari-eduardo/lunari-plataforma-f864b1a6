@@ -15,6 +15,7 @@ import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
 import { cn } from '@/lib/utils';
 import { calcularDemonstrativoDeLinhas, fetchDemonstrativo } from '@/hooks/useDemonstrativoFinanceiro';
+import type { RegimeContabil } from '@/hooks/useExtratoSupabase';
 
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
@@ -23,6 +24,7 @@ interface DemonstrativoSimplificadoProps {
     fim: string;
   };
   transactions?: any[];
+  regime?: RegimeContabil;
 }
 
 // Component for a single line item with dotted line
@@ -82,7 +84,8 @@ function SectionHeader({ icon: Icon, title, iconColor }: { icon: React.ElementTy
 export default function DemonstrativoSimplificado({
   demonstrativo,
   periodo,
-  transactions = []
+  transactions = [],
+  regime = 'caixa',
 }: DemonstrativoSimplificadoProps) {
   const { getProfileOrDefault } = useUserProfile();
   const { getBrandingOrDefault } = useUserBranding();
@@ -102,6 +105,7 @@ export default function DemonstrativoSimplificado({
       inicio: periodo.inicio,
       fim: periodo.fim,
     },
+    regime,
     resumo: {
       totalEntradas: receitas.totalReceitas,
       entradasPagas: receitas.totalReceitas,
@@ -145,36 +149,35 @@ export default function DemonstrativoSimplificado({
       return;
     }
 
+    const toastId = toast.loading('Preparando demonstrativo do período...');
+
     try {
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
       
       let demonstrativoPeriodo: DemonstrativoType;
+      // Se o período selecionado for o mesmo exibido em tela, usa o demonstrativo já calculado
       if (startDate === periodo.inicio && endDate === periodo.fim) {
         demonstrativoPeriodo = demonstrativo;
-      } else if (transactions.length > 0) {
-        const transacoesPeriodo = transactions.filter((t) => {
-          const dt = t.data?.substring(0, 10);
-          return dt >= startDate && dt <= endDate;
-        });
-        demonstrativoPeriodo = calcularDemonstrativoDeLinhas(transacoesPeriodo);
       } else {
-        demonstrativoPeriodo = await fetchDemonstrativo(startDate, endDate);
+        // Período diferente (ex: "Ano atual", trimestre ou customizado) -> consulta a base completa!
+        demonstrativoPeriodo = await fetchDemonstrativo(startDate, endDate, regime);
       }
       
       const exportData: DemonstrativeExportData = {
         profile,
         branding,
         period: { startDate, endDate },
-        demonstrativo: demonstrativoPeriodo
+        demonstrativo: demonstrativoPeriodo,
+        regime,
       };
 
       await generateDemonstrativePDF(exportData);
       const periodText = `${formatDateForPDF(startDate)} a ${formatDateForPDF(endDate)}`;
-      toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`);
+      toast.success(`PDF do demonstrativo gerado com sucesso para o período ${periodText}!`, { id: toastId });
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      toast.error('Erro ao gerar o PDF. Tente novamente.');
+      toast.error('Erro ao gerar o PDF. Tente novamente.', { id: toastId });
     }
   };
 
@@ -340,6 +343,7 @@ export default function DemonstrativoSimplificado({
         dadosExtrato={dadosExportacao}
         title="Exportar Demonstrativo"
         description="Selecione o período que deseja incluir no demonstrativo"
+        regime={regime}
       />
 
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>

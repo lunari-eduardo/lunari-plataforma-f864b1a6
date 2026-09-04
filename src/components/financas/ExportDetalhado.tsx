@@ -235,6 +235,7 @@ export default function ExportDetalhado({ dados, regime = 'caixa' }: ExportDetal
         dadosExtrato={dados}
         title="Exportar Vista Detalhada"
         description="Selecione o período que deseja exportar"
+        regime={regime}
       />
 
       {/* Modal de redirecionamento para perfil */}
