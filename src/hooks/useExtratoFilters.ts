@@ -88,7 +88,11 @@ export function aplicarFiltrosClientSide(
     resultado = resultado.filter(l => l.origem === filtros.origem);
   }
   if (filtros.status && filtros.status !== 'todos') {
-    resultado = resultado.filter(l => l.status === filtros.status);
+    if (filtros.status === ('pendentes' as any)) {
+      resultado = resultado.filter(l => l.status === 'Faturado' || l.status === 'Agendado');
+    } else {
+      resultado = resultado.filter(l => l.status === filtros.status);
+    }
   }
   if (filtros.escopo && filtros.escopo !== 'todos') {
     resultado = resultado.filter(l =>
@@ -101,6 +105,15 @@ export function aplicarFiltrosClientSide(
   if (filtros.cliente) {
     resultado = resultado.filter(l =>
       l.cliente?.toLowerCase().includes(filtros.cliente!.toLowerCase())
+    );
+  }
+
+  if (filtros.formaPagamento && filtros.formaPagamento.trim()) {
+    const termo = filtros.formaPagamento.trim().toLowerCase();
+    resultado = resultado.filter(l =>
+      (l.meioPagamento && l.meioPagamento.toLowerCase().includes(termo)) ||
+      (l.cartao && l.cartao.toLowerCase().includes(termo)) ||
+      (l.descricao && l.descricao.toLowerCase().includes(termo))
     );
   }
 

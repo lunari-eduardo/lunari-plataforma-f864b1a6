@@ -6,10 +6,11 @@
  * Regra crítica: NADA de lógica de negócio nova. Consome useExtrato (leitura unificada)
  * + useNovoFinancas (mutations existentes) exatamente como já estavam.
  */
-import { memo, useMemo, useState, useEffect } from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { memo, useMemo, useState, useEffect, useCallback } from 'react';
+import { Search, SlidersHorizontal, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useExtrato } from '@/hooks/useExtrato';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
@@ -60,6 +61,31 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const [valorMax, setValorMax] = useState('');
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
+  const [selectedAno, setSelectedAno] = useState<number>(() => financas.filtroMesAno.ano);
+  const [selectedMes, setSelectedMes] = useState<string>(() => String(financas.filtroMesAno.mes));
+
+  const handlePeriodChange = useCallback((novoAno: number, novoMes: string) => {
+    setSelectedAno(novoAno);
+    setSelectedMes(novoMes);
+
+    if (novoMes === 'ano-completo') {
+      extrato.atualizarFiltros({
+        dataInicio: `${novoAno}-01-01`,
+        dataFim: `${novoAno}-12-31`,
+      });
+    } else {
+      const mNum = parseInt(novoMes, 10);
+      if (!isNaN(mNum)) {
+        financas.setFiltroMesAno({ mes: mNum, ano: novoAno });
+        const start = new Date(novoAno, mNum - 1, 1);
+        const end = new Date(novoAno, mNum, 0);
+        const fmt = (d: Date) =>
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        extrato.atualizarFiltros({ dataInicio: fmt(start), dataFim: fmt(end) });
+      }
+    }
+  }, [extrato, financas]);
+
   // Foco vindo da Visão Geral (Agenda / Pendências)
   useEffect(() => {
     const handler = (ev: Event) => {
@@ -69,7 +95,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
       const ano = Number(yStr);
       const mes = Number(mStr);
       if (ano && mes) {
-        setFiltroMesAno({ mes, ano });
+        handlePeriodChange(ano, String(mes));
       }
       const nextChip: Chip = detail.tipo === 'entrada' ? 'receitas' : 'despesas';
       applyChip(nextChip);
@@ -81,17 +107,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
     window.addEventListener(FINANCE_FOCUS_FLUXO_EVENT, handler as EventListener);
     return () => window.removeEventListener(FINANCE_FOCUS_FLUXO_EVENT, handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync competência (mês/ano) do Fluxo com o range de datas do useExtrato
-  const filtroMesAno = financas.filtroMesAno;
-  const setFiltroMesAno = (novo: { mes: number; ano: number }) => {
-    financas.setFiltroMesAno(novo);
-    const start = new Date(novo.ano, novo.mes - 1, 1);
-    const end = new Date(novo.ano, novo.mes, 0);
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    extrato.atualizarFiltros({ dataInicio: fmt(start), dataFim: fmt(end) });
-  };
+  }, [handlePeriodChange]);
 
   // Aplica chip → filtros do extrato
   const applyChip = (c: Chip) => {
@@ -107,10 +123,12 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         extrato.atualizarFiltros({ tipo: 'saida', status: 'todos' });
         break;
       case 'a_receber':
-        extrato.atualizarFiltros({ tipo: 'entrada', status: 'Faturado' as ExtratoStatus });
+        // Filtra pendentes (Faturado + Agendado)
+        extrato.atualizarFiltros({ tipo: 'entrada', status: 'pendentes' as any });
         break;
       case 'a_pagar':
-        extrato.atualizarFiltros({ tipo: 'saida', status: 'Faturado' as ExtratoStatus });
+        // Filtra pendentes (Faturado + Agendado)
+        extrato.atualizarFiltros({ tipo: 'saida', status: 'pendentes' as any });
         break;
     }
   };
@@ -193,17 +211,73 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
     (valorMin ? 1 : 0) +
     (valorMax ? 1 : 0);
 
+  const regimeControl = (
+    <div className="flex items-center gap-1.5 ml-1 sm:ml-2">
+      <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/50 border border-border/60 text-xs">
+        <button
+          type="button"
+          onClick={() => extrato.setRegime('caixa')}
+          className={cn(
+            'px-2.5 py-1 rounded-md text-xs font-medium transition-all',
+            extrato.regime === 'caixa'
+              ? 'bg-background text-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Caixa
+        </button>
+        <button
+          type="button"
+          onClick={() => extrato.setRegime('competencia')}
+          className={cn(
+            'px-2.5 py-1 rounded-md text-xs font-medium transition-all',
+            extrato.regime === 'competencia'
+              ? 'bg-background text-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Competência
+        </button>
+      </div>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground p-1 transition-colors"
+              aria-label="Sobre regimes contábeis"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+            <p className="font-semibold mb-1">Regime Contábil</p>
+            <p className="mb-1">
+              <strong>Caixa:</strong> considera a data em que o valor efetivamente entrou ou saiu da conta bancária/gateway (fluxo financeiro real).
+            </p>
+            <p>
+              <strong>Competência:</strong> considera a data do fato gerador (prestação do serviço ou competência da despesa), refletindo o resultado contábil do período.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+
   return (
     <FinancePageContainer>
       <PeriodActionBar
-        ano={String(filtroMesAno.ano)}
-        setAno={(v) => setFiltroMesAno({ mes: filtroMesAno.mes, ano: parseInt(v, 10) })}
-        mes={String(filtroMesAno.mes)}
-        setMes={(v) => setFiltroMesAno({ mes: parseInt(v, 10), ano: filtroMesAno.ano })}
+        ano={String(selectedAno)}
+        setAno={(v) => handlePeriodChange(parseInt(v, 10), selectedMes)}
+        mes={selectedMes}
+        setMes={(v) => handlePeriodChange(selectedAno, v)}
         anosDisponiveis={(() => {
           const y = new Date().getFullYear();
           return [y - 2, y - 1, y, y + 1];
         })()}
+        showAnoTodo
+        extraLeft={regimeControl}
         onSelectTipo={(tipo) => drawer.open({ tipo })}
       />
 
@@ -266,8 +340,18 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onClearSelection={clearSelection}
       />
 
-      {/* Resumo Financeiro expandível */}
-      <FluxoResumoExpandable ano={filtroMesAno.ano} mes={filtroMesAno.mes} />
+      {/* Resumo Financeiro expandível (Demonstrativo) */}
+      <FluxoResumoExpandable
+        ano={selectedAno}
+        mes={selectedMes}
+        periodo={{
+          inicio: extrato.filtros.dataInicio,
+          fim: extrato.filtros.dataFim,
+        }}
+        linhas={linhasVisiveis}
+        regime={extrato.regime}
+        onSetMes={(m) => handlePeriodChange(selectedAno, m)}
+      />
 
       {/* Timeline */}
       <div className="pt-4 pb-24">
@@ -301,6 +385,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
           extrato.limparFiltros();
           setValorMin('');
           setValorMax('');
+          const hoje = new Date();
+          handlePeriodChange(hoje.getFullYear(), String(hoje.getMonth() + 1));
         }}
         valorMin={valorMin}
         valorMax={valorMax}

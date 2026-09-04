@@ -16,9 +16,10 @@ interface PeriodActionBarProps {
   mes: string;
   setMes: (v: string) => void;
   anosDisponiveis: number[];
-  /** Mostra a opção "Ano todo" no seletor de mês (apenas Visão Geral). */
+  /** Mostra a opção "Ano todo" no seletor de mês. */
   showAnoTodo?: boolean;
   onSelectTipo: (tipo: LancamentoTipo) => void;
+  extraLeft?: React.ReactNode;
 }
 
 export const PeriodActionBar = memo(function PeriodActionBar({
@@ -29,13 +30,14 @@ export const PeriodActionBar = memo(function PeriodActionBar({
   anosDisponiveis,
   showAnoTodo = false,
   onSelectTipo,
+  extraLeft,
 }: PeriodActionBarProps) {
   const mesesSemAnoTodo = OPCOES_MES.filter((m) => m.value !== 'ano-completo');
   const meses = showAnoTodo ? OPCOES_MES : mesesSemAnoTodo;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-4 min-w-0">
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Select value={ano} onValueChange={setAno}>
           <SelectTrigger className="w-[86px] sm:w-24 h-9 border-border/60 bg-transparent">
             <SelectValue />
@@ -61,6 +63,8 @@ export const PeriodActionBar = memo(function PeriodActionBar({
             ))}
           </SelectContent>
         </Select>
+
+        {extraLeft}
       </div>
 
       <div className="shrink-0 ml-auto">

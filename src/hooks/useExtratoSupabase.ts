@@ -104,7 +104,11 @@ export function useExtratoSupabase({
         query = query.eq('origem', origem);
       }
       if (status && status !== 'todos') {
-        query = query.eq('status', status);
+        if (status === ('pendentes' as any)) {
+          query = query.in('status', ['Faturado', 'Agendado']);
+        } else {
+          query = query.eq('status', status);
+        }
       }
       if (escopo && escopo !== 'todos') {
         query = escopo === 'fotos_extras'

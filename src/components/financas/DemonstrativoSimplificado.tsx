@@ -13,8 +13,8 @@ import { useUserProfile, useUserBranding } from '@/hooks/useUserProfile';
 import { generateDemonstrativePDF, DemonstrativeExportData } from '@/utils/newDemonstrativePdfUtils';
 import { TransacaoComItem } from '@/types/financas';
 import PeriodSelectionModal from './PeriodSelectionModal';
-import { useExtrato } from '@/hooks/useExtrato';
 import { cn } from '@/lib/utils';
+import { calcularDemonstrativoDeLinhas, fetchDemonstrativo } from '@/hooks/useDemonstrativoFinanceiro';
 
 interface DemonstrativoSimplificadoProps {
   demonstrativo: DemonstrativoType;
@@ -22,7 +22,7 @@ interface DemonstrativoSimplificadoProps {
     inicio: string;
     fim: string;
   };
-  transactions?: TransacaoComItem[];
+  transactions?: any[];
 }
 
 // Component for a single line item with dotted line
@@ -86,7 +86,6 @@ export default function DemonstrativoSimplificado({
 }: DemonstrativoSimplificadoProps) {
   const { getProfileOrDefault } = useUserProfile();
   const { getBrandingOrDefault } = useUserBranding();
-  const { prepararDadosExportacao, calcularDemonstrativoParaPeriodo } = useExtrato();
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
@@ -96,6 +95,36 @@ export default function DemonstrativoSimplificado({
   const validateProfileData = () => {
     const profile = getProfileOrDefault();
     return !!(profile.empresa || profile.nome);
+  };
+
+  const dadosExportacao: any = {
+    periodo: {
+      inicio: periodo.inicio,
+      fim: periodo.fim,
+    },
+    resumo: {
+      totalEntradas: receitas.totalReceitas,
+      entradasPagas: receitas.totalReceitas,
+      entradasFaturadas: 0,
+      entradasAgendadas: 0,
+      totalSaidas: despesas.totalDespesas,
+      saidasPagas: despesas.totalDespesas,
+      saidasFaturadas: 0,
+      saidasAgendadas: 0,
+      saldoPeriodo: resumoFinal.resultadoLiquido,
+      saldoEfetivo: resumoFinal.resultadoLiquido,
+      saldoProjetado: resumoFinal.resultadoLiquido,
+      totalAReceber: 0,
+      totalAgendado: 0,
+      totalPago: receitas.totalReceitas + despesas.totalDespesas,
+      ticketMedioEntradas: 0,
+      percentualPago: 100,
+    },
+    linhas: transactions,
+    filtrosAplicados: {
+      dataInicio: periodo.inicio,
+      dataFim: periodo.fim,
+    },
   };
 
   const handleExportRequest = () => {
@@ -119,7 +148,19 @@ export default function DemonstrativoSimplificado({
     try {
       const profile = getProfileOrDefault();
       const branding = getBrandingOrDefault();
-      const demonstrativoPeriodo = calcularDemonstrativoParaPeriodo(startDate, endDate);
+      
+      let demonstrativoPeriodo: DemonstrativoType;
+      if (startDate === periodo.inicio && endDate === periodo.fim) {
+        demonstrativoPeriodo = demonstrativo;
+      } else if (transactions.length > 0) {
+        const transacoesPeriodo = transactions.filter((t) => {
+          const dt = t.data?.substring(0, 10);
+          return dt >= startDate && dt <= endDate;
+        });
+        demonstrativoPeriodo = calcularDemonstrativoDeLinhas(transacoesPeriodo);
+      } else {
+        demonstrativoPeriodo = await fetchDemonstrativo(startDate, endDate);
+      }
       
       const exportData: DemonstrativeExportData = {
         profile,
@@ -295,7 +336,7 @@ export default function DemonstrativoSimplificado({
         isOpen={showPeriodModal}
         onClose={() => setShowPeriodModal(false)}
         onExport={handleExportWithPeriod}
-        dadosExtrato={prepararDadosExportacao()}
+        dadosExtrato={dadosExportacao}
         title="Exportar Demonstrativo"
         description="Selecione o período que deseja incluir no demonstrativo"
       />
