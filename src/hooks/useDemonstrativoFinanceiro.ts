@@ -13,11 +13,69 @@ import { DemonstrativoSimplificado } from '@/types/extrato';
 import { RegimeContabil } from '@/hooks/useExtratoSupabase';
 import { GRUPOS_DESPESAS } from '@/constants/extratoConstants';
 
+export interface SessionProductItem {
+  id: string;
+  sessionId?: string;
+  total: number;
+}
+
 export const DEMONSTRATIVO_VAZIO: DemonstrativoSimplificado = {
-  receitas: { sessoes: 0, produtos: 0, naoOperacionais: 0, totalReceitas: 0 },
+  receitas: { sessoes: 0, fotosExtras: 0, produtos: 0, naoOperacionais: 0, totalReceitas: 0 },
   despesas: { categorias: [], totalDespesas: 0 },
   resumoFinal: { receitaTotal: 0, despesaTotal: 0, resultadoLiquido: 0, margemLiquida: 0 },
 };
+
+/**
+ * Busca a relação de produtos físicos incluídos nas sessões de um determinado período.
+ */
+export async function fetchSessoesProdutos(
+  dataInicio: string,
+  dataFim: string
+): Promise<SessionProductItem[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: sessoesProds, error } = await supabase
+    .from('clientes_sessoes')
+    .select('id, session_id, produtos_incluidos')
+    .eq('user_id', user.id)
+    .gte('data_sessao', dataInicio)
+    .lte('data_sessao', dataFim)
+    .not('produtos_incluidos', 'is', null)
+    .or('status.is.null,status.neq.cancelado,status.neq.historico');
+
+  if (error || !sessoesProds) return [];
+
+  const list: SessionProductItem[] = [];
+  sessoesProds.forEach((s: any) => {
+    let totalProdSess = 0;
+    if (Array.isArray(s.produtos_incluidos)) {
+      s.produtos_incluidos.forEach((p: any) => {
+        if (p?.tipo === 'manual' || (p?.quantidade && p?.valorUnitario)) {
+          totalProdSess += (Number(p.quantidade) || 0) * (Number(p.valorUnitario) || 0);
+        }
+      });
+    }
+    if (totalProdSess > 0) {
+      list.push({ id: s.id, sessionId: s.session_id, total: totalProdSess });
+    }
+  });
+
+  return list;
+}
+
+/**
+ * Hook para obter a lista de produtos de sessões de um período.
+ */
+export function useSessoesProdutos(dataInicio?: string, dataFim?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['sessoes-produtos-dre', dataInicio, dataFim],
+    queryFn: () => fetchSessoesProdutos(dataInicio || '', dataFim || ''),
+    enabled: enabled && !!dataInicio && !!dataFim,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
 
 /**
  * Calcula o Demonstrativo Financeiro diretamente a partir de um conjunto de linhas de extrato.
@@ -26,7 +84,8 @@ export const DEMONSTRATIVO_VAZIO: DemonstrativoSimplificado = {
  */
 export function calcularDemonstrativoDeLinhas(
   linhas: any[],
-  regime: RegimeContabil = 'caixa'
+  regime: RegimeContabil = 'caixa',
+  produtosSessoes?: SessionProductItem[]
 ): DemonstrativoSimplificado {
   if (!linhas || linhas.length === 0) {
     return DEMONSTRATIVO_VAZIO;
@@ -50,6 +109,7 @@ export function calcularDemonstrativoDeLinhas(
   const totalEstornos = estornos.reduce((sum, l) => sum + Math.abs(Number(l.valor) || 0), 0);
 
   let receitaSessoes = 0;
+  let receitaFotosExtras = 0;
   let receitaProdutos = 0;
   let receitaNaoOperacional = 0;
   let outrasReceitas = 0;
@@ -59,13 +119,22 @@ export function calcularDemonstrativoDeLinhas(
     const cat = l.categoria || '';
     const orig = l.origem || '';
     const esc = l.escopo || '';
+    const desc = (l.descricao || '').toLowerCase();
 
+    // Fotos extras vendidas em galeria ou avulsas
     if (
       orig === 'gallery' ||
-      orig === 'venda_avulsa' ||
-      cat === 'Receita com produtos' ||
       esc === 'fotos_extras' ||
-      esc === 'avulso'
+      desc.includes('foto extra') ||
+      desc.includes('fotos extras') ||
+      desc.includes('[extras')
+    ) {
+      receitaFotosExtras += val;
+    } else if (
+      // Produtos físicos vendidos avulsos ou explicitamente categorizados como produtos
+      cat === 'Receita com produtos' ||
+      cat === 'Produtos' ||
+      cat === 'Venda de Produtos'
     ) {
       receitaProdutos += val;
     } else if (
@@ -75,11 +144,13 @@ export function calcularDemonstrativoDeLinhas(
       receitaNaoOperacional += val;
     } else if (
       orig === 'workflow' ||
+      orig === 'venda_avulsa' ||
       cat === 'Receita de Serviços' ||
       cat === 'Receita Operacional' ||
       esc === 'sessao' ||
       esc === 'sinal' ||
-      esc === 'sessao_e_extras'
+      esc === 'sessao_e_extras' ||
+      esc === 'avulso'
     ) {
       receitaSessoes += val;
     } else {
@@ -91,9 +162,53 @@ export function calcularDemonstrativoDeLinhas(
   // Se houver outras receitas não categorizadas, agregamos à receita de serviços/sessões
   receitaSessoes += outrasReceitas;
 
+  // Desdobramento de produtos físicos embutidos nas sessões
+  if (produtosSessoes && produtosSessoes.length > 0) {
+    const sessoesPresentes = new Set<string>();
+    entradas.forEach((l) => {
+      const sId = l.sessionId || l.session_id;
+      if (sId) sessoesPresentes.add(sId);
+      const refId = l.referenciaId || l.id;
+      if (refId) {
+        sessoesPresentes.add(refId);
+        if (refId.startsWith('cs_')) sessoesPresentes.add(refId.replace('cs_', ''));
+      }
+    });
+
+    let totalProdutosDesmembrados = 0;
+    produtosSessoes.forEach((sp) => {
+      const estaPresente =
+        sessoesPresentes.size === 0 ||
+        (sp.sessionId && sessoesPresentes.has(sp.sessionId)) ||
+        (sp.id && sessoesPresentes.has(sp.id)) ||
+        (sp.id && sessoesPresentes.has(`cs_${sp.id}`));
+
+      if (estaPresente) {
+        totalProdutosDesmembrados += sp.total;
+      }
+    });
+
+    const desmembramentoEfetivo = Math.min(receitaSessoes, totalProdutosDesmembrados);
+    receitaSessoes -= desmembramentoEfetivo;
+    receitaProdutos += desmembramentoEfetivo;
+  }
+
   // Abatimento de estornos na receita bruta
-  const totalReceitasBrutas = receitaSessoes + receitaProdutos + receitaNaoOperacional;
+  const totalReceitasBrutas = receitaSessoes + receitaFotosExtras + receitaProdutos + receitaNaoOperacional;
   const totalReceitas = Math.max(0, totalReceitasBrutas - totalEstornos);
+
+  // Ajuste fino por rubrica para estornos específicos (ex: estorno de galeria)
+  let estornosRestantes = totalEstornos;
+  const estornosFotosExtras = estornos
+    .filter((e) => e.origem === 'gallery' || e.escopo === 'fotos_extras' || e.descricao?.toLowerCase().includes('foto'))
+    .reduce((sum, e) => sum + Math.abs(Number(e.valor) || 0), 0);
+  if (estornosFotosExtras > 0) {
+    receitaFotosExtras = Math.max(0, receitaFotosExtras - estornosFotosExtras);
+    estornosRestantes = Math.max(0, estornosRestantes - estornosFotosExtras);
+  }
+  if (estornosRestantes > 0) {
+    receitaSessoes = Math.max(0, receitaSessoes - estornosRestantes);
+  }
 
   // 3. DESPESAS AGRUPADAS
   // Saídas que não sejam estorno (estorno é redução de receita)
@@ -153,6 +268,7 @@ export function calcularDemonstrativoDeLinhas(
   return {
     receitas: {
       sessoes: receitaSessoes,
+      fotosExtras: receitaFotosExtras,
       produtos: receitaProdutos,
       naoOperacionais: receitaNaoOperacional,
       totalReceitas,
@@ -179,7 +295,7 @@ export async function fetchDemonstrativo(
 
   let query = supabase
     .from('extrato_unificado')
-    .select('tipo, origem, categoria, descricao, valor, status, escopo, natureza')
+    .select('tipo, origem, categoria, descricao, valor, status, escopo, natureza, session_id')
     .eq('user_id', user.id)
     .gte(dataColumn, dataInicio)
     .lte(dataColumn, dataFim);
@@ -190,10 +306,14 @@ export async function fetchDemonstrativo(
     query = query.in('status', ['Pago', 'Faturado']);
   }
 
-  const { data: linhas, error } = await query;
-  if (error) throw error;
+  const [extratoRes, sessoesProds] = await Promise.all([
+    query,
+    fetchSessoesProdutos(dataInicio, dataFim),
+  ]);
 
-  return calcularDemonstrativoDeLinhas(linhas || [], regime);
+  if (extratoRes.error) throw extratoRes.error;
+
+  return calcularDemonstrativoDeLinhas(extratoRes.data || [], regime, sessoesProds);
 }
 
 export function useDemonstrativoFinanceiro(
@@ -203,7 +323,7 @@ export function useDemonstrativoFinanceiro(
   enabled = true
 ) {
   const { data, isLoading } = useQuery({
-    queryKey: ['demonstrativo-financeiro-v4', regime, dataInicio, dataFim],
+    queryKey: ['demonstrativo-financeiro-v5', regime, dataInicio, dataFim],
     queryFn: () => fetchDemonstrativo(dataInicio, dataFim, regime),
     enabled: enabled && !!dataInicio && !!dataFim,
     staleTime: 2 * 60_000,

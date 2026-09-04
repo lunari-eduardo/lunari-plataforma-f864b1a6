@@ -30,6 +30,7 @@ export interface LinhaExtrato {
   // IDs de referência para drill-down
   referenciaId: string; // ID da transação ou pagamento original
   referenciaOrigem: ExtratoOrigem;
+  sessionId?: string;
   // Datas auxiliares (sempre populadas) para mostrar indicador visual quando diverge
   dataCaixa?: string;        // data efetiva da transação (regime de caixa)
   dataCompetencia?: string;  // data econômica/de prestação do serviço
@@ -108,6 +109,7 @@ export interface DadosExportacaoExtrato {
 export interface DemonstrativoSimplificado {
   receitas: {
     sessoes: number;
+    fotosExtras: number;
     produtos: number;
     naoOperacionais: number;
     totalReceitas: number;

@@ -209,6 +209,7 @@ export default function DemonstrativoSimplificado({
             
             <div className="space-y-3">
               <LineItem label="Receita com sessões" value={receitas.sessoes} />
+              <LineItem label="Receita com fotos extras" value={receitas.fotosExtras || 0} />
               <LineItem label="Receita com produtos" value={receitas.produtos} />
               <LineItem label="Receitas não operacionais" value={receitas.naoOperacionais} />
               

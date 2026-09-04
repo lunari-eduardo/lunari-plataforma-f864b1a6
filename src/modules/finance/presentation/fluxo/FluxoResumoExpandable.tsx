@@ -2,7 +2,7 @@ import { memo, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { calcularDemonstrativoDeLinhas, useDemonstrativoFinanceiro } from '@/hooks/useDemonstrativoFinanceiro';
+import { calcularDemonstrativoDeLinhas, useDemonstrativoFinanceiro, useSessoesProdutos } from '@/hooks/useDemonstrativoFinanceiro';
 import type { RegimeContabil } from '@/hooks/useExtratoSupabase';
 import type { LinhaExtrato } from '@/types/extrato';
 import DemonstrativoSimplificado from '@/components/financas/DemonstrativoSimplificado';
@@ -33,10 +33,13 @@ const FluxoResumoExpandable = memo(function FluxoResumoExpandable({
   // Mantém escopo sincronizado se mes mudar externamente
   const escopoEfetivo = isAnoTodo ? 'ano' : escopo;
 
+  // Busca produtos embutidos nas sessões do período exibido
+  const { data: produtosSessoes } = useSessoesProdutos(periodo.inicio, periodo.fim, open);
+
   // Demonstrativo do período corrente do fluxo (calculado em memória sobre os dados filtrados)
   const demonstrativoLocal = useMemo(() => {
-    return calcularDemonstrativoDeLinhas(linhas, regime);
-  }, [linhas, regime]);
+    return calcularDemonstrativoDeLinhas(linhas, regime, produtosSessoes);
+  }, [linhas, regime, produtosSessoes]);
 
   // Se o usuário estiver vendo um mês específico, mas clicar em "Ano 2026" dentro do collapsible:
   // Consulta o consolidado anual

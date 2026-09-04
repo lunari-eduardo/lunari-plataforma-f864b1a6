@@ -164,6 +164,7 @@ export function useExtratoCalculations(
     return {
       receitas: {
         sessoes: receitaSessoes,
+        fotosExtras: 0,
         produtos: receitaProdutos,
         naoOperacionais: receitaNaoOperacional,
         totalReceitas
@@ -266,6 +267,7 @@ export function useExtratoCalculations(
     return {
       receitas: {
         sessoes: receitaSessoes,
+        fotosExtras: 0,
         produtos: receitaProdutos,
         naoOperacionais: receitaNaoOperacional,
         totalReceitas

@@ -259,6 +259,11 @@ const getDemonstrativeHTML = (data: DemonstrativeExportData): string => {
             </tr>
             <tr>
               <td>Receitas Operacionais</td>
+              <td>Receita com fotos extras</td>
+              <td class="valor">${formatCurrency(receitas.fotosExtras || 0)}</td>
+            </tr>
+            <tr>
+              <td>Receitas Operacionais</td>
               <td>Receita com produtos</td>
               <td class="valor">${formatCurrency(receitas.produtos)}</td>
             </tr>

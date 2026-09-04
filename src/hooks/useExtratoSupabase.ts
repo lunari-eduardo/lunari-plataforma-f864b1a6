@@ -39,6 +39,7 @@ function mapLinhasExtrato(data: any[], regime: RegimeContabil): LinhaExtrato[] {
       escopo: (row.escopo as ExtratoEscopo) || undefined,
       referenciaId: row.id,
       referenciaOrigem: row.origem,
+      sessionId: row.session_id || undefined,
       // Datas auxiliares para indicação visual na tabela
       dataCaixa: row.data,
       dataCompetencia: row.data_competencia || row.data,
