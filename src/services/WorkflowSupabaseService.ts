@@ -566,7 +566,7 @@ export class WorkflowSupabaseService {
         pacote: nomePacote || "", // ✅ CORREÇÃO: Salvar NOME do pacote, não o ID
         descricao: descricao,
         valor_base_pacote: valorBasePacote, // ✅ CORREÇÃO: Adicionar valor_base_pacote
-        status: "stub",
+        status: null,
         valor_total: valorTotal, // Frontend calculates and sends correct total
         valor_pago: Number(
           hydratedData.paidAmount || hydratedData.paid_amount || 0,

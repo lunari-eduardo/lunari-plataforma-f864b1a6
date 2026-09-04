@@ -460,8 +460,8 @@ export default function SessionPanel({
           categoria: packageCategoryName || "Sessão",
           pacote: (selectedPackage as any)?.nome || null,
           descricao: form.description || "",
-          // Mesmo status usado na criação oficial da sessão (WorkflowSupabaseService)
-          status: "stub",
+          // Sessões iniciam sem status no workflow
+          status: null,
           valor_total: valorPacote || form.paidAmount || 0,
           valor_base_pacote: valorPacote || 0,
           valor_pago: 0,

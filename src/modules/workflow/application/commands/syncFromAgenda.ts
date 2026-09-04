@@ -132,7 +132,7 @@ export const syncFromAgenda = defineCommand({
         categoria: appt.type ?? "Sessão",
         pacote: appt.package_id ?? null,
         descricao: appt.description ?? appt.title ?? null,
-        status: "agendado",
+        status: null,
         valor_base_pacote: 0,
         valor_total: 0,
         tipo_registro: "workflow",
