@@ -2,6 +2,7 @@ import { useMemo, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseGalleries, GaleriaPhoto } from '@/hooks/useSupabaseGalleries';
+import { useGalleryById } from '@/hooks/useGalleryById';
 import { GalleryPhoto, GalleryAction, WatermarkSettings, Gallery } from '@/types/gallery';
 import { calcularPrecoProgressivoComCredito, RegrasCongeladas } from '@/lib/pricingUtils';
 import { getEffectiveGalleryStatus } from '@/lib/galleryStatus';
@@ -20,16 +21,14 @@ export function useGalleryDetailData({
   const queryClient = useQueryClient();
 
   const { 
-    getGallery: getSupabaseGallery, 
     fetchGalleryPhotos, 
     sendGallery: sendSupabaseGallery,
     reopenSelection: reopenSupabaseSelection,
     deleteGallery: deleteSupabaseGallery,
     getPhotoUrl,
-    isLoading: isSupabaseLoading 
-  } = useSupabaseGalleries();
+  } = useSupabaseGalleries({ enabled: false });
 
-  const supabaseGallery = getSupabaseGallery(id || '');
+  const { data: supabaseGallery, isLoading: isGalleryLoading } = useGalleryById(id);
 
   // Resolve client ID (from gallery directly, or fallback to session/name search)
   const { data: resolvedClienteId } = useQuery({
@@ -63,11 +62,11 @@ export function useGalleryDetailData({
 
   const effectiveClienteId = supabaseGallery?.clienteId || resolvedClienteId;
 
-  // Fetch photos
+  // Fetch photos (em paralelo com ID direto, fim do waterfall)
   const { data: supabasePhotos = [], isLoading: isLoadingPhotos } = useQuery({
     queryKey: ['galeria-fotos', id],
     queryFn: () => fetchGalleryPhotos(id!),
-    enabled: !!supabaseGallery && !!id,
+    enabled: !!id,
   });
 
   // Fetch folders
@@ -127,7 +126,7 @@ export function useGalleryDetailData({
       }
       return data || [];
     },
-    enabled: !!supabaseGallery,
+    enabled: !!id,
   });
 
   // Fetch latest PENDING cobranca
@@ -153,7 +152,7 @@ export function useGalleryDetailData({
       }
       return data;
     },
-    enabled: !!supabaseGallery,
+    enabled: !!id,
   });
 
   // Check payment status via Edge Function
@@ -178,14 +177,14 @@ export function useGalleryDetailData({
       if (data?.status === 'pago' && cobrancaData.status !== 'pago') {
         console.log('[Polling] Payment confirmed! Refreshing data...');
         queryClient.invalidateQueries({ queryKey: ['galleries'] });
-        queryClient.invalidateQueries({ queryKey: ['galerias'] });
-        queryClient.invalidateQueries({ queryKey: ['galeria-cobranca'] });
-        refetchCobranca();
+        queryClient.invalidateQueries({ queryKey: ['gallery-by-id', id] });
+        queryClient.invalidateQueries({ queryKey: ['galeria-cobranca-pendente', id] });
+        queryClient.invalidateQueries({ queryKey: ['galeria-cobrancas-pagas', id] });
       }
     } catch (err) {
-      console.error('[Polling] Exception:', err);
+      console.error('[Polling] Error:', err);
     }
-  }, [cobrancaData?.id, cobrancaData?.status, queryClient, refetchCobranca]);
+  }, [cobrancaData?.id, cobrancaData?.status, id, queryClient]);
 
   // Polling for pending payments
   useEffect(() => {

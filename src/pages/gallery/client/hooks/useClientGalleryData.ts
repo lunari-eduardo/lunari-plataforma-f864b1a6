@@ -104,8 +104,9 @@ export function useClientGalleryData({
       return false;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Extract gallery data from response (handle both legacy and new format)
@@ -142,6 +143,8 @@ export function useClientGalleryData({
       return data;
     },
     enabled: !!sessionId && !supabaseGallery?.regrasCongeladas,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   // 3. Fetch photos from Supabase (for legacy) or use from response (for token)
@@ -169,6 +172,8 @@ export function useClientGalleryData({
       return data || [];
     },
     enabled: !!supabaseGallery,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   // 4. Transform gallery data to local format

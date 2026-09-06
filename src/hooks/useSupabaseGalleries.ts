@@ -136,64 +136,13 @@ export interface CreateGaleriaData {
   venda_tipo_cobranca?: string;
 }
 
-function transformGaleria(row: any): Galeria {
-  const configuracoes = (row.configuracoes as GaleriaConfiguracoes) || {};
+import {
+  transformGaleria,
+  transformArchivedGaleria,
+  transformPhoto,
+} from './gallery/galleryTransformers';
 
-  // Chaves de foto vêm de colunas denormalizadas em `galerias`
-  // (mantidas por trigger em galeria_fotos). Isso elimina o join pesado
-  // que puxava toda `galeria_fotos` só para descobrir a capa/primeira foto.
-  const coverPhotoKey: string | null = row.cover_storage_key || null;
-  const firstPhotoKey: string | null = row.first_photo_storage_key || null;
-
-  return {
-    id: row.id,
-    userId: row.user_id,
-    clienteId: row.cliente_id,
-    status: row.status,
-    statusPagamento: row.status_pagamento,
-    fotosIncluidas: row.fotos_incluidas,
-    valorFotoExtra: row.valor_foto_extra,
-    regrasSelecao: row.regras_selecao,
-    prazoSelecaoDias: row.prazo_selecao_dias,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-    publishedAt: row.published_at ? new Date(row.published_at) : null,
-    finalizedAt: row.finalized_at ? new Date(row.finalized_at) : null,
-    sessionId: row.session_id,
-    orcamentoId: row.orcamento_id,
-    permissao: row.permissao || 'private',
-    nomeSessao: row.nome_sessao,
-    nomePacote: row.nome_pacote,
-    mensagemBoasVindas: row.mensagem_boas_vindas,
-    configuracoes,
-    totalFotos: row.total_fotos || 0,
-    fotosSelecionadas: row.fotos_selecionadas || 0,
-    valorExtras: row.valor_extras || 0,
-    valorTotalVendido: row.valor_total_vendido || 0,
-    totalFotosExtrasVendidas: row.total_fotos_extras_vendidas || 0,
-    statusSelecao: row.status_selecao || 'em_andamento',
-    prazoSelecao: row.prazo_selecao ? new Date(row.prazo_selecao) : null,
-    enviadoEm: row.enviado_em ? new Date(row.enviado_em) : null,
-    clienteNome: row.cliente_nome,
-    clienteEmail: row.cliente_email,
-    clienteTelefone: row.cliente_telefone || null,
-    publicToken: row.public_token || null,
-    galleryPassword: row.gallery_password || null,
-    regrasCongeladas: row.regras_congeladas as RegrasCongeladas | null,
-    regrasOverride: row.regras_override ?? false,
-    tipo: row.tipo === 'entrega' ? 'entrega' : 'selecao',
-    firstPhotoKey,
-    coverPhotoKey,
-    themeId: row.theme_id,
-    useCustomTheme: row.use_custom_theme ?? false,
-    themeOverrides: row.theme_overrides ?? {},
-    coverId: row.cover_id ?? null,
-    expiresAt: row.expires_at ? new Date(row.expires_at) : null,
-    vendaModo: row.venda_modo ?? null,
-    vendaPagamentoProvedor: row.venda_pagamento_provedor ?? null,
-    vendaTipoCobranca: row.venda_tipo_cobranca ?? null,
-  };
-}
+export { transformGaleria, transformArchivedGaleria, transformPhoto };
 
 function generatePublicToken(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -204,30 +153,7 @@ function generatePublicToken(): string {
   return result;
 }
 
-function transformPhoto(row: any): GaleriaPhoto {
-  return {
-    id: row.id,
-    galeriaId: row.galeria_id,
-    userId: row.user_id,
-    filename: row.filename,
-    originalFilename: row.original_filename,
-    fileSize: row.file_size,
-    mimeType: row.mime_type,
-    width: row.width,
-    height: row.height,
-    storageKey: row.storage_key,
-    isSelected: row.is_selected,
-    isFavorite: row.is_favorite ?? false,
-    comment: row.comment,
-    pesoVisual: row.peso_visual ?? 0,
-    orderIndex: row.order_index,
-    pastaId: row.pasta_id || null,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
-}
-
-export function useSupabaseGalleries() {
+export function useSupabaseGalleries(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
   const [isReady, setIsReady] = useState(false);
 
@@ -279,55 +205,12 @@ export function useSupabaseGalleries() {
 
       const activeGalleries = (activeData || []).map(transformGaleria);
       
-      // Transformar dados do histórico de forma parecida para a listagem não quebrar
-      const archivedGalleries = (archivedData || []).map((row: any) => ({
-        id: row.id,
-        userId: row.user_id,
-        clienteId: row.cliente_id,
-        status: 'archived', // status especial
-        statusPagamento: 'none',
-        fotosIncluidas: row.fotos_incluidas || 0,
-        valorFotoExtra: row.valor_foto_extra || 0,
-        regrasSelecao: null,
-        prazoSelecaoDias: null,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.archived_at || row.created_at),
-        publishedAt: null,
-        finalizedAt: row.finalized_at ? new Date(row.finalized_at) : null,
-        sessionId: row.session_id,
-        orcamentoId: null,
-        permissao: 'private',
-        nomeSessao: row.nome_sessao || 'Galeria Arquivada',
-        nomePacote: row.nome_pacote,
-        mensagemBoasVindas: null,
-        configuracoes: {},
-        totalFotos: 0,
-        fotosSelecionadas: row.fotos_selecionadas || 0,
-        valorExtras: 0,
-        valorTotalVendido: row.valor_total_vendido || 0,
-        totalFotosExtrasVendidas: row.total_fotos_extras_vendidas || 0,
-        statusSelecao: 'arquivada',
-        prazoSelecao: null,
-        enviadoEm: null,
-        clienteNome: null,
-        clienteEmail: null,
-        clienteTelefone: null,
-        publicToken: null,
-        galleryPassword: null,
-        regrasCongeladas: null,
-        regrasOverride: false,
-        tipo: row.tipo || 'selecao',
-        firstPhotoKey: null,
-        coverPhotoKey: null,
-        vendaModo: null,
-        vendaPagamentoProvedor: null,
-        vendaTipoCobranca: null,
-      } as Galeria));
+      const archivedGalleries = (archivedData || []).map(transformArchivedGaleria);
 
       // Unir as duas listas
       return [...activeGalleries, ...archivedGalleries].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
-    enabled: isReady,
+    enabled: isReady && (options?.enabled !== false),
     // Egress guard (Bloco B3): evita refetch a cada foco de aba.
     // Realtime + invalidação explícita cobrem os casos em que a lista precisa
     // ser atualizada; sem isso, cada foco de janela disparava um SELECT * em galerias.

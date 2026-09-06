@@ -1,59 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  CreditCard,
-  Edit,
-  Trash2,
-  CheckCircle2,
-  Calendar,
-  DollarSign,
-  Package,
-  Send,
-  QrCode,
-  Link2,
-  Loader2,
-  RotateCcw,
-  Images,
-  ChevronDown,
-  ChevronUp,
-  Camera,
-  Layers,
-  ShoppingBag,
-  Wallet,
-  Zap,
-  History,
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { formatCurrency } from '@/utils/financialUtils';
-import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
+import { Card } from '@/components/ui/card';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { CombinedChargeModal } from '@/components/cobranca/CombinedChargeModal';
-import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { AsaasAnticipationModal } from '@/components/payments/AsaasAnticipationModal';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
 import { supabase } from '@/integrations/supabase/client';
 
-interface SessionPaymentsManagerProps {
-  sessionData: any;
-  onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
-  displayMode?: 'modal' | 'card';
-  isOpen?: boolean;
-  onClose?: () => void;
-}
+import { SessionPaymentsManagerProps, convertExistingPayments } from './session-manager/types';
+import { SessionPaymentsSummaryCards } from './session-manager/SessionPaymentsSummaryCards';
+import { SessionPaymentsActionsBar } from './session-manager/SessionPaymentsActionsBar';
+import { SessionPaymentsTable } from './session-manager/SessionPaymentsTable';
 
 export function SessionPaymentsManager({
   sessionData,
@@ -64,66 +25,11 @@ export function SessionPaymentsManager({
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [chargeModalTab, setChargeModalTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** "Cobrar tudo": abre um único modal (finalidade `sessao_e_extras`, link único). */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
   const [paymentToAnticipate, setPaymentToAnticipate] = useState<SessionPaymentExtended | null>(null);
   const [, setRefundMotivo] = useState('');
-
-  // Convert existing payments to extended format
-  const convertExistingPayments = (payments: any[]): SessionPaymentExtended[] => {
-    if (!payments || !Array.isArray(payments)) return [];
-    return payments.map(p => {
-      let tipo = p.tipo || 'pago';
-      let statusPagamento = p.statusPagamento || 'pago';
-
-      if (p.dataVencimento && !p.data) {
-        tipo = 'agendado';
-        statusPagamento = 'pendente';
-      }
-
-      if (p.numeroParcela && p.totalParcelas) {
-        tipo = 'parcelado';
-        if (!p.data) {
-          statusPagamento = 'pendente';
-        }
-      }
-
-      let origem = p.origem || 'manual';
-      if (p.numeroParcela && p.totalParcelas && origem !== 'parcelado') {
-        origem = 'parcelado';
-      }
-
-      let finalidade: SessionPaymentExtended['finalidade'] = p.finalidade;
-      const obs = (p.observacoes || '').toLowerCase();
-      if (!finalidade) {
-        if (tipo === 'estorno' || statusPagamento === 'estornado') finalidade = 'estorno';
-        else if (origem === 'credito' || obs.includes('crédito do cliente')) finalidade = 'credito';
-        else if (/(foto[s]?\s+extra|\[extras)/i.test(obs)) finalidade = 'fotos_extras';
-        else if (/(sess[ãoa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) finalidade = 'sessao_e_extras';
-        else if (/(sinal|entrada|arras|reserva)/i.test(obs)) finalidade = 'sinal';
-        else if (/(venda\s+avulsa|avulso)/i.test(obs)) finalidade = 'avulso';
-        else finalidade = 'sessao';
-      }
-
-      return {
-        id: p.id || `legacy-${Date.now()}-${Math.random()}`,
-        valor: typeof p.valor === 'number' ? p.valor : parseFloat(String(p.valor || '0')),
-        data: p.data || '',
-        dataVencimento: p.dataVencimento,
-        tipo: tipo as 'pago' | 'agendado' | 'parcelado',
-        statusPagamento: statusPagamento as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
-        numeroParcela: p.numeroParcela,
-        totalParcelas: p.totalParcelas,
-        origem: origem as 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado',
-        finalidade,
-        editavel: p.origem !== 'agenda' && p.editavel !== false,
-        forma_pagamento: p.forma_pagamento,
-        observacoes: p.observacoes,
-      };
-    });
-  };
 
   const {
     payments,
@@ -138,17 +44,13 @@ export function SessionPaymentsManager({
     markAsPaid,
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
-  // Painel financeiro composto — combina RPC da sessão + snapshot canônico da
-  // galeria (desconto progressivo). Mesma lógica usada nos cards do Workflow,
-  // eliminando divergências entre card e modal (fotos extras invisíveis, etc.).
   const fin = useSessionFinancialsWithExtras(
     sessionData.id,
     sessionData.galeriaId,
     sessionData.sessionId,
   );
 
-  // Reconciliação de fallback: quando o painel abre, varre TODAS as cobranças
-  // pendentes/parcialmente pagas desta sessão e aciona `check-payment-status`
+  // Reconciliação de fallback
   useEffect(() => {
     const isVisible = displayMode === 'card' || isOpen === true;
     if (!isVisible) return;
@@ -184,147 +86,6 @@ export function SessionPaymentsManager({
     };
   }, [displayMode, isOpen, sessionData?.id, sessionData?.sessionId]);
 
-  // Badges neutros (Silent Luxury): superfície discreta + tipografia semântica.
-  const BADGE_BASE = 'border-border/20 bg-muted/40 font-medium';
-  const BADGE_OK = `${BADGE_BASE} text-emerald-600 dark:text-emerald-500`;
-  const BADGE_WARN = `${BADGE_BASE} text-accent-gold`;
-  const BADGE_DANGER = `${BADGE_BASE} text-destructive`;
-  const BADGE_NEUTRAL = `${BADGE_BASE} text-muted-foreground`;
-
-  const getStatusBadge = (payment: SessionPaymentExtended) => {
-    if (payment.statusRecebimento) {
-      switch (payment.statusRecebimento) {
-        case 'confirmado':
-          return <Badge className={BADGE_WARN}>Confirmado</Badge>;
-        case 'recebido':
-          return <Badge className={BADGE_OK}>Recebido</Badge>;
-        case 'antecipado':
-          return <Badge className={BADGE_NEUTRAL}>Antecipado</Badge>;
-        case 'pendente':
-          return <Badge className={BADGE_NEUTRAL}>Pendente</Badge>;
-      }
-    }
-
-    const { statusPagamento } = payment;
-    if (statusPagamento === 'estornado') {
-      return <Badge className={BADGE_DANGER}>Estornado</Badge>;
-    }
-    if (statusPagamento === 'pago') {
-      return <Badge className={BADGE_OK}>Pago</Badge>;
-    }
-    if (statusPagamento === 'pendente') {
-      const isOverdue = payment.dataVencimento && new Date(payment.dataVencimento) < new Date();
-      if (isOverdue) {
-        return <Badge className={BADGE_DANGER}>Atrasado</Badge>;
-      }
-      return <Badge className={BADGE_WARN}>Pendente</Badge>;
-    }
-    return <Badge variant="outline">{statusPagamento}</Badge>;
-  };
-
-  // Helper para obter a finalidade/motivo funcional do pagamento (Sinal, Sessão, Extras, etc.)
-  const getPaymentOriginInfo = (payment: SessionPaymentExtended) => {
-    const finalidade = payment.finalidade;
-    const obs = payment.observacoes || '';
-    const isEstorno = payment.tipo === 'estorno' || payment.statusPagamento === 'estornado' || finalidade === 'estorno';
-    const isCredito = payment.origem === 'credito' || finalidade === 'credito' || obs.toLowerCase().includes('crédito do cliente');
-
-    if (isEstorno) {
-      return {
-        label: 'Estorno',
-        badgeClass: 'bg-destructive/10 text-destructive border-destructive/20',
-        icon: <RotateCcw className="h-3 w-3 text-destructive" />
-      };
-    }
-    if (isCredito) {
-      return {
-        label: 'Crédito',
-        badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-        icon: <CreditCard className="h-3 w-3 text-emerald-600" />
-      };
-    }
-    if (finalidade === 'fotos_extras' || /(foto[s]?\s+extra|\[extras)/i.test(obs)) {
-      return {
-        label: 'Extras',
-        badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
-        icon: <Images className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-      };
-    }
-    if (finalidade === 'sessao_e_extras' || /(sess[ãoa]o\s*\+\s*extras|sessao_e_extras)/i.test(obs)) {
-      return {
-        label: 'Sessão + Extras',
-        badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
-        icon: <Layers className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
-      };
-    }
-    if (
-      finalidade === 'sinal' ||
-      obs.toLowerCase().includes('entrada') ||
-      obs.toLowerCase().includes('sinal') ||
-      obs.toLowerCase().includes('reserva') ||
-      obs.toLowerCase().includes('arras')
-    ) {
-      return {
-        label: 'Sinal',
-        badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-        icon: <Calendar className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-      };
-    }
-    if (finalidade === 'avulso' || /(venda\s+avulsa|avulso)/i.test(obs)) {
-      return {
-        label: 'Venda Avulsa',
-        badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-        icon: <ShoppingBag className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-      };
-    }
-    // Padrão: Sessão / Pacote
-    return {
-      label: 'Sessão',
-      badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
-      icon: <Camera className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-    };
-  };
-
-  // Helper para obter o provedor/meio de pagamento
-  const getProviderInfo = (payment: SessionPaymentExtended) => {
-    const { origem, observacoes, forma_pagamento } = payment;
-    const obs = observacoes || '';
-    const forma = forma_pagamento || '';
-
-    if (origem === 'credito' || obs.toLowerCase().includes('crédito do cliente')) {
-      return { label: 'Crédito do cliente', icon: <CreditCard className="h-3 w-3 text-emerald-600" /> };
-    }
-    if (origem === 'infinitepay' || obs.toLowerCase().includes('infinitepay')) {
-      return { label: 'InfinitePay', icon: <Link2 className="h-3 w-3 text-green-600" /> };
-    }
-    if (origem === 'asaas' || obs.toLowerCase().includes('asaas')) {
-      if (obs.toLowerCase().includes('pix')) {
-        return { label: 'Pix Asaas', icon: <QrCode className="h-3 w-3 text-blue-600" /> };
-      }
-      return { label: 'Link Asaas', icon: <CreditCard className="h-3 w-3 text-blue-600" /> };
-    }
-    if (origem === 'mercadopago' || obs.toLowerCase().includes('mercado pago') || obs.toLowerCase().includes('mp #')) {
-      if (obs.toLowerCase().includes('pix')) {
-        return { label: 'Pix MP', icon: <QrCode className="h-3 w-3 text-primary" /> };
-      }
-      return { label: 'Link MP', icon: <Link2 className="h-3 w-3 text-primary" /> };
-    }
-
-    if (forma) {
-      return { label: forma, icon: <Wallet className="h-3 w-3 text-muted-foreground" /> };
-    }
-    switch (origem) {
-      case 'agenda':
-        return { label: 'Agenda', icon: <Calendar className="h-3 w-3 text-muted-foreground" /> };
-      case 'workflow_rapido':
-        return { label: 'Studio', icon: <Camera className="h-3 w-3 text-muted-foreground" /> };
-      case 'parcelado':
-        return { label: 'Parcelado', icon: <Package className="h-3 w-3 text-muted-foreground" /> };
-      default:
-        return { label: 'Manual', icon: <DollarSign className="h-3 w-3 text-muted-foreground" /> };
-    }
-  };
-
   const valorTotalFallback =
     typeof sessionData.total === 'number'
       ? sessionData.total
@@ -353,495 +114,52 @@ export function SessionPaymentsManager({
   const canCobrarExtras = fin.extrasPend > 0.001;
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
-  const handleCobrarTudo = () => {
-    setShowCombinedChargeModal(true);
-  };
-
   const handleOpenChargeModal = (tab: 'cobrar' | 'historico' = 'cobrar') => {
     setChargeModalTab(tab);
     setShowChargeModal(true);
   };
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-
-  const toggleGroup = (cobrancaId: string) => {
-    setExpandedGroups(prev => ({ ...prev, [cobrancaId]: !prev[cobrancaId] }));
-  };
-
-  const groupedPayments = useMemo(() => {
-    const result: any[] = [];
-    const groups = new Map<string, SessionPaymentExtended[]>();
-
-    const validPayments = payments.filter(p => p.valor !== undefined);
-
-    validPayments.forEach(p => {
-      if (p.cobrancaId && (p.totalParcelas || 1) > 1 && p.tipo !== 'estorno') {
-        if (!groups.has(p.cobrancaId)) {
-          groups.set(p.cobrancaId, []);
-        }
-        groups.get(p.cobrancaId)!.push(p);
-      } else {
-        result.push(p);
-      }
-    });
-
-    groups.forEach((group, cobrancaId) => {
-      const first = group[0];
-      const totalGroupValue = group.reduce((sum, p) => sum + p.valor, 0);
-      const pagas = group.filter(p => p.statusPagamento === 'pago' || p.statusPagamento === 'antecipado').length;
-      const allPaid = pagas === group.length;
-
-      result.push({
-        ...first,
-        id: `group_${cobrancaId}`,
-        cobrancaId: cobrancaId,
-        valor: totalGroupValue,
-        statusPagamento: allPaid ? 'pago' : (pagas > 0 ? 'pendente' : first.statusPagamento),
-        numeroParcela: undefined,
-        totalParcelas: group.length,
-        isGrouped: true,
-        pagasCount: pagas,
-        totalCount: group.length,
-        groupedItems: group.sort((a, b) => (a.numeroParcela || 0) - (b.numeroParcela || 0)), 
-      });
-    });
-
-    return result.sort((a, b) => {
-      const timestampA = a.createdAt || a.dataVencimento || a.data || '';
-      const timestampB = b.createdAt || b.dataVencimento || b.data || '';
-      return timestampB.localeCompare(timestampA);
-    });
-  }, [payments]);
-
-  const renderPaymentRow = (payment: any, isChild: boolean) => (
-    <TableRow key={payment.id} className={isChild ? "bg-muted/15 border-l-2 border-l-primary/60" : ""}>
-      <TableCell className={isChild ? "pl-8" : ""}>
-        <div className="space-y-1">
-          {(payment.statusPagamento === 'pago' || payment.tipo === 'estorno' || payment.statusPagamento === 'antecipado') && (payment.createdAt || payment.data) && (
-            <div className="flex items-center gap-1 text-sm">
-              {payment.tipo === 'estorno' ? (
-                <RotateCcw className="h-3 w-3 text-destructive" />
-              ) : (
-                <CheckCircle2 className="h-3 w-3 text-green-600" />
-              )}
-              <span className="font-medium">
-                {formatDateTimeForDisplay(payment.createdAt || payment.data)}
-              </span>
-            </div>
-          )}
-          {payment.dataVencimento && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              <span>Venc: {formatDateForDisplay(payment.dataVencimento)}</span>
-            </div>
-          )}
-          {payment.numeroParcela && (
-            <div className="text-xs text-muted-foreground">
-              Parcela {payment.numeroParcela}/{payment.totalParcelas}
-            </div>
-          )}
-          {payment.dataCreditoPrevista && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <DollarSign className="h-3 w-3 text-primary" />
-              <span>
-                {payment.dataCreditoReal 
-                  ? `Creditado: ${formatDateForDisplay(payment.dataCreditoReal)}`
-                  : `Crédito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
-                }
-              </span>
-            </div>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <span className={`font-semibold ${
-          payment.tipo === 'estorno' ? 'text-red-600 line-through' : 
-          (payment.statusPagamento === 'pago' || payment.statusPagamento === 'antecipado') ? 'text-green-600' : 'text-yellow-600'
-        }`}>
-          {payment.tipo === 'estorno' ? '-' : ''}{formatCurrency(payment.valor)}
-        </span>
-        {payment.valorLiquido != null && payment.valorLiquido < payment.valor && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Líquido: {formatCurrency(payment.valorLiquido)}
-            {payment.taxaTotal != null && payment.taxaTotal > 0 && ` (taxa: ${formatCurrency(payment.taxaTotal)})`}
-            {payment.taxaAntecipacao != null && payment.taxaAntecipacao > 0 && (
-              <span className="block">Antecipação: {formatCurrency(payment.taxaAntecipacao)}</span>
-            )}
-          </p>
-        )}
-      </TableCell>
-      <TableCell>
-        <div className="space-y-1">
-          {String(payment.tipo || '').toLowerCase() !==
-            String(payment.statusPagamento || '').toLowerCase() && (
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">
-              {payment.tipo}
-            </div>
-          )}
-          {getStatusBadge(payment)}
-        </div>
-      </TableCell>
-
-      <TableCell>
-        {(() => {
-          const originInfo = getPaymentOriginInfo(payment);
-          const providerInfo = getProviderInfo(payment);
-          return (
-            <div className="flex flex-col gap-1 items-start">
-              <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-2xs font-medium border ${originInfo.badgeClass}`}>
-                {originInfo.icon}
-                <span>{originInfo.label}</span>
-              </span>
-              <div className="flex items-center gap-1 text-2xs text-muted-foreground pl-0.5">
-                {providerInfo.icon}
-                <span>{providerInfo.label}</span>
-              </div>
-            </div>
-          );
-        })()}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1">
-          {payment.statusPagamento === 'pendente' && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => markAsPaid(payment.id)}
-              className="h-8 w-8 p-0"
-            >
-              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-            </Button>
-          )}
-          {payment.editavel && payment.statusPagamento !== 'pago' && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditingPayment(payment)}
-                className="h-8 w-8 p-0"
-              >
-                <Edit className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => deletePayment(payment.id)}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-            </>
-          )}
-          {payment.statusPagamento === 'pago' && payment.editavel && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditingPayment(payment)}
-                className="h-8 w-8 p-0"
-              >
-                <Edit className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setPaymentToRefund(payment)}
-                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
-                title="Estornar pagamento"
-              >
-                <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => deletePayment(payment.id)}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                title="Excluir registro (lançamento manual)"
-              >
-                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-            </>
-          )}
-          {/* Ação de Antecipação Asaas para parcelas pagas/confirmadas ainda não antecipadas */}
-          {payment.provedor === 'asaas' && !payment.antecipado && (payment.statusRecebimento === 'confirmado' || payment.statusPagamento === 'pago') && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setPaymentToAnticipate(payment)}
-              className="h-8 w-8 p-0 text-accent-gold hover:text-accent-gold"
-              title="Simular / Antecipar recebível no Asaas"
-            >
-              <Zap className="h-3 w-3 md:h-4 md:w-4" />
-            </Button>
-          )}
-          {payment.statusPagamento === 'pago' && !payment.editavel && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setPaymentToRefund(payment)}
-              className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
-              title="Estornar pagamento"
-            >
-              <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
-            </Button>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-
   // Shared content
   const content = (
     <>
-      {/* Financial Summary */}
-      <Card className={isCard ? 'mb-3 border-0 bg-transparent shadow-none' : 'mb-6'}>
-        <CardContent className={isCard ? 'p-0 pb-3 border-b border-border/20' : 'pt-6'}>
-          <div className={`grid ${gridCols} gap-2 sm:gap-3 lg:gap-4 text-center`}>
-            {showTotalChip && (
-              <div>
-                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-                <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
-              </div>
-            )}
-            {showExtrasChip && (
-              <>
-                <div>
-                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Base sessão</p>
-                  <p className="font-semibold text-foreground text-xs sm:text-sm">{formatCurrency(fin.baseSessao)}</p>
-                </div>
-                <div>
-                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Extras</p>
-                  <p className="font-semibold text-accent-gold text-xs sm:text-sm">
-                    {formatCurrency(fin.extrasIdeal)}
-                  </p>
-                  <p className="text-2xs text-muted-foreground">
-                    Pago {formatCurrency(fin.extrasPago)} · Pend {formatCurrency(fin.extrasPend)}
-                  </p>
-                </div>
-              </>
-            )}
-            {showCobradoChip && (
-              <div>
-                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
-                <p className="font-bold text-emerald-600 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Recebido</p>
-              <p className="font-bold text-emerald-700 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
-              {totalTaxas > 0 && (
-                <p className="text-2xs text-destructive">Taxas: -{formatCurrency(totalTaxas)}</p>
-              )}
-            </div>
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Agendado</p>
-              <p className="font-bold text-orange-500 text-xs sm:text-sm">{formatCurrency(totalAgendado)}</p>
-            </div>
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
-              <p className={`font-bold text-xs sm:text-sm ${valorRestante > 0.001 ? 'text-accent-gold' : 'text-muted-foreground'}`}>{formatCurrency(valorRestante)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SessionPaymentsSummaryCards
+        isCard={isCard}
+        gridCols={gridCols}
+        showTotalChip={showTotalChip}
+        showExtrasChip={showExtrasChip}
+        showCobradoChip={showCobradoChip}
+        valorTotal={valorTotal}
+        fin={fin}
+        totalPago={totalPago}
+        totalRecebido={totalRecebido}
+        totalTaxas={totalTaxas}
+        totalAgendado={totalAgendado}
+        valorRestante={valorRestante}
+      />
 
-      {/* Payment History */}
       <Card className={isCard ? 'border-0 bg-transparent shadow-none' : undefined}>
-        <CardHeader className={isCard ? 'px-0 pt-0 pb-2' : undefined}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <CardTitle className={isCard ? 'text-xs font-semibold flex items-center gap-2' : 'text-sm md:text-lg font-semibold flex items-center gap-2'}>
-              <CreditCard className={isCard ? 'h-3.5 w-3.5 text-accent-gold' : 'h-4 w-4 md:h-5 md:w-5 text-primary'} />
-              Histórico de Movimentações
-            </CardTitle>
-
-            <div className="flex gap-2 w-full sm:w-auto">
-              {fin.hasGaleria ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
-                      size="sm"
-                      disabled={!canCobrarSessao && !canCobrarExtras}
-                    >
-                      <Send className="h-3 w-3 md:h-4 md:w-4" />
-                      Cobrar
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem
-                      disabled={!canCobrarSessao}
-                      onClick={() => handleOpenChargeModal('cobrar')}
-                    >
-                      <Send className="h-3.5 w-3.5 mr-2" />
-                      <div className="flex-1">
-                        <div className="text-xs font-medium">Cobrar sessão</div>
-                        <div className="text-2xs text-muted-foreground">{formatCurrency(valorRestanteSessao)}</div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!canCobrarExtras}
-                      onClick={() => setShowExtraChargeModal(true)}
-                    >
-                      <Images className="h-3.5 w-3.5 mr-2 text-amber-500" />
-                      <div className="flex-1">
-                        <div className="text-xs font-medium">Cobrar extras</div>
-                        <div className="text-2xs text-muted-foreground">{formatCurrency(fin.extrasPend)}</div>
-                      </div>
-                    </DropdownMenuItem>
-                    {canCobrarTudo && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleCobrarTudo}>
-                          <Send className="h-3.5 w-3.5 mr-2 text-primary" />
-                          <div className="flex-1">
-                            <div className="text-xs font-medium">Cobrar tudo</div>
-                            <div className="text-2xs text-muted-foreground">
-                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 1 link único
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  onClick={() => handleOpenChargeModal('cobrar')}
-                  variant="outline"
-                  disabled={!canCobrarSessao}
-                  className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
-                  size="sm"
-                >
-                  <Send className="h-3 w-3 md:h-4 md:w-4" />
-                  Cobrar
-                </Button>
-              )}
-              <Button
-                onClick={() => handleOpenChargeModal('historico')}
-                variant="outline"
-                className="gap-2 flex-1 sm:flex-none h-8 text-xs border-muted-foreground/30 hover:bg-muted/50"
-                size="sm"
-              >
-                <History className="h-3.5 w-3.5" />
-                Histórico
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className={isCard ? 'px-0 pb-0' : undefined}>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
-              <p>Carregando pagamentos...</p>
-              <div className="mt-4 space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </div>
-          ) : payments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum pagamento registrado</p>
-              <p className="text-sm">Clique em "Cobrar" para enviar um link de pagamento</p>
-            </div>
-          ) : (
-            <div className="-mx-2 px-2 overflow-y-auto max-h-[350px]">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <TableHead className="text-xs md:text-sm">Data / Vencimento</TableHead>
-                    <TableHead className="text-xs md:text-sm">Valor</TableHead>
-                    <TableHead className="text-xs md:text-sm">Tipo / Status</TableHead>
-                    <TableHead className="text-xs md:text-sm">Origem</TableHead>
-                    <TableHead className="text-right text-xs md:text-sm">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groupedPayments.map(payment => {
-                    if (payment.isGrouped) {
-                      const isExpanded = expandedGroups[payment.cobrancaId];
-                      return (
-                        <tr key={payment.id} className="contents">
-                          {/* Linha agrupada principal */}
-                          <TableRow
-                            className="cursor-pointer hover:bg-muted/40 transition-colors"
-                            onClick={() => toggleGroup(payment.cobrancaId)}
-                          >
-                            <TableCell>
-                              <div className="space-y-1">
-                                {(payment.statusPagamento === 'pago' || payment.statusPagamento === 'antecipado') && (payment.createdAt || payment.data) && (
-                                  <div className="flex items-center gap-1 text-sm">
-                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                    <span className="font-medium">{formatDateTimeForDisplay(payment.createdAt || payment.data)}</span>
-                                  </div>
-                                )}
-                                <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                                  <Layers className="h-3.5 w-3.5 text-primary" />
-                                  <span>{payment.pagasCount}/{payment.totalCount} parcelas pagas</span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`font-semibold ${
-                                (payment.statusPagamento === 'pago' || payment.statusPagamento === 'antecipado') ? 'text-green-600' : 'text-yellow-600'
-                              }`}>
-                                {formatCurrency(payment.valor)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">PARCELADO</div>
-                                {getStatusBadge(payment)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {(() => {
-                                const originInfo = getPaymentOriginInfo(payment);
-                                const providerInfo = getProviderInfo(payment);
-                                return (
-                                  <div className="flex flex-col gap-1 items-start">
-                                    <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-2xs font-medium border ${originInfo.badgeClass}`}>
-                                      {originInfo.icon}
-                                      <span>{originInfo.label}</span>
-                                    </span>
-                                    <div className="flex items-center gap-1 text-2xs text-muted-foreground pl-0.5">
-                                      {providerInfo.icon}
-                                      <span>{providerInfo.label}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleGroup(payment.cobrancaId);
-                                }}
-                                title={isExpanded ? 'Recolher parcelas' : 'Ver parcelas'}
-                              >
-                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                          {/* Parcelas detalhadas ao expandir */}
-                          {isExpanded && payment.groupedItems.map((child: any) => renderPaymentRow(child, true))}
-                        </tr>
-                      );
-                    }
-                    return renderPaymentRow(payment, false);
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+        <SessionPaymentsActionsBar
+          isCard={isCard}
+          hasGaleria={fin.hasGaleria}
+          canCobrarSessao={canCobrarSessao}
+          canCobrarExtras={canCobrarExtras}
+          canCobrarTudo={canCobrarTudo}
+          valorRestanteSessao={valorRestanteSessao}
+          extrasPend={fin.extrasPend}
+          onOpenChargeModal={handleOpenChargeModal}
+          onOpenExtraChargeModal={() => setShowExtraChargeModal(true)}
+          onCobrarTudo={() => setShowCombinedChargeModal(true)}
+        />
+        <SessionPaymentsTable
+          payments={payments}
+          isLoading={isLoading}
+          isCard={isCard}
+          onMarkAsPaid={markAsPaid}
+          onEditPayment={setEditingPayment}
+          onDeletePayment={deletePayment}
+          onRefundPayment={setPaymentToRefund}
+          onAnticipatePayment={setPaymentToAnticipate}
+        />
       </Card>
 
       {/* Modais */}
@@ -921,7 +239,6 @@ export function SessionPaymentsManager({
     </>
   );
 
-  // Render as modal or card
   if (displayMode === 'modal') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>

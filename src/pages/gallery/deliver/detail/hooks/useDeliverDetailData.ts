@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useSupabaseGalleries, GaleriaPhoto } from '@/hooks/useSupabaseGalleries';
+import { useGalleryById } from '@/hooks/useGalleryById';
 import { supabase } from '@/integrations/supabase/client';
 import { useTransferStorage } from '@/hooks/useTransferStorage';
 import { useSettings } from '@/hooks/useSettings';
@@ -10,14 +11,13 @@ import { DEFAULT_THEME_ID } from '@/components/gallery/themes/registry';
 export function useDeliverDetailData() {
   const { id } = useParams<{ id: string }>();
   const {
-    galleries,
-    getGallery,
     fetchGalleryPhotos,
     updateGallery,
     deleteGallery,
     deletePhoto,
-    isLoading: galleriesLoading,
-  } = useSupabaseGalleries();
+  } = useSupabaseGalleries({ enabled: false });
+
+  const { data: gallery, isLoading: galleryLoading } = useGalleryById(id);
 
   const transferStorage = useTransferStorage();
   const { settings } = useSettings();
@@ -44,8 +44,6 @@ export function useDeliverDetailData() {
   const [subtitle, setSubtitle] = useState('');
   const [category, setCategory] = useState('');
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
-
-  const gallery = useMemo(() => getGallery(id || ''), [id, galleries]);
 
   // Resolve client ID (from gallery directly, or fallback to session/name search)
   const { data: resolvedClienteId } = useQuery({
@@ -136,7 +134,8 @@ export function useDeliverDetailData() {
   return {
     id,
     gallery,
-    galleriesLoading,
+    galleryLoading,
+    galleriesLoading: galleryLoading,
     photos,
     setPhotos,
     photosLoading,

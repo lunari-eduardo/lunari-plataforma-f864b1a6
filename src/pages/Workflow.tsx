@@ -28,6 +28,8 @@ import {
 } from "@/features/workflow/components/WorkflowMonthSwitcher";
 import { WorkflowTasksDock } from "@/features/workflow/components/WorkflowTasksDock";
 import { WorkflowMonthDataProvider } from "@/features/workflow/presentation/WorkflowMonthDataContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { WorkflowMobileView } from "@/components/workflow/mobile/WorkflowMobileView";
 
 import type { CategoryOption, PackageOption, ProductOption } from "@/types/workflow";
 
@@ -74,6 +76,7 @@ function WorkflowContent() {
   const [, setScrollLeft] = useState(0);
 
   // ── UI state ────────────────────────────────────────────────────────
+  const isMobile = useIsMobile();
   const [showMetrics, setShowMetrics] = useState(true);
   const [isTasksPanelOpen, setIsTasksPanelOpen] = usePersistedState(
     "workflow_tasks_panel_open",
@@ -183,6 +186,39 @@ function WorkflowContent() {
           Recarregar dados
         </Button>
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <WorkflowMonthDataProvider
+        sessionSlugs={monthSessionSlugs}
+        sessionUuids={monthSessionUuids}
+      >
+        <WorkflowMobileView
+          sessions={filters.sortedSessions}
+          monthSessions={month.workflowSessions}
+          currentMonth={month.currentMonth}
+          financials={financials}
+          isColdMetrics={isColdMetrics}
+          isColdSessions={isColdSessions}
+          isRevalidating={isRevalidating}
+          onNavigate={month.applyDelta}
+          onGoToday={month.goToday}
+          filters={filters}
+          categoryOptions={categoryOptions}
+          packageOptions={packageOptions}
+          productOptions={productOptions}
+          statusOptions={getStatusOptions}
+          actions={{
+            handleStatusChange: actions.handleStatusChange,
+            handleEditSession: actions.handleEditSession,
+            handleDeleteSession: actions.handleDeleteSession,
+            handleFieldUpdate: actions.handleFieldUpdate,
+            forceRefresh: month.forceRefresh,
+          }}
+        />
+      </WorkflowMonthDataProvider>
     );
   }
 

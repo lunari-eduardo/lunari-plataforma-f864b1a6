@@ -97,20 +97,18 @@ export const FinancialSection: React.FC<FinancialSectionProps> = ({
               onChange={paidInput.handleChange}
               onFocus={paidInput.handleFocus}
               placeholder={
-                cobrarAoSalvar || isConfirmedWithDeposit
+                cobrarAoSalvar || (isEdit && isConfirmedWithDeposit)
                   ? "Gerenciado pelo Workflow"
                   : "0,00"
               }
               disabled={
                 cobrarAoSalvar ||
-                pagoCobrancas.length > 0 ||
-                isConfirmedWithDeposit
+                (isEdit && (pagoCobrancas.length > 0 || isConfirmedWithDeposit))
               }
               className={cn(
                 "h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity",
                 (cobrarAoSalvar ||
-                  pagoCobrancas.length > 0 ||
-                  isConfirmedWithDeposit) &&
+                  (isEdit && (pagoCobrancas.length > 0 || isConfirmedWithDeposit))) &&
                   "opacity-50 cursor-not-allowed bg-muted/30",
               )}
             />
@@ -120,7 +118,7 @@ export const FinancialSection: React.FC<FinancialSectionProps> = ({
               Agendamento confirmado. Gerencie pagamentos e cobranças pelo{" "}
               <strong className="font-medium text-foreground">Workflow</strong>.
             </p>
-          ) : pagoCobrancas.length > 0 ? (
+          ) : isEdit && pagoCobrancas.length > 0 ? (
             <p className="text-[11px] text-muted-foreground">
               Entrada manual desativada pois existem cobranças processadas via link para esta sessão.
             </p>

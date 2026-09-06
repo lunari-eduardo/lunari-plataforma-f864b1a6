@@ -159,10 +159,7 @@ export function useSessionPanelForm({
   });
 
   const { cobrancas, cancelCharge } = useCobranca({
-    sessionId: appointment?.sessionId,
-    clienteId: !appointment?.sessionId
-      ? form.clienteId || undefined
-      : undefined,
+    sessionId: isEdit ? appointment?.sessionId : undefined,
   });
 
   const {

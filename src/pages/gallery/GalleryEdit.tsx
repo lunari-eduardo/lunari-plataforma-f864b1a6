@@ -16,6 +16,7 @@ import { ReactivateGalleryDialog } from '@/components/ReactivateGalleryDialog';
 import { ReactivateSuccessModal } from '@/components/ReactivateSuccessModal';
 import { ClientModal } from '@/components/ClientModal';
 import { useSupabaseGalleries } from '@/hooks/useSupabaseGalleries';
+import { useGalleryById } from '@/hooks/useGalleryById';
 import { useGalleryClients } from '@/hooks/useGalleryClients';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGestaoPackages } from '@/hooks/useGestaoPackages';
@@ -39,7 +40,6 @@ export default function GalleryEdit() {
   const { settings } = useSettings();
 
   const {
-    getGallery,
     updateGallery,
     deleteGallery,
     reopenSelection,
@@ -47,11 +47,12 @@ export default function GalleryEdit() {
     getPhotoUrl,
     deletePhoto,
     deletePhotos,
-    isLoading: isSupabaseLoading,
     isUpdating,
     isDeletingPhoto,
     isDeletingPhotos,
-  } = useSupabaseGalleries();
+  } = useSupabaseGalleries({ enabled: false });
+
+  const { data: gallery, isLoading: isGalleryLoading } = useGalleryById(id);
 
   const {
     clients,
@@ -59,8 +60,6 @@ export default function GalleryEdit() {
     createClient,
     refetch: refetchClients,
   } = useGalleryClients();
-
-  const gallery = getGallery(id || '');
 
   const photoManager = useGalleryEditPhotos({
     galleryId: id,
@@ -87,7 +86,7 @@ export default function GalleryEdit() {
   });
 
   const isInitialLoading =
-    (isSupabaseLoading && !gallery) || (isClientsLoading && clients.length === 0);
+    (isGalleryLoading && !gallery) || (isClientsLoading && clients.length === 0);
 
   if (isInitialLoading) {
     return (

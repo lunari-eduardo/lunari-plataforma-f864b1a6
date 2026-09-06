@@ -1,131 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
-import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuthUser } from '@/shared/capability';
 
-// Converter SessionPaymentExtended para SessionPayment (formato legado)
-const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): SessionPayment[] => {
-  return extendedPayments.map(p => ({
-    id: p.id,
-    valor: p.valor,
-    data: p.data,
-    forma_pagamento: p.forma_pagamento,
-    observacoes: p.observacoes,
-    tipo: p.tipo,
-    statusPagamento: p.statusPagamento,
-    dataVencimento: p.dataVencimento,
-    numeroParcela: p.numeroParcela,
-    totalParcelas: p.totalParcelas,
-    origem: p.origem,
-    editavel: p.editavel
-  }));
-};
-
-// Salvar UM ÚNICO pagamento específico no Supabase (evita loops de duplicação)
-const saveSinglePaymentToSupabase = async (
-  sessionId: string, 
-  paymentId: string,
-  payment: SessionPaymentExtended
-) => {
-  try {
-    // Só salvar se o pagamento estiver pago e tiver data
-    if (payment.statusPagamento !== 'pago' || !payment.data) {
-      console.log('⏭️ Pagamento não está pago ou sem data, não salvando no Supabase:', paymentId);
-      return;
-    }
-
-    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    
-    // Usar método rastreado para evitar duplicação
-    await PaymentSupabaseService.saveSinglePaymentTracked(sessionId, paymentId, {
-      valor: payment.valor,
-      data: payment.data,
-      observacoes: payment.observacoes,
-      forma_pagamento: payment.forma_pagamento
-    });
-    
-    console.log('✅ Pagamento único sincronizado com Supabase:', paymentId);
-  } catch (error) {
-    console.error('❌ Erro ao salvar pagamento único no Supabase:', error);
-  }
-};
-
-// Atualizar pagamento existente no Supabase (UPDATE em vez de INSERT)
-const updatePaymentInSupabase = async (
-  sessionId: string, 
-  paymentId: string,
-  payment: SessionPaymentExtended
-) => {
-  try {
-    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    
-    const success = await PaymentSupabaseService.updateSinglePayment(sessionId, paymentId, {
-      valor: payment.valor,
-      data: payment.data,
-      observacoes: payment.observacoes,
-      forma_pagamento: payment.forma_pagamento
-    });
-    
-    if (success) {
-      console.log('✅ Pagamento atualizado no Supabase:', paymentId);
-    } else {
-      console.error('❌ Falha ao atualizar pagamento no Supabase:', paymentId);
-    }
-  } catch (error) {
-    console.error('❌ Erro ao atualizar pagamento no Supabase:', error);
-  }
-};
-
-// Deletar pagamento do Supabase (apenas para pendentes)
-const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
-  try {
-    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    await PaymentSupabaseService.deletePaymentFromSupabase(sessionId, paymentId);
-    console.log('✅ Pagamento deletado do Supabase:', paymentId);
-  } catch (error) {
-    console.error('❌ Erro ao deletar pagamento do Supabase:', error);
-  }
-};
-
-// Estornar pagamento no Supabase (para pagos)
-const refundPaymentInSupabase = async (
-  sessionId: string,
-  paymentId: string,
-  valor: number,
-  motivo?: string,
-  keepAsCredit?: boolean,
-) => {
-  try {
-    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo, { keepAsCredit });
-    if (success) {
-      console.log('✅ Pagamento estornado no Supabase:', paymentId, { keepAsCredit });
-    }
-    return success;
-  } catch (error) {
-    console.error('❌ Erro ao estornar pagamento no Supabase:', error);
-    return false;
-  }
-};
-
-// Salvar pagamentos no localStorage
-const savePaymentsToStorage = (sessionId: string, payments: SessionPaymentExtended[]) => {
-  const sessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
-  const updatedSessions = sessions.map((s: any) => 
-    s.id === sessionId ? { 
-      ...s, 
-      pagamentos: convertToLegacyFormat(payments),
-      valorPago: payments.filter(p => p.statusPagamento === 'pago').reduce((acc, p) => acc + p.valor, 0)
-    } : s
-  );
-  localStorage.setItem('workflow_sessions', JSON.stringify(updatedSessions));
-  
-  // Disparar evento para sincronização global
-  window.dispatchEvent(new CustomEvent('workflowSessionsUpdated'));
-};
+import { savePaymentsToStorage } from './session-payments/storageHelpers';
+import {
+  saveSinglePaymentToSupabase,
+  updatePaymentInSupabase,
+  deletePaymentFromSupabase,
+  refundPaymentInSupabase,
+} from './session-payments/supabasePaymentService';
+import { executeGatewayRefund } from './session-payments/gatewayRefund';
+import { fetchUnifiedSessionPayments } from './session-payments/fetchUnifiedPayments';
 
 export function useSessionPayments(sessionId: string, initialPayments: SessionPaymentExtended[] = []) {
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
@@ -138,6 +25,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     queryClient.invalidateQueries({ queryKey: ['cliente-credito'] });
     queryClient.invalidateQueries({ queryKey: ['pending-sessions'] });
   }, [queryClient]);
+
   // Onda 4d hotfix — sem user a Capability retorna UNAUTHENTICATED.
   const capabilityUser = useAuthUser();
   const capabilityUserRef = useRef(capabilityUser);
@@ -147,458 +35,21 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const fetchInitiatedRef = useRef(false);
   const lastSessionIdRef = useRef<string | null>(null);
 
-  // NOVO: Buscar pagamentos UNIFICADOS do Supabase + Cobranças MP ao iniciar
+  // Buscar pagamentos UNIFICADOS do Supabase + Cobranças ao iniciar
   useEffect(() => {
-    const fetchUnifiedPayments = async () => {
-      // Guard contra loops: só executar se sessionId mudou E não foi iniciado
+    const runFetch = async () => {
       if (!sessionId) return;
       if (sessionId === lastSessionIdRef.current && fetchInitiatedRef.current) return;
       
-      // Marcar como iniciado ANTES de fazer qualquer coisa
       fetchInitiatedRef.current = true;
       lastSessionIdRef.current = sessionId;
-
       setIsLoading(true);
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setIsLoading(false);
-          return;
+        const unified = await fetchUnifiedSessionPayments(sessionId);
+        if (unified.length > 0) {
+          setPayments(unified);
         }
-
-        // 1. Buscar session_id texto e cliente_id se sessionId for UUID
-        let textSessionId = sessionId;
-        let clienteId: string | null = null;
-        
-        const { data: sessaoData } = await supabase
-          .from('clientes_sessoes')
-          .select('session_id, cliente_id')
-          .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
-          .maybeSingle();
-        
-        if (sessaoData?.session_id) {
-          textSessionId = sessaoData.session_id;
-          clienteId = sessaoData.cliente_id;
-        }
-
-        console.log('🔍 [useSessionPayments] Session IDs:', { sessionId, textSessionId, clienteId });
-
-        // 2. Buscar transações E cobranças MP EM PARALELO
-        const asaasIntegPromise = (supabase as any)
-          .from('usuarios_integracoes')
-          .select('dados_extras')
-          .eq('user_id', user.id)
-          .eq('provedor', 'asaas')
-          .maybeSingle();
-
-        const [transacoesResult, cobrancasResult] = await Promise.all([
-          supabase
-            .from('clientes_transacoes')
-            .select('*')
-            .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
-            .eq('user_id', user.id)
-            .order('data_transacao', { ascending: false }),
-          supabase
-            .from('cobrancas')
-            .select('*')
-            .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
-            .eq('user_id', user.id)
-            .in('status', ['pago', 'estornado'])
-            // Extras de galeria vinculada à sessão também são receita da sessão.
-            // (Filtro `finalidade='sessao'` removido — vide migration 20260625181941.)
-            .order('data_pagamento', { ascending: false })
-        ]);
-
-        const asaasIntegResult: any = await asaasIntegPromise;
-        const transacoes = transacoesResult.data;
-        const cobrancasPagas = cobrancasResult.data;
-        const asaasExtras: any = asaasIntegResult?.data?.dados_extras || {};
-        const asaasSandbox = (asaasExtras?.environment || 'sandbox') !== 'production';
-
-
-
-        if (transacoesResult.error) {
-          console.error('❌ [useSessionPayments] Erro ao buscar transações:', transacoesResult.error);
-        }
-
-        if (cobrancasResult.error) {
-          console.error('❌ [useSessionPayments] Erro ao buscar cobranças:', cobrancasResult.error);
-        }
-
-        const allPayments: SessionPaymentExtended[] = [];
-        const addedIds = new Set<string>();
-        const refundedPaymentIds = new Set<string>();
-
-        // Extract refunded payment IDs from estornos
-        if (transacoes && transacoes.length > 0) {
-          for (const t of transacoes) {
-            if (t.tipo === 'estorno') {
-              const refMatch = t.descricao?.match(/\[REF:([^\]]+)\]/);
-              if (refMatch) {
-                refundedPaymentIds.add(refMatch[1]);
-              }
-            }
-          }
-        }
-
-        // Mapa de cobranças pagas por ID para enriquecimento
-        const cobrancasById = new Map<string, any>();
-        if (cobrancasPagas && cobrancasPagas.length > 0) {
-          for (const c of cobrancasPagas) {
-            cobrancasById.set(c.id, c);
-          }
-        }
-
-        // 4. Converter transações para formato de pagamentos
-        if (transacoes && transacoes.length > 0) {
-          console.log('✅ [useSessionPayments] Transações do Supabase:', transacoes.length);
-
-          for (const t of transacoes) {
-            const match = t.descricao?.match(/\[ID:([^\]]+)\]/);
-            const paymentId = match ? match[1] : t.id;
-            
-            if (addedIds.has(paymentId)) continue;
-            addedIds.add(paymentId);
-
-            const isPaid = t.tipo === 'pagamento';
-            const isPending = t.tipo === 'ajuste';
-            const isEstorno = t.tipo === 'estorno';
-
-            // Estornos aparecem como tipo especial
-            if (isEstorno) {
-              allPayments.push({
-                id: t.id,
-                valor: Number(t.valor) || 0,
-                data: t.data_transacao || '',
-                createdAt: t.created_at || undefined,
-                tipo: 'estorno',
-                statusPagamento: 'estornado',
-                origem: 'supabase',
-                editavel: false,
-                observacoes: t.descricao?.replace(/\s*\[REF:[^\]]+\]/, '') || 'Estorno',
-                finalidade: 'estorno',
-              });
-              continue;
-            }
-
-            const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
-            const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
-            const totalParcelas = parcelaMatch ? parseInt(parcelaMatch[2]) : undefined;
-
-            let tipo: 'pago' | 'agendado' | 'parcelado' = 'pago';
-            if (isPending) {
-              tipo = totalParcelas ? 'parcelado' : 'agendado';
-            }
-
-            let statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'estornado' = 'pago';
-            if (isPending) {
-              statusPagamento = 'pendente';
-              if (t.data_vencimento) {
-                const hoje = new Date();
-                const vencimento = new Date(t.data_vencimento);
-                if (vencimento < hoje) statusPagamento = 'atrasado';
-              }
-            } else if (refundedPaymentIds.has(paymentId)) {
-              statusPagamento = 'estornado';
-            }
-
-            // Detectar origem por descrição
-            const isCredito = /\[CREDIT:/i.test(t.descricao || '');
-            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') ||
-                                   t.descricao?.toLowerCase().includes('mercado pago');
-            const isAsaas = t.descricao?.toLowerCase().includes('asaas');
-            const isInfinitePay = t.descricao?.toLowerCase().includes('infinitepay');
-            const isGateway = isMercadoPago || isAsaas || isInfinitePay;
-
-            // Crédito do cliente aparece como pagamento efetivo, não editável avulsamente
-            const origem: SessionPaymentExtended['origem'] = isCredito
-              ? 'credito'
-              : isMercadoPago
-              ? 'mercadopago'
-              : isAsaas
-              ? 'asaas'
-              : isInfinitePay
-              ? 'infinitepay'
-              : 'supabase';
-
-            const isSandboxAsaas = isAsaas && asaasSandbox;
-
-            // Permitir edição/exclusão para:
-            // - Pagamentos pendentes (sempre)
-            // - Pagamentos pagos manuais que NÃO são de integração e NÃO são crédito
-            // - Pagamentos Asaas em sandbox (dados de teste podem ser removidos manualmente)
-            const canEdit = !isCredito && (isPending || (!isGateway && isPaid) || (isSandboxAsaas && isPaid));
-
-            // Calculate valor_liquido and taxas from transaction data
-            const valorBruto = Number(t.valor) || 0;
-            const valorLiq = t.valor_liquido != null ? Number(t.valor_liquido) : undefined;
-            const taxaGw = t.taxa_gateway != null ? Number(t.taxa_gateway) : 0;
-            const taxaAnt = t.taxa_antecipacao != null ? Number(t.taxa_antecipacao) : 0;
-            const taxaTotalCalc = taxaGw + taxaAnt;
-
-            // Determinar finalidade/origem funcional do pagamento
-            const linkedCob = t.cobranca_id ? cobrancasById.get(t.cobranca_id) : null;
-            let finalidade: SessionPaymentExtended['finalidade'] = 'sessao';
-            if (isCredito) {
-              finalidade = 'credito';
-            } else if (linkedCob?.finalidade === 'fotos_extras' || /(foto[s]?\s+extra|\[extras)/i.test(t.descricao || '')) {
-              finalidade = 'fotos_extras';
-            } else if (linkedCob?.finalidade === 'sessao_e_extras' || /(sess[ãa]o\s*\+\s*extras|sessao_e_extras)/i.test(t.descricao || '')) {
-              finalidade = 'sessao_e_extras';
-            } else if (
-              linkedCob?.finalidade === 'sinal' ||
-              /(sinal|entrada|arras|reserva)/i.test(t.descricao || '') ||
-              /(sinal|entrada|arras|reserva)/i.test(linkedCob?.descricao || '')
-            ) {
-              finalidade = 'sinal';
-            } else if (linkedCob?.finalidade) {
-              finalidade = linkedCob.finalidade;
-            } else if (/(venda\s+avulsa|avulso)/i.test(t.descricao || '')) {
-              finalidade = 'avulso';
-            } else {
-              finalidade = 'sessao';
-            }
-
-            allPayments.push({
-              id: paymentId,
-              valor: valorBruto,
-              data: isPaid ? t.data_transacao : '',
-              dataVencimento: t.data_vencimento || undefined,
-              createdAt: t.created_at || undefined,
-              tipo,
-              statusPagamento,
-              numeroParcela,
-              totalParcelas,
-              origem,
-              finalidade,
-              editavel: canEdit,
-              observacoes: (t.descricao || '')
-                .replace(/\s*\[ID:[^\]]+\]/, '')
-                .replace(/\s*\[CREDIT:[^\]]+\]/, '') || '',
-              valorLiquido: valorLiq,
-              taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
-              taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
-              cobrancaId: (t as any).cobranca_id || undefined,
-              sandbox: isSandboxAsaas || undefined,
-            });
-
-          }
-        }
-
-        // 5. Processar cobranças pagas (MP, InfinitePay, Asaas)
-        // Para Asaas com parcelas, buscar cobranca_parcelas e exibir cada parcela individualmente
-        if (cobrancasPagas && cobrancasPagas.length > 0) {
-          console.log('✅ [useSessionPayments] Cobranças pagas encontradas:', cobrancasPagas.length);
-
-          // Build a map of dados_extras for repasse flags
-          const dadosExtrasMap: Record<string, any> = {};
-          for (const c of cobrancasPagas) {
-            if (c.dados_extras) {
-              dadosExtrasMap[c.id] = typeof c.dados_extras === 'string' ? JSON.parse(c.dados_extras) : c.dados_extras;
-            }
-          }
-
-          // Buscar parcelas para cobranças Asaas com total_parcelas > 1
-          const asaasCobrancaIds = cobrancasPagas
-            .filter(c => c.provedor === 'asaas' && (c.total_parcelas || 1) > 1)
-            .map(c => c.id);
-
-          const parcelasMap: Record<string, any[]> = {};
-          if (asaasCobrancaIds.length > 0) {
-            const { data: parcelas } = await supabase
-              .from('cobranca_parcelas')
-              .select('*')
-              .in('cobranca_id', asaasCobrancaIds)
-              .order('numero_parcela', { ascending: true });
-
-            if (parcelas) {
-              for (const p of parcelas) {
-                if (!parcelasMap[p.cobranca_id]) parcelasMap[p.cobranca_id] = [];
-                parcelasMap[p.cobranca_id].push(p);
-              }
-            }
-          }
-
-          for (const c of cobrancasPagas) {
-            // Verificar se já existe uma transação correspondente (by cobranca ID)
-            const hasMatchingTransaction = transacoes?.some(t => 
-              t.descricao?.includes(`cobranca ${c.id}`)
-            );
-            if (hasMatchingTransaction) continue;
-
-            // Determinar label do provedor
-            let provedorLabel: string;
-            let origem: 'mercadopago' | 'infinitepay' | 'asaas';
-            if (c.provedor === 'infinitepay') {
-              provedorLabel = 'InfinitePay';
-              origem = 'infinitepay';
-            } else if (c.provedor === 'asaas') {
-              provedorLabel = `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Asaas`;
-              origem = 'asaas';
-            } else {
-              provedorLabel = `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago`;
-              origem = 'mercadopago';
-            }
-
-            // Se Asaas com parcelas detalhadas, mostrar cada parcela individualmente
-            const parcelas = parcelasMap[c.id];
-            if (parcelas && parcelas.length > 0) {
-              // Get repasse flags for this cobrança
-              const extras = dadosExtrasMap[c.id] || {};
-              const repassarProcessamento = extras.repassarTaxasProcessamento === true;
-              const repassarAntecipacao = extras.repassarTaxaAntecipacao === true;
-
-              for (const parcela of parcelas) {
-                const parcelaId = `asaas-parcela-${parcela.id}`;
-                if (addedIds.has(parcelaId)) continue;
-                addedIds.add(parcelaId);
-
-                const rawBase = parcela.valor_principal != null ? Number(parcela.valor_principal) : Number(parcela.valor_bruto);
-                const valorBruto = rawBase || 0;
-                
-                // Apply repasse logic: if taxes are passed to client, photographer sees no deduction
-                const rawLiq = parcela.valor_liquido != null ? Number(parcela.valor_liquido) : undefined;
-                const rawTaxaGw = parcela.taxa_gateway != null ? Number(parcela.taxa_gateway) : 0;
-                const rawTaxaAnt = parcela.taxa_antecipacao != null ? Number(parcela.taxa_antecipacao) : 0;
-                
-                const taxaGwEfetiva = repassarProcessamento ? 0 : rawTaxaGw;
-                const taxaAntEfetiva = repassarAntecipacao ? 0 : rawTaxaAnt;
-                const valorLiq = (repassarProcessamento && repassarAntecipacao) 
-                  ? valorBruto 
-                  : (valorBruto - taxaGwEfetiva - taxaAntEfetiva);
-                const taxaTotalCalc = taxaGwEfetiva + taxaAntEfetiva;
-
-                // Mapear status da parcela para statusRecebimento
-                let statusRecebimento: 'pendente' | 'confirmado' | 'recebido' | 'antecipado' = 'pendente';
-                if (parcela.status === 'confirmado') statusRecebimento = 'confirmado';
-                else if (parcela.status === 'recebido') statusRecebimento = 'recebido';
-                else if (parcela.status === 'antecipado') statusRecebimento = 'antecipado';
-
-                const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
-
-                let parcelaFinalidade: SessionPaymentExtended['finalidade'] = 'sessao';
-                if (c.finalidade === 'fotos_extras') {
-                  parcelaFinalidade = 'fotos_extras';
-                } else if (c.finalidade === 'sessao_e_extras') {
-                  parcelaFinalidade = 'sessao_e_extras';
-                } else if (c.finalidade === 'sinal' || /(sinal|entrada|arras|reserva)/i.test(c.descricao || '')) {
-                  parcelaFinalidade = 'sinal';
-                } else {
-                  parcelaFinalidade = c.finalidade || 'sessao';
-                }
-
-                allPayments.push({
-                  id: parcelaId,
-                  valor: valorBruto,
-                  data: parcela.data_pagamento ? String(parcela.data_pagamento).split('T')[0] : (c.data_pagamento ? c.data_pagamento.split('T')[0] : ''),
-                  tipo: 'parcelado',
-                  statusPagamento: parcela.status === 'pendente' ? 'pendente' : 'pago',
-                  numeroParcela: parcela.numero_parcela,
-                  totalParcelas: c.total_parcelas || parcelas.length,
-                  origem,
-                  finalidade: parcelaFinalidade,
-                  editavel: isSandboxAsaas,
-                  observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
-                  valorLiquido: taxaTotalCalc > 0 ? valorLiq : undefined,
-                  taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
-                  taxaAntecipacao: taxaAntEfetiva > 0 ? taxaAntEfetiva : undefined,
-                  dataCreditoPrevista: parcela.data_credito || undefined,
-                  dataCreditoReal: parcela.data_credito_real ? String(parcela.data_credito_real).split('T')[0] : undefined,
-                  statusRecebimento,
-                  createdAt: parcela.created_at || undefined,
-                  cobrancaId: c.id,
-                  parcelaId: parcela.id,
-                  sandbox: isSandboxAsaas || undefined,
-                });
-              }
-              continue; // Não adicionar a cobrança agregada
-            }
-
-            // Cobrança sem parcelas detalhadas (avulsa ou não-Asaas)
-            let paymentId: string;
-            if (c.provedor === 'infinitepay') {
-              paymentId = `ip-${c.ip_transaction_nsu || c.id}`;
-            } else if (c.provedor === 'asaas') {
-              paymentId = `asaas-${c.id}`;
-            } else {
-              paymentId = `mp-${c.mp_payment_id || c.id}`;
-            }
-            
-            if (addedIds.has(paymentId)) continue;
-            addedIds.add(paymentId);
-
-            const rawBase = c.valor_principal != null ? Number(c.valor_principal) : Number(c.valor);
-            const valorBruto = rawBase || 0;
-            const extras = dadosExtrasMap[c.id] || {};
-            const repassarProc = extras.repassarTaxasProcessamento === true;
-            let valorLiq: number | undefined;
-            let taxaTotal: number | undefined;
-            
-            if (repassarProc) {
-              // Taxes passed to client - photographer receives full nominal
-              valorLiq = undefined;
-              taxaTotal = undefined;
-            } else {
-              const rawLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
-              valorLiq = rawLiq;
-              taxaTotal = rawLiq != null ? Math.round((valorBruto - rawLiq) * 100) / 100 : undefined;
-              if (taxaTotal != null && taxaTotal <= 0) {
-                taxaTotal = undefined;
-                valorLiq = undefined;
-              }
-            }
-
-            const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
-
-            let cobFinalidade: SessionPaymentExtended['finalidade'] = 'sessao';
-            if (c.finalidade === 'fotos_extras') {
-              cobFinalidade = 'fotos_extras';
-            } else if (c.finalidade === 'sessao_e_extras') {
-              cobFinalidade = 'sessao_e_extras';
-            } else if (c.finalidade === 'sinal' || /(sinal|entrada|arras|reserva)/i.test(c.descricao || '')) {
-              cobFinalidade = 'sinal';
-            } else {
-              cobFinalidade = c.finalidade || 'sessao';
-            }
-
-            allPayments.push({
-              id: paymentId,
-              valor: valorBruto,
-              data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
-              tipo: 'pago',
-              statusPagamento: c.status === 'estornado' || refundedPaymentIds.has(paymentId) ? 'estornado' : 'pago',
-              origem,
-              finalidade: cobFinalidade,
-              editavel: isSandboxAsaas,
-              observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
-              valorLiquido: valorLiq,
-              taxaTotal,
-              dataCreditoPrevista: c.data_credito || undefined,
-              dataCreditoReal: c.data_credito_real ? String(c.data_credito_real).split('T')[0] : undefined,
-              cobrancaId: c.id,
-              sandbox: isSandboxAsaas || undefined,
-            });
-          }
-        }
-
-        // NÃO criar transações automaticamente aqui - deixar para o webhook
-        // Remover bloco de transacoesACriar que causava loop de reload
-
-        if (allPayments.length > 0) {
-          console.log('✅ [useSessionPayments] Total pagamentos unificados:', allPayments.length);
-          
-          // Ordenar por timestamp decrescente (mais recente primeiro)
-          // Prioriza createdAt (timestamp completo) para ordenação precisa
-          allPayments.sort((a, b) => {
-            const timestampA = a.createdAt || a.data || a.dataVencimento || '';
-            const timestampB = b.createdAt || b.data || b.dataVencimento || '';
-            return timestampB.localeCompare(timestampA);
-          });
-          
-          setPayments(allPayments);
-        }
-        
         setLoadedFromSupabase(true);
         setIsLoading(false);
       } catch (error) {
@@ -608,12 +59,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       }
     };
 
-    fetchUnifiedPayments();
+    runFetch();
   }, [sessionId, loadedFromSupabase]);
 
   // Listener para eventos do AppContext (pagamentos rápidos) - como fallback
   useEffect(() => {
-    // Se já carregou do Supabase, não sobrescrever com localStorage
     if (loadedFromSupabase) return;
 
     const handleWorkflowUpdate = () => {
@@ -621,23 +71,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       const currentSession = sessions.find((s: any) => s.id === sessionId);
       
       if (currentSession && currentSession.pagamentos) {
-        // Converter pagamentos legados para formato estendido
         const extendedPayments: SessionPaymentExtended[] = currentSession.pagamentos.map((p: any) => {
-          // Determinar tipo e status com lógica mais robusta
           let tipo = p.tipo;
           let statusPagamento = p.statusPagamento;
           
-          // Se tipo/status já existem e são válidos, confiar neles
           if (!tipo || !statusPagamento) {
-            // Inferir baseado em dados disponíveis
             if (p.numeroParcela && p.totalParcelas) {
               tipo = 'parcelado';
               statusPagamento = p.data ? 'pago' : 'pendente';
             } else if (p.dataVencimento && !p.data) {
               tipo = 'agendado';
               statusPagamento = 'pendente';
-              
-              // Verificar se está atrasado
               const hoje = new Date();
               const vencimento = new Date(p.dataVencimento);
               if (vencimento < hoje) {
@@ -647,7 +91,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               tipo = 'pago';
               statusPagamento = 'pago';
             } else {
-              // Fallback: se não tem data nem vencimento, assumir pendente
               tipo = 'agendado';
               statusPagamento = 'pendente';
             }
@@ -687,17 +130,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     };
 
     window.addEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
-    
-    // Carregar dados iniciais
     handleWorkflowUpdate();
-
     return () => window.removeEventListener('workflowSessionsUpdated', handleWorkflowUpdate);
   }, [sessionId, loadedFromSupabase]);
 
-  // Remove auto-save useEffect to prevent loops
-  // Payments will be saved explicitly in each action function
-
-  // Calcular total pago (bruto - o que o cliente pagou) - subtrair estornos
+  // Totais calculados
   const totalEstornado = payments
     .filter(p => p.tipo === 'estorno')
     .reduce((acc, p) => acc + p.valor, 0);
@@ -706,12 +143,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => acc + p.valor, 0) - totalEstornado;
 
-  // Calcular total recebido (líquido - o que o fotógrafo recebeu de fato)
   const totalRecebido = payments
     .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0) - totalEstornado;
 
-  // Calcular total de taxas
   const totalTaxas = payments
     .filter(p => (p.tipo === 'pago' || p.tipo === 'parcelado') && (p.statusPagamento === 'pago' || p.statusPagamento === 'estornado'))
     .reduce((acc, p) => {
@@ -719,12 +154,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       return acc + taxa;
     }, 0);
 
-  // Calcular total agendado (com data de vencimento definida)
   const totalAgendado = payments
     .filter(p => p.statusPagamento === 'pendente' && p.dataVencimento)
     .reduce((acc, p) => acc + p.valor, 0);
 
-  // Calcular total pendente (sem data de vencimento específica)
   const totalPendente = payments
     .filter(p => p.statusPagamento === 'pendente' && !p.dataVencimento)
     .reduce((acc, p) => acc + p.valor, 0);
@@ -742,12 +175,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       return updated;
     });
 
-    // Save to Supabase with error feedback
     if (newPayment.statusPagamento === 'pago' && newPayment.data) {
       try {
         const { USE_CAPABILITY_ADD_PAYMENT } = await import('@/features/workflow/config');
         if (USE_CAPABILITY_ADD_PAYMENT) {
-          // Onda 4d — caminho oficial via Capability `workflow.addPayment`
           const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
           const { isOk } = await import('@/shared/result');
           const result = await addPaymentCapability.execute(
@@ -789,10 +220,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       const finalPayment = { ...updatedPayment, ...updates };
       const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
 
-      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
 
-      // Persistir no Supabase
       (async () => {
         try {
           if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
@@ -821,12 +250,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const deletePayment = useCallback((paymentId: string) => {
     setPayments(prev => {
       const updated = prev.filter(p => p.id !== paymentId);
-      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      // Delete from Supabase (não re-salvar os restantes!)
       deletePaymentFromSupabase(sessionId, paymentId);
-      // Notifica card/footer para invalidar financeiros imediatamente
-      // (independente do canal realtime — cobre estorno/exclusão manuais).
       window.dispatchEvent(new CustomEvent('payment-optimistic', {
         detail: { sessionId, sessionUuid: sessionId },
       }));
@@ -837,9 +262,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     });
   }, [sessionId]);
 
-
-  // Estornar pagamento pago (cria registro de estorno, mantém original)
-  // options.autoRefund: se true e origem for asaas/mercadopago, chama API do gateway
+  // Estornar pagamento
   const refundPayment = useCallback(async (
     paymentId: string,
     options?: { motivo?: string; autoRefund?: boolean; keepAsCredit?: boolean }
@@ -849,108 +272,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     const motivo = options?.motivo;
     const keepAsCredit = options?.keepAsCredit === true;
-    // "Manter como crédito" e "Estornar no gateway" são mutuamente exclusivos:
-    // se o valor vira crédito interno, o dinheiro NÃO deve voltar ao cliente.
-    // Sandbox: nunca chamar o gateway — o pagamento é de teste e o estorno é interno.
     const autoRefund = !keepAsCredit && options?.autoRefund === true && payment.sandbox !== true;
 
-    // Se auto refund solicitado, tentar API do gateway antes de gravar registro interno
     if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-
-        if (payment.origem === 'asaas') {
-          // Resolução robusta: cobrancaId/parcelaId vindos do próprio registro,
-          // com fallback pelos prefixos legados e pela transação (extras da Gallery).
-          let cobrancaId: string | undefined = payment.cobrancaId;
-          let parcelaId: string | undefined = payment.parcelaId;
-
-          if (!parcelaId && paymentId.startsWith('asaas-parcela-')) {
-            parcelaId = paymentId.replace('asaas-parcela-', '');
-          }
-          if (!cobrancaId && paymentId.startsWith('asaas-') && !paymentId.startsWith('asaas-parcela-')) {
-            cobrancaId = paymentId.replace('asaas-', '');
-          }
-          if (!cobrancaId && parcelaId) {
-            const { data: parcela } = await supabase
-              .from('cobranca_parcelas')
-              .select('cobranca_id')
-              .eq('id', parcelaId)
-              .maybeSingle();
-            cobrancaId = parcela?.cobranca_id || undefined;
-          }
-          if (!cobrancaId && /^[0-9a-f-]{36}$/i.test(paymentId)) {
-            // paymentId é o UUID da transação — buscar a cobrança vinculada
-            const { data: trx } = await supabase
-              .from('clientes_transacoes')
-              .select('cobranca_id')
-              .eq('id', paymentId)
-              .maybeSingle();
-            cobrancaId = (trx as any)?.cobranca_id || undefined;
-          }
-
-          if (!cobrancaId) {
-            const { toast } = await import('sonner');
-            toast.error('Não foi possível identificar a cobrança Asaas para estornar');
-            return false;
-          }
-
-
-          const { data, error } = await supabase.functions.invoke('gestao-asaas-refund', {
-            body: { cobrancaId, parcelaId, valor: payment.valor, motivo }
-          });
-
-          if (error || !data?.success) {
-            const { toast } = await import('sonner');
-            const errMsg = (data as any)?.error || error?.message || 'Erro ao estornar no Asaas';
-            toast.error(`Estorno no Asaas falhou: ${errMsg}`);
-            return false;
-          }
-        } else if (payment.origem === 'mercadopago') {
-          // paymentId no formato "mp-{id}" — pode ser mp_payment_id ou cobranca.id
-          const suffix = paymentId.replace(/^mp-/, '');
-          // Tentar como cobranca.id primeiro (UUID)
-          const isUUID = /^[0-9a-f-]{36}$/i.test(suffix);
-          let cobrancaId: string | undefined = payment.cobrancaId;
-          if (!cobrancaId && isUUID) {
-            cobrancaId = suffix;
-          } else if (!cobrancaId) {
-            // É mp_payment_id; buscar cobrança correspondente
-            const { data: cob } = await supabase
-              .from('cobrancas')
-              .select('id')
-              .eq('mp_payment_id', suffix)
-              .maybeSingle();
-            cobrancaId = cob?.id;
-          }
-
-
-          if (!cobrancaId) {
-            const { toast } = await import('sonner');
-            toast.error('Não foi possível identificar a cobrança Mercado Pago para estornar');
-            return false;
-          }
-
-          const { data, error } = await supabase.functions.invoke('gestao-mercadopago-refund', {
-            body: { cobrancaId, valor: payment.valor, motivo }
-          });
-
-          if (error || !data?.success) {
-            const { toast } = await import('sonner');
-            const errMsg = (data as any)?.error || error?.message || 'Erro ao estornar no Mercado Pago';
-            toast.error(`Estorno no Mercado Pago falhou: ${errMsg}`);
-            return false;
-          }
-        }
-      } catch (err) {
-        console.error('Erro ao chamar gateway refund:', err);
-        const { toast } = await import('sonner');
-        toast.error('Erro inesperado ao estornar no gateway');
-        return false;
-      }
+      const successGw = await executeGatewayRefund(payment, paymentId, motivo);
+      if (!successGw) return false;
     }
 
-    // Sempre gravar registro interno (fonte de verdade financeira)
     const sufixos: string[] = [];
     if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
       sufixos.push('[Estornado no gateway]');
@@ -962,7 +290,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivoFinal, keepAsCredit);
     if (success) {
-      // Adicionar estorno à lista local e atualizar o status do pagamento original
       const estorno: SessionPaymentExtended = {
         id: `refund-${Date.now()}`,
         valor: payment.valor,
@@ -977,7 +304,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         p.id === paymentId ? { ...p, statusPagamento: 'estornado' as const } : p
       ).concat(estorno));
 
-      // Notifica card/footer para invalidar financeiros imediatamente.
       window.dispatchEvent(new CustomEvent('payment-optimistic', {
         detail: { sessionId, sessionUuid: sessionId },
       }));
@@ -993,15 +319,12 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     return success;
   }, [sessionId, payments]);
 
-
-  // Marcar como pago (atualiza de pendente para pago no Supabase).
-  // Se o UPDATE no banco falhar, reverte o estado local e avisa o usuário.
+  // Marcar como pago
   const markAsPaid = useCallback(async (paymentId: string) => {
     const dataPagamento = formatDateForStorage(new Date());
     const original = payments.find(p => p.id === paymentId);
     if (!original) return;
 
-    // Otimista
     const optimistic = payments.map(p =>
       p.id === paymentId ? { ...p, statusPagamento: 'pago' as const, data: dataPagamento } : p
     );
@@ -1019,7 +342,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       );
 
       if (!ok) {
-        // Rollback + toast
         setPayments(payments);
         savePaymentsToStorage(sessionId, payments);
         const { toast } = await import('sonner');
@@ -1037,7 +359,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     }
   }, [sessionId, payments, invalidateSessionQueries]);
 
-  // Criar parcelas e salvar como pendentes no Supabase
+  // Criar parcelas
   const createInstallments = useCallback(async (
     totalValue: number, 
     installmentCount: number, 
@@ -1067,10 +389,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, ...newInstallments];
-      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
       
-      // Salvar parcelas pendentes no Supabase
       (async () => {
         const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.savePendingPayments(
@@ -1092,24 +412,17 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     return newInstallments;
   }, [sessionId]);
 
-  // Agendar pagamento único e salvar como pendente no Supabase
+  // Agendar pagamento único
   const schedulePayment = useCallback(async (
     value: number,
     dueDate: Date,
     observacoes?: string
   ) => {
     const dataVencimento = formatDateForStorage(dueDate);
-    console.log('📅 [schedulePayment] Dados do agendamento:', {
-      valor: value,
-      dataOriginal: dueDate.toISOString(),
-      dataFormatada: dataVencimento,
-      observacoes
-    });
-    
     const newPayment: SessionPaymentExtended = {
       id: `scheduled-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       valor: value,
-      data: '', // Vazio pois ainda não foi pago
+      data: '',
       dataVencimento: dataVencimento,
       tipo: 'agendado',
       statusPagamento: 'pendente',
@@ -1120,10 +433,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
     setPayments(prev => {
       const updated = [...prev, newPayment];
-      // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
       
-      // Salvar agendamento pendente no Supabase
       (async () => {
         const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.savePendingPayments(

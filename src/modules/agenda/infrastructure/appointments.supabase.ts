@@ -201,6 +201,17 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
       hydrated,
     );
 
+    const targetSessionId = fresh.session_id || session?.session_id;
+    if (targetSessionId) {
+      await syncAppointmentDepositTransaction(
+        userId,
+        fresh.cliente_id,
+        targetSessionId,
+        Number(fresh.paid_amount) || 0,
+        fresh.date,
+      );
+    }
+
     if (session) {
       console.log("🎯 [agenda.repo] Sessão criada com sucesso:", session.id);
 
@@ -290,7 +301,17 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
           .maybeSingle();
 
         if (!checkSession) {
-          await WorkflowSupabaseService.createSessionFromAppointment(appointmentId, hydrated);
+          const fallbackSession = await WorkflowSupabaseService.createSessionFromAppointment(appointmentId, hydrated);
+          const fallbackSessionId = fresh.session_id || fallbackSession?.session_id;
+          if (fallbackSessionId) {
+            await syncAppointmentDepositTransaction(
+              userId,
+              fresh.cliente_id,
+              fallbackSessionId,
+              Number(fresh.paid_amount) || 0,
+              fresh.date,
+            );
+          }
         }
       }, 2000);
     }
