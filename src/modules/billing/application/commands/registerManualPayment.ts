@@ -129,6 +129,18 @@ export const registerManualPayment = defineCommand({
       }
     }
 
+    if (!finalQtdFotos && (effEscopo === "fotos_extras" || effEscopo === "sessao_e_extras")) {
+      const { data: sessRow } = await supabase
+        .from("clientes_sessoes")
+        .select("qtd_fotos_extra")
+        .or(`session_id.eq.${binding.session_id},id.eq.${binding.id}`)
+        .limit(1)
+        .maybeSingle();
+      if (sessRow?.qtd_fotos_extra) {
+        finalQtdFotos = sessRow.qtd_fotos_extra;
+      }
+    }
+
     const escopoTag = effEscopo === "sessao" ? "" : ` (${effEscopo.replace("_", " ")})`;
     const descBase = observacao?.trim() || `Pagamento ${label}${escopoTag}`;
     const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${effEscopo}`;
@@ -186,7 +198,12 @@ export const registerManualPayment = defineCommand({
         const cancelledPendingIds: string[] = edgeData.cancelledPendingIds ?? [];
         const paymentId = `manual-${cobrancaId.slice(0, 8)}`;
         // Marcador [MANUAL] casa com o índice único parcial (evita duplo lançamento).
-        const desc = `${descBase} ${intentMark} [MANUAL] [ID:${paymentId}] (cobranca ${cobrancaId})`;
+        let desc = `${descBase} ${intentMark} [MANUAL] [ID:${paymentId}] (cobranca ${cobrancaId})`;
+        if (effEscopo === "sessao_e_extras" && vSessaoComp !== undefined && vExtrasComp !== undefined) {
+          desc += ` [SESSAO_VALOR:${vSessaoComp.toFixed(2)}] [EXTRAS_VALOR:${vExtrasComp.toFixed(2)}]`;
+        } else if (effEscopo === "fotos_extras") {
+          desc += ` [EXTRAS_VALOR:${valor.toFixed(2)}]`;
+        }
 
         const okSaved = await PaymentSupabaseService.saveSinglePaymentTracked(
           binding.id,
@@ -197,7 +214,17 @@ export const registerManualPayment = defineCommand({
             observacoes: desc,
             forma_pagamento: label,
           },
-          { binding, intentKey, cobrancaId },
+          {
+            binding,
+            intentKey,
+            cobrancaId,
+            dadosExtras: {
+              escopo: effEscopo,
+              valor_sessao_componente: effEscopo === "sessao_e_extras" ? vSessaoComp : undefined,
+              valor_extras_componente: effEscopo === "sessao_e_extras" ? vExtrasComp : (effEscopo === "fotos_extras" ? valor : undefined),
+              qtd_fotos: finalQtdFotos,
+            },
+          },
         );
 
         if (!okSaved) {
@@ -233,7 +260,12 @@ export const registerManualPayment = defineCommand({
     // Grava clientes_transacoes; trigger recalcula clientes_sessoes.
     // ────────────────────────────────────────────────────────────
     const paymentId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const desc = `${descBase} ${intentMark}`;
+    let desc = `${descBase} ${intentMark}`;
+    if (effEscopo === "sessao_e_extras" && vSessaoComp !== undefined && vExtrasComp !== undefined) {
+      desc += ` [SESSAO_VALOR:${vSessaoComp.toFixed(2)}] [EXTRAS_VALOR:${vExtrasComp.toFixed(2)}]`;
+    } else if (effEscopo === "fotos_extras") {
+      desc += ` [EXTRAS_VALOR:${valor.toFixed(2)}]`;
+    }
 
     const okSaved = await PaymentSupabaseService.saveSinglePaymentTracked(
       binding.id,
@@ -244,7 +276,16 @@ export const registerManualPayment = defineCommand({
         observacoes: desc,
         forma_pagamento: label,
       },
-      { binding, intentKey },
+      {
+        binding,
+        intentKey,
+        dadosExtras: {
+          escopo: effEscopo,
+          valor_sessao_componente: effEscopo === "sessao_e_extras" ? vSessaoComp : undefined,
+          valor_extras_componente: effEscopo === "sessao_e_extras" ? vExtrasComp : (effEscopo === "fotos_extras" ? valor : undefined),
+          qtd_fotos: finalQtdFotos,
+        },
+      },
     );
 
     if (!okSaved) {

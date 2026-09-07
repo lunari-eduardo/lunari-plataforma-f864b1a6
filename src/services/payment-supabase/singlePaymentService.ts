@@ -125,6 +125,7 @@ export async function saveSinglePaymentTracked(
     binding?: SessionBinding;
     intentKey?: string;
     cobrancaId?: string;
+    dadosExtras?: Record<string, any>;
   }
 ): Promise<boolean> {
   try {
@@ -178,6 +179,7 @@ export async function saveSinglePaymentTracked(
         data_transacao: payment.data,
         descricao: descricao,
         cobranca_id: options?.cobrancaId ?? null,
+        dados_extras: options?.dadosExtras ?? null,
         updated_by: userId
       });
 
