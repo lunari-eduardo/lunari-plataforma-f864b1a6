@@ -355,7 +355,7 @@ export function useGalleryDetailData({
     calculatedExtraTotal,
     economia,
     galleryForSummary,
-    isLoadingData: isSupabaseLoading || isLoadingPhotos,
+    isLoadingData: isGalleryLoading || isLoadingPhotos,
     refetchCobrancas,
     refetchCobranca,
     sendSupabaseGallery,

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 
 interface DeleteGalleryDialogProps {
   galleryName: string;
-  onDelete: () => Promise<any>;
+  onDelete: () => Promise<any> | void;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

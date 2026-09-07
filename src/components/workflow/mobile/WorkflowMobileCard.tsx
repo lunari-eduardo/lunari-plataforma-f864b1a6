@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -117,6 +117,49 @@ export function WorkflowMobileCard({
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
+
+  // Estados de controle dos menus dropdown
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+
+  // Rastreamento de toque para prevenir abertura acidental durante a rolagem no mobile/iOS
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const isScrollingRef = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartPos.current = { x: t.clientX, y: t.clientY };
+    isScrollingRef.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - touchStartPos.current.x);
+    const dy = Math.abs(t.clientY - touchStartPos.current.y);
+    // Se o dedo se moveu mais de 6px, trata-se de um gesto de rolagem
+    if (dx > 6 || dy > 6) {
+      isScrollingRef.current = true;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    // Janela de 150ms para neutralizar eventos click sintéticos disparados após o término do scroll
+    setTimeout(() => {
+      isScrollingRef.current = false;
+      touchStartPos.current = null;
+    }, 150);
+  }, []);
+
+  const handleActionsMenuOpenChange = useCallback((open: boolean) => {
+    if (open && isScrollingRef.current) return;
+    setActionsMenuOpen(open);
+  }, []);
+
+  const handleStatusMenuOpenChange = useCallback((open: boolean) => {
+    if (open && isScrollingRef.current) return;
+    setStatusMenuOpen(open);
+  }, []);
 
   // Campos editáveis
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
@@ -358,8 +401,14 @@ export function WorkflowMobileCard({
       >
         {/* PARTE COLAPSADA DO CARD */}
         <div
-          onClick={onToggleExpand}
-          className="p-3.5 sm:p-4 cursor-pointer active:bg-accent/30 transition-colors select-none"
+          onClick={() => {
+            if (isScrollingRef.current) return;
+            onToggleExpand();
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="p-3.5 sm:p-4 cursor-pointer active:bg-accent/30 transition-colors select-none touch-manipulation"
         >
           {/* Linha 1: Nome do Cliente + Ações Contextuais */}
           <div className="flex items-center justify-between gap-2">
@@ -367,7 +416,13 @@ export function WorkflowMobileCard({
               {session.clienteId ? (
                 <Link
                   to={`/app/clientes/${session.clienteId}`}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    if (isScrollingRef.current) {
+                      e.preventDefault();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
                   className="font-semibold text-[15px] text-foreground hover:text-primary transition-colors truncate block"
                 >
                   {session.nome}
@@ -389,24 +444,41 @@ export function WorkflowMobileCard({
                   href={`https://wa.me/${session.whatsapp.replace(/\D/g, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors"
+                  onClick={(e) => {
+                    if (isScrollingRef.current) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors touch-manipulation"
                   title="WhatsApp"
                 >
                   <MessageCircle className="h-4 w-4" />
                 </a>
               )}
 
-              <DropdownMenu>
+              <DropdownMenu open={actionsMenuOpen} onOpenChange={handleActionsMenuOpenChange}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                    onPointerDown={(e) => {
+                      // Previne que o Radix abra no pointerdown inicial no touch, evitando disparar no início da rolagem
+                      e.preventDefault();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isScrollingRef.current) return;
+                      setActionsMenuOpen((prev) => !prev);
+                    }}
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground touch-manipulation"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuContent align="end" className="w-52" collisionPadding={12}>
                   {session.clienteId && (
                     <DropdownMenuItem
                       onClick={() => navigate(`/app/clientes/${session.clienteId}`)}
@@ -430,37 +502,7 @@ export function WorkflowMobileCard({
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <span
-                        className="w-2 h-2 rounded-full mr-2"
-                        style={{ backgroundColor: statusColor }}
-                      />
-                      Alterar status
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-44">
-                      <DropdownMenuItem
-                        onClick={() => onStatusChange(session.id, "")}
-                        className="text-muted-foreground italic"
-                      >
-                        Limpar status
-                      </DropdownMenuItem>
-                      {statusOptions.map((opt) => (
-                        <DropdownMenuItem
-                          key={opt}
-                          onClick={() => onStatusChange(session.id, opt)}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full mr-2"
-                            style={{ backgroundColor: getStatusColor(opt) }}
-                          />
-                          {opt}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                  {(session.clienteId || session.whatsapp) && <DropdownMenuSeparator />}
 
                   <DropdownMenuItem onClick={() => setModalProdutosOpen(true)}>
                     <Package className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -497,11 +539,20 @@ export function WorkflowMobileCard({
               onClick={(e) => e.stopPropagation()}
               className="shrink-0"
             >
-              <DropdownMenu>
+              <DropdownMenu open={statusMenuOpen} onOpenChange={handleStatusMenuOpenChange}>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all shadow-2xs hover:opacity-90 active:scale-95 shrink-0 select-none cursor-pointer"
+                    onPointerDown={(e) => {
+                      // Previne que o Radix abra no pointerdown inicial no touch, evitando disparar no início da rolagem
+                      e.preventDefault();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isScrollingRef.current) return;
+                      setStatusMenuOpen((prev) => !prev);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all shadow-2xs hover:opacity-90 active:scale-95 shrink-0 select-none cursor-pointer touch-manipulation"
                     style={
                       session.status
                         ? {
@@ -522,7 +573,7 @@ export function WorkflowMobileCard({
                     <ChevronDown className="h-2.5 w-2.5 opacity-75 shrink-0" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 z-50">
+                <DropdownMenuContent align="end" className="w-48 z-50" collisionPadding={12}>
                   <DropdownMenuItem
                     onClick={() => onStatusChange(session.id, "")}
                     className="text-muted-foreground italic text-xs"
