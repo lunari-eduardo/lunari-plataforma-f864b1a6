@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -7,6 +7,7 @@ import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useFinancialItemsManagement } from '@/hooks/useFinancialItemsManagement';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/hooks/use-toast';
 import type { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import CategoriaSideSheet from './CategoriaSideSheet';
 
@@ -14,12 +15,18 @@ interface Props {
   onBack: () => void;
 }
 
-const GRUPOS: { value: GrupoPrincipal; label: string }[] = [
-  { value: 'Receita Operacional', label: 'Receitas Operacionais' },
-  { value: 'Receita Não Operacional', label: 'Receitas Não Operacionais' },
-  { value: 'Despesa Fixa', label: 'Despesas Fixas' },
-  { value: 'Despesa Variável', label: 'Despesas Variáveis' },
-  { value: 'Investimento', label: 'Investimentos' },
+interface GrupoConfig {
+  value: GrupoPrincipal;
+  label: string;
+  autoGerenciado: boolean;
+}
+
+const GRUPOS: GrupoConfig[] = [
+  { value: 'Receita Operacional', label: 'Receitas de vendas', autoGerenciado: true },
+  { value: 'Receita Não Operacional', label: 'Outras receitas', autoGerenciado: false },
+  { value: 'Despesa Fixa', label: 'Despesas fixas', autoGerenciado: false },
+  { value: 'Despesa Variável', label: 'Gastos do dia a dia', autoGerenciado: false },
+  { value: 'Investimento', label: 'Investimentos', autoGerenciado: false },
 ];
 
 function normalize(v: string) {
@@ -35,6 +42,7 @@ function initialOf(name: string) {
 }
 
 export default function CategoriasPanel({ onBack }: Props) {
+  const { toast } = useToast();
   const {
     itensFinanceiros,
     adicionarItemFinanceiro,
@@ -69,36 +77,73 @@ export default function CategoriasPanel({ onBack }: Props) {
   const [grupoSelecionado, setGrupoSelecionado] = useState<GrupoPrincipal>(() => {
     return (
       GRUPOS.map((g) => g.value).find((g) => (countsByGroup[g] ?? 0) > 0) ??
-      'Despesa Fixa'
+      'Receita Operacional'
     );
   });
 
-  const [query, setQuery] = useState('');
+  const [novaCategoriaNome, setNovaCategoriaNome] = useState('');
+  const [salvandoRapido, setSalvandoRapido] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetMode, setSheetMode] = useState<'create' | 'edit'>('create');
+  const [sheetMode, setSheetMode] = useState<'create' | 'edit'>('edit');
   const [editingItem, setEditingItem] = useState<ItemFinanceiro | null>(null);
 
-  const grupoLabel = GRUPOS.find((g) => g.value === grupoSelecionado)?.label ?? '';
+  const currentGrupo = useMemo(
+    () => GRUPOS.find((g) => g.value === grupoSelecionado) ?? GRUPOS[0],
+    [grupoSelecionado]
+  );
+  const grupoLabel = currentGrupo.label;
+  const isAutoGerenciado = currentGrupo.autoGerenciado;
   const grupoCount = countsByGroup[grupoSelecionado] ?? 0;
 
-  const filteredItems = useMemo(() => {
-    const q = normalize(query);
+  const itensDoGrupo = useMemo(() => {
     return itensFinanceiros
       .filter(
         (i) =>
           i.grupo_principal === grupoSelecionado &&
-          i.ativo !== false &&
-          (q.length === 0 || normalize(i.nome).includes(q))
+          i.ativo !== false
       )
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  }, [itensFinanceiros, grupoSelecionado, query]);
+  }, [itensFinanceiros, grupoSelecionado]);
 
-  const openCreate = useCallback(() => {
-    itemsManagement.updateItemState({ novoNome: '', novoGrupo: grupoSelecionado });
-    setSheetMode('create');
-    setEditingItem(null);
-    setSheetOpen(true);
-  }, [grupoSelecionado, itemsManagement]);
+  const handleAdicionarRapido = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const nomeTrim = novaCategoriaNome.trim();
+    if (!nomeTrim || salvandoRapido || isAutoGerenciado) return;
+
+    const jaExiste = itensFinanceiros.some(
+      (i) =>
+        i.ativo !== false &&
+        i.grupo_principal === grupoSelecionado &&
+        normalize(i.nome) === normalize(nomeTrim)
+    );
+
+    if (jaExiste) {
+      toast({
+        title: 'Categoria já existe',
+        description: `Já existe uma categoria chamada "${nomeTrim}" neste grupo.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSalvandoRapido(true);
+    try {
+      await adicionarItemFinanceiro(nomeTrim, grupoSelecionado);
+      setNovaCategoriaNome('');
+      toast({
+        title: 'Categoria adicionada',
+        description: `"${nomeTrim}" foi adicionada com sucesso em ${grupoLabel.toLowerCase()}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao adicionar categoria',
+        description: error?.message || 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSalvandoRapido(false);
+    }
+  };
 
   const openEdit = useCallback(
     (item: ItemFinanceiro) => {
@@ -151,12 +196,12 @@ export default function CategoriasPanel({ onBack }: Props) {
                   type="button"
                   onClick={() => {
                     setGrupoSelecionado(g.value);
-                    setQuery('');
+                    setNovaCategoriaNome('');
                   }}
                   className={[
                     'w-full flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors',
                     active
-                      ? 'bg-foreground text-background'
+                      ? 'bg-foreground text-background font-medium'
                       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
                   ].join(' ')}
                 >
@@ -183,12 +228,12 @@ export default function CategoriasPanel({ onBack }: Props) {
                     type="button"
                     onClick={() => {
                       setGrupoSelecionado(g.value);
-                      setQuery('');
+                      setNovaCategoriaNome('');
                     }}
                     className={[
                       'shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors border',
                       active
-                        ? 'bg-foreground text-background border-foreground'
+                        ? 'bg-foreground text-background border-foreground font-medium'
                         : 'bg-transparent text-muted-foreground border-border hover:text-foreground',
                     ].join(' ')}
                   >
@@ -205,45 +250,89 @@ export default function CategoriasPanel({ onBack }: Props) {
         {/* Main area */}
         <section className="min-w-0">
           <header className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">{grupoLabel}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">{grupoLabel}</h2>
+              {isAutoGerenciado && (
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground border border-border/50">
+                  Gerenciada automaticamente
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
-              {grupoCount} {grupoCount === 1 ? 'categoria cadastrada' : 'categorias cadastradas'}
+              {isAutoGerenciado
+                ? 'Controlada automaticamente pelo sistema a partir dos seus ensaios e vendas'
+                : `${grupoCount} ${grupoCount === 1 ? 'categoria cadastrada' : 'categorias cadastradas'}`}
             </p>
           </header>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="size-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar categoria..."
-                className="pl-9 bg-muted/40 border-transparent focus-visible:border-border focus-visible:bg-background"
-              />
-            </div>
-            <Button onClick={openCreate} className="sm:w-auto w-full">
-              <Plus className="size-4 mr-1.5" />
-              Nova categoria
-            </Button>
-          </div>
-
-          {filteredItems.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/60 py-12 text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                {query
-                  ? 'Nenhuma categoria encontrada para a busca.'
-                  : `Nenhuma categoria em ${grupoLabel.toLowerCase()}.`}
-              </p>
-              {!query && (
-                <Button variant="outline" onClick={openCreate}>
+          {/* Adição rápida inline (apenas para grupos personalizáveis) */}
+          {!isAutoGerenciado && (
+            <form onSubmit={handleAdicionarRapido} className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+              <div className="relative flex-1">
+                <Input
+                  value={novaCategoriaNome}
+                  onChange={(e) => setNovaCategoriaNome(e.target.value)}
+                  placeholder="Nova categoria..."
+                  disabled={salvandoRapido}
+                  className="bg-muted/40 border-transparent focus-visible:border-border focus-visible:bg-background"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={salvandoRapido || !novaCategoriaNome.trim()}
+                className="sm:w-auto w-full shrink-0"
+              >
+                {salvandoRapido ? (
+                  <Loader2 className="size-4 mr-1.5 animate-spin" />
+                ) : (
                   <Plus className="size-4 mr-1.5" />
-                  Criar primeira categoria
-                </Button>
-              )}
+                )}
+                Nova categoria
+              </Button>
+            </form>
+          )}
+
+          {/* Estado de Receitas de Vendas (Auto gerenciado) */}
+          {isAutoGerenciado ? (
+            itensDoGrupo.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 py-12 px-6 text-center bg-card/20">
+                <div className="mx-auto size-12 rounded-full bg-accent-gold/10 text-accent-gold flex items-center justify-center mb-3.5 ring-1 ring-accent-gold/20">
+                  <Sparkles className="size-5" />
+                </div>
+                <h3 className="text-base font-medium text-foreground mb-1.5">
+                  Categoria gerenciada automaticamente
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  As receitas de vendas são registradas diretamente através das suas sessões fotográficas, contratos e vendas avulsas. Não é necessário criar categorias manuais neste grupo.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                  Esta categoria é gerenciada automaticamente pelo sistema a partir das sessões e vendas avulsas.
+                </div>
+                <ul className="divide-y divide-border/40">
+                  {itensDoGrupo.map((item) => (
+                    <li key={item.id} className="flex items-center gap-3 px-2 py-3">
+                      <span className="size-8 rounded-full bg-muted grid place-items-center text-xs font-medium text-muted-foreground shrink-0">
+                        {initialOf(item.nome)}
+                      </span>
+                      <span className="text-sm text-foreground flex-1 truncate">{item.nome}</span>
+                      <span className="text-xs text-muted-foreground">Automática</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          ) : itensDoGrupo.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/60 py-12 px-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Nenhuma categoria em {grupoLabel.toLowerCase()}. Digite o nome no campo acima e clique em &ldquo;Nova categoria&rdquo; para adicionar.
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-border/40">
-              {filteredItems.map((item) => (
+              {itensDoGrupo.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"

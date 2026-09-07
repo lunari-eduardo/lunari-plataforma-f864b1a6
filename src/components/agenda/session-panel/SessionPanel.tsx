@@ -61,8 +61,6 @@ export default function SessionPanel({
     setShowCharge,
     showBriefing,
     setShowBriefing,
-    showSchedule,
-    setShowSchedule,
     newClientMode,
     setNewClientMode,
     newClient,
@@ -129,8 +127,6 @@ export default function SessionPanel({
           <SessionPanelHeader
             isEdit={isEdit}
             statusMeta={statusMeta}
-            showSchedule={showSchedule}
-            setShowSchedule={setShowSchedule}
             contextLine={contextLine}
             dateInput={dateInput}
             setDateInput={setDateInput}

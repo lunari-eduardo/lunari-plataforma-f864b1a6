@@ -116,10 +116,10 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   receita_nao_operacional: {
     id: "receita_nao_operacional",
-    label: "Outra entrada",
+    label: "Outra receita",
     descricao: "Juros, reembolsos, aportes e outros valores recebidos.",
-    tituloDrawer: "Nova Outra Entrada",
-    subtituloDrawer: "Entrada fora da atividade principal do estúdio.",
+    tituloDrawer: "Nova Outra Receita",
+    subtituloDrawer: "Receita fora da atividade principal do estúdio.",
     icone: Banknote,
     gruposPermitidos: ["Receita Não Operacional"],
     natureza: "entrada",
@@ -130,10 +130,10 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   despesa_fixa: {
     id: "despesa_fixa",
-    label: "Conta fixa",
+    label: "Despesa fixa",
     descricao: "Aluguel, softwares, internet e outros gastos recorrentes.",
-    tituloDrawer: "Nova Conta Fixa",
-    subtituloDrawer: "Registre um custo recorrente do estúdio.",
+    tituloDrawer: "Nova Despesa Fixa",
+    subtituloDrawer: "Registre uma despesa recorrente do estúdio.",
     icone: ArrowDownRight,
     gruposPermitidos: ["Despesa Fixa"],
     natureza: "saida",
@@ -154,7 +154,7 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
     id: "despesa_variavel",
     label: "Gasto do dia a dia",
     descricao: "Marketing, transporte, materiais e outros gastos.",
-    tituloDrawer: "Novo Gasto",
+    tituloDrawer: "Novo Gasto do Dia a Dia",
     subtituloDrawer: "Registre um novo gasto do seu estúdio.",
     icone: ArrowDownRight,
     gruposPermitidos: ["Despesa Variável"],
@@ -174,10 +174,10 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   investimento: {
     id: "investimento",
-    label: "Compra / Investimento",
+    label: "Investimento",
     descricao: "Equipamentos, computadores, móveis e outros bens.",
-    tituloDrawer: "Nova Compra / Investimento",
-    subtituloDrawer: "Registre a aquisição de um ativo do estúdio.",
+    tituloDrawer: "Novo Investimento",
+    subtituloDrawer: "Registre a aquisição de um ativo ou investimento do estúdio.",
     icone: Landmark,
     gruposPermitidos: ["Investimento"],
     natureza: "saida",

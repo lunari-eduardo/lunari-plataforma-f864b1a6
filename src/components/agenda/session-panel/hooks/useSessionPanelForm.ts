@@ -49,7 +49,6 @@ export function useSessionPanelForm({
   const [showDelete, setShowDelete] = useState(false);
   const [showCharge, setShowCharge] = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClient, setNewClient] = useState({ nome: "", telefone: "" });
   const [saving, setSaving] = useState(false);
@@ -107,7 +106,6 @@ export function useSessionPanelForm({
     setForm(next);
     setDateInput(formatDateForInput(next.date));
     setTimeInput(next.time);
-    setShowSchedule(false);
     setNewClientMode(false);
     setNewClient({ nome: "", telefone: "" });
     setCobrarAoSalvar(false);
@@ -236,6 +234,21 @@ export function useSessionPanelForm({
       clientName: prev.clientName,
       categoria: prev.categoria || (pkg?.categorias?.nome ?? prev.categoria),
     }));
+  };
+
+  const handleDateInputChange = (val: string) => {
+    setDateInput(val);
+    const parsed = safeParseInputDate(val);
+    if (parsed) {
+      setForm((prev) => ({ ...prev, date: parsed }));
+    }
+  };
+
+  const handleTimeInputChange = (val: string) => {
+    setTimeInput(val);
+    if (val && val.length === 5) {
+      setForm((prev) => ({ ...prev, time: val }));
+    }
   };
 
   const commitDate = () => {
@@ -488,8 +501,6 @@ export function useSessionPanelForm({
     setShowCharge,
     showBriefing,
     setShowBriefing,
-    showSchedule,
-    setShowSchedule,
     newClientMode,
     setNewClientMode,
     newClient,
@@ -502,9 +513,9 @@ export function useSessionPanelForm({
     form,
     setForm,
     dateInput,
-    setDateInput,
+    setDateInput: handleDateInputChange,
     timeInput,
-    setTimeInput,
+    setTimeInput: handleTimeInputChange,
     selectedPackage,
     valorPacote,
     packageCategoryName,

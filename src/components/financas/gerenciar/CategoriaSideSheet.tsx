@@ -23,6 +23,14 @@ interface Props {
   onDelete?: (id: string, nome: string) => Promise<void> | void;
 }
 
+const GRUPO_LABELS: Record<GrupoPrincipal, string> = {
+  'Receita Operacional': 'Receitas de vendas',
+  'Receita Não Operacional': 'Outras receitas',
+  'Despesa Fixa': 'Despesas fixas',
+  'Despesa Variável': 'Gastos do dia a dia',
+  'Investimento': 'Investimentos',
+};
+
 function initialOf(name: string) {
   return (name?.trim()?.[0] ?? '·').toUpperCase();
 }
@@ -112,7 +120,7 @@ export default function CategoriaSideSheet({
             <p className="text-sm font-medium text-foreground truncate">
               {displayName || (mode === 'create' ? 'Nova categoria' : item?.nome)}
             </p>
-            <p className="text-xs text-muted-foreground truncate">{grupo}</p>
+            <p className="text-xs text-muted-foreground truncate">{GRUPO_LABELS[grupo] ?? grupo}</p>
           </div>
         </div>
 
@@ -139,7 +147,7 @@ export default function CategoriaSideSheet({
 
         <div className="space-y-2">
           <Label className="text-xs font-medium text-muted-foreground">Grupo</Label>
-          <Input value={grupo} disabled readOnly />
+          <Input value={GRUPO_LABELS[grupo] ?? grupo} disabled readOnly />
           <p className="text-xs text-muted-foreground">
             O grupo é definido pela navegação lateral. Para mover a categoria, selecione outro grupo antes de criar.
           </p>

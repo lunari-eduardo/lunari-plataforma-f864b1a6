@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
 import { pixLogo, infinitepayLogo, mercadopagoLogo, asaasLogo } from '@/assets/payment-logos';
 import {
   PaymentProvider,
@@ -258,9 +260,45 @@ export function PaymentConfigDrawer({
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={mpAbsorverTaxa} onCheckedChange={setMpAbsorverTaxa} />
-                        <span className="text-sm text-muted-foreground">{mpAbsorverTaxa ? 'Eu absorvo a taxa' : 'Cliente paga juros'}</span>
+                      <div className="space-y-2">
+                        <Label>Taxas de parcelamento</Label>
+                        <RadioGroup
+                          value={mpAbsorverTaxa ? 'absorver' : 'repassar'}
+                          onValueChange={(val) => setMpAbsorverTaxa(val === 'absorver')}
+                          className="grid gap-2"
+                        >
+                          <label
+                            htmlFor="mp-taxa-repassar"
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                              !mpAbsorverTaxa
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border hover:bg-muted/40"
+                            )}
+                          >
+                            <RadioGroupItem value="repassar" id="mp-taxa-repassar" className="mt-0.5" />
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-medium text-foreground">Cliente paga os juros</p>
+                              <p className="text-xs text-muted-foreground">O acréscimo das parcelas é cobrado do cliente no checkout.</p>
+                            </div>
+                          </label>
+
+                          <label
+                            htmlFor="mp-taxa-absorver"
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                              mpAbsorverTaxa
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border hover:bg-muted/40"
+                            )}
+                          >
+                            <RadioGroupItem value="absorver" id="mp-taxa-absorver" className="mt-0.5" />
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-medium text-foreground">Eu absorvo a taxa</p>
+                              <p className="text-xs text-muted-foreground">Parcelamento sem juros para o cliente; você assume a taxa.</p>
+                            </div>
+                          </label>
+                        </RadioGroup>
                       </div>
                     </div>
                   )}
@@ -346,10 +384,15 @@ export function PaymentConfigDrawer({
                     </Select>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={asaasAbsorverTaxa}
-                      onCheckedChange={async (checked) => {
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Taxas de parcelamento</Label>
+                      {updateAsaasSettings.isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                    </div>
+                    <RadioGroup
+                      value={asaasAbsorverTaxa ? 'absorver' : 'repassar'}
+                      onValueChange={async (val) => {
+                        const checked = val === 'absorver';
                         setAsaasAbsorverTaxa(checked);
                         if (asaasIntegrationStatus === 'ativo') {
                           try {
@@ -369,9 +412,40 @@ export function PaymentConfigDrawer({
                         }
                       }}
                       disabled={updateAsaasSettings.isPending}
-                    />
-                    <span className="text-sm text-muted-foreground">{asaasAbsorverTaxa ? 'Eu absorvo a taxa' : 'Cliente paga juros'}</span>
-                    {updateAsaasSettings.isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                      className="grid gap-2"
+                    >
+                      <label
+                        htmlFor="asaas-taxa-repassar"
+                        className={cn(
+                          "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          !asaasAbsorverTaxa
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border hover:bg-muted/40"
+                        )}
+                      >
+                        <RadioGroupItem value="repassar" id="asaas-taxa-repassar" className="mt-0.5" />
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium text-foreground">Cliente paga os juros</p>
+                          <p className="text-xs text-muted-foreground">O acréscimo das parcelas é cobrado do cliente no checkout.</p>
+                        </div>
+                      </label>
+
+                      <label
+                        htmlFor="asaas-taxa-absorver"
+                        className={cn(
+                          "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          asaasAbsorverTaxa
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border hover:bg-muted/40"
+                        )}
+                      >
+                        <RadioGroupItem value="absorver" id="asaas-taxa-absorver" className="mt-0.5" />
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium text-foreground">Eu absorvo a taxa</p>
+                          <p className="text-xs text-muted-foreground">Parcelamento sem juros para o cliente; você assume a taxa.</p>
+                        </div>
+                      </label>
+                    </RadioGroup>
                   </div>
 
                   {/* Antecipação */}

@@ -1,5 +1,4 @@
 import React from "react";
-import { CalendarDays } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PanelField } from "../PanelSection";
@@ -7,8 +6,8 @@ import { PanelField } from "../PanelSection";
 interface SessionPanelHeaderProps {
   isEdit: boolean;
   statusMeta: { label: string; dot: string; chip: string };
-  showSchedule: boolean;
-  setShowSchedule: React.Dispatch<React.SetStateAction<boolean>>;
+  showSchedule?: boolean;
+  setShowSchedule?: React.Dispatch<React.SetStateAction<boolean>>;
   contextLine: string[];
   dateInput: string;
   setDateInput: (v: string) => void;
@@ -21,8 +20,6 @@ interface SessionPanelHeaderProps {
 export const SessionPanelHeader: React.FC<SessionPanelHeaderProps> = ({
   isEdit,
   statusMeta,
-  showSchedule,
-  setShowSchedule,
   contextLine,
   dateInput,
   setDateInput,
@@ -48,44 +45,39 @@ export const SessionPanelHeader: React.FC<SessionPanelHeaderProps> = ({
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowSchedule((v) => !v)}
-        className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {contextLine.map((part, i) => (
-          <span key={i} className="flex items-center gap-2">
-            {i > 0 && <span className="text-border">•</span>}
-            {part}
-          </span>
-        ))}
-        <CalendarDays className="h-3.5 w-3.5 ml-1 opacity-70" />
-      </button>
-
-      {showSchedule && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <PanelField label="Data" htmlFor="sp-date">
-            <Input
-              id="sp-date"
-              type="date"
-              value={dateInput}
-              onChange={(e) => setDateInput(e.target.value)}
-              onBlur={commitDate}
-              className="h-10 rounded-lg text-base sm:text-sm"
-            />
-          </PanelField>
-          <PanelField label="Horário" htmlFor="sp-time">
-            <Input
-              id="sp-time"
-              type="time"
-              value={timeInput}
-              onChange={(e) => setTimeInput(e.target.value)}
-              onBlur={commitTime}
-              className="h-10 rounded-lg text-base sm:text-sm"
-            />
-          </PanelField>
+      {contextLine.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {contextLine.map((part, i) => (
+            <span key={i} className="flex items-center gap-2">
+              {i > 0 && <span className="text-border">•</span>}
+              {part}
+            </span>
+          ))}
         </div>
       )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <PanelField label="Data" htmlFor="sp-date">
+          <Input
+            id="sp-date"
+            type="date"
+            value={dateInput}
+            onChange={(e) => setDateInput(e.target.value)}
+            onBlur={commitDate}
+            className="h-10 rounded-lg text-base sm:text-sm"
+          />
+        </PanelField>
+        <PanelField label="Horário" htmlFor="sp-time">
+          <Input
+            id="sp-time"
+            type="time"
+            value={timeInput}
+            onChange={(e) => setTimeInput(e.target.value)}
+            onBlur={commitTime}
+            className="h-10 rounded-lg text-base sm:text-sm"
+          />
+        </PanelField>
+      </div>
     </header>
   );
 };
