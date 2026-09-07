@@ -10,7 +10,7 @@ import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 import { ManualPaymentModal } from "./ManualPaymentModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
-import { Lock, Camera, Plus, Package, Zap } from "lucide-react";
+import { Lock, Camera, Plus, Package, Zap, Calculator } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
@@ -23,8 +23,6 @@ import { INPUT_EDITABLE, VALUE_STRONG } from "./details/cardTokens";
 import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
-import { useQuickPaymentScope } from "./details/useQuickPaymentScope";
-import { QuickPaymentScopeDialog } from "./details/QuickPaymentScopeDialog";
 
 
 interface WorkflowCardExpandedProps {
@@ -164,21 +162,6 @@ export function WorkflowCardExpanded({
   const pendenteVisual = fin.totalVisual > 0 || fin.pagoTotal > 0 ? fin.pendenteTot : Math.max(0, valorTotalFallback - valorPago);
   const pendenteSessaoSugerido = fin.totalVisual > 0 ? fin.pendenteSess : pendenteVisual;
 
-  // Pagamento rápido com escopo do excedente (sessão vs fotos extras)
-  const quickPay = useQuickPaymentScope({
-    sessionId: session.id,
-    pendente: Math.max(0, pendenteVisual),
-    hasGaleria,
-    valorFotoExtra: parseCurrency(String(session.valorFotoExtra || "0")),
-    qtdFotosExtraAtual: Number(session.qtdFotosExtra) || 0,
-    addPayment: addPaymentContext,
-    onFieldUpdate,
-  });
-  const paymentInput = quickPay.paymentInput;
-  const setPaymentInput = quickPay.setPaymentInput;
-  const handlePaymentAdd = quickPay.handlePaymentAdd;
-  const handlePaymentKeyDown = quickPay.handlePaymentKeyDown;
-
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
     valorProdutosTotal = session.produtosList
@@ -258,297 +241,322 @@ export function WorkflowCardExpanded({
 
   return (
     <div className="bg-transparent px-4 py-5 md:px-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-border/20">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-5">
         {/* BLOCO 1 — Dados da Sessão */}
-        <div className="md:pr-5 pb-4 md:pb-0">
-          <SectionHeader icon={Camera} title="Dados da Sessão" />
+        <div className="rounded-2xl border border-stone-200/70 dark:border-border/40 bg-card/40 dark:bg-card/20 p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
           <div>
-            <FieldRow label="Pacote">
-              <span className={VALUE_STRONG}>{pacoteNome}</span>
-            </FieldRow>
-            <FieldRow label="Valor base">
-              <span className={VALUE_STRONG + " text-primary"}>{valorPacoteDisplay}</span>
-            </FieldRow>
-            <FieldRow label="Desconto">
-              <Input
-                value={descontoValue}
-                onChange={(e) => setDescontoValue(e.target.value)}
-                onBlur={handleDescontoBlur}
-                onKeyDown={handleEnterBlur}
-                onFocus={handleValueFocus}
-                placeholder="R$ 0,00"
-                className={INPUT_EDITABLE + " w-24"}
-              />
-            </FieldRow>
-            <FieldRow
-              label={
-                <span className="inline-flex items-center gap-1">
-                  Vlr foto extra
-                  {hasDescontoProgressivo && (
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center justify-center h-3.5 px-1 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[9px] font-semibold cursor-help border border-emerald-200/60 dark:border-emerald-500/30">
-                            %
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs">
-                          <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
-                          <div>Preço de tabela: {formatCurrency(precoBaseTabela)}</div>
-                          <div>
-                            Preço cobrado: <strong>{formatCurrency(precoEfetivo)}</strong>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  {galeriaHasSales && (
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Lock className="h-3 w-3 text-muted-foreground/60" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs">
-                          Sincronizado com a galeria. Editar aqui sobrescreve o valor recebido.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </span>
-              }
-            >
-              <div className="flex items-center gap-1.5">
+            <SectionHeader
+              icon={Calculator}
+              title="DADOS DA SESSÃO"
+              subtitle="Informações principais do atendimento."
+            />
+            <div className="mt-2">
+              <FieldRow label="Pacote">
+                <span className={VALUE_STRONG}>{pacoteNome}</span>
+              </FieldRow>
+              <FieldRow label="Valor base">
+                <span className={VALUE_STRONG + " text-primary"}>{valorPacoteDisplay}</span>
+              </FieldRow>
+              <FieldRow label="Desconto">
                 <Input
-                  value={valorFotoExtraValue}
-                  onChange={(e) => setValorFotoExtraValue(e.target.value)}
-                  onBlur={handleValorFotoExtraBlur}
+                  value={descontoValue}
+                  onChange={(e) => setDescontoValue(e.target.value)}
+                  onBlur={handleDescontoBlur}
                   onKeyDown={handleEnterBlur}
                   onFocus={handleValueFocus}
                   placeholder="R$ 0,00"
                   className={INPUT_EDITABLE + " w-24"}
                 />
-                {session.extrasOverridden && hasDescontoProgressivo && !galeriaHasSales && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm("Restaurar valor do pacote? Isso re-vincula os extras à regra congelada do pacote.")) {
-                              onFieldUpdate(session.id, "resyncExtrasWithGallery", true);
-                            }
-                          }}
-                          className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition"
-                          aria-label="Restaurar preço do pacote"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs max-w-xs">
-                        Restaurar valor do pacote (re-vincula à regra congelada)
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </FieldRow>
-          </div>
-        </div>
-
-        {/* BLOCO 2 — Adicionais */}
-        <div className="md:px-5 py-4 md:py-0">
-          <SectionHeader icon={Plus} title="Adicionais" />
-          <div>
-            <FieldRow
-              label={
-                <span className="inline-flex items-center gap-1">
-                  Qtd fotos extras
-                  {galeriaHasSales && (
+              </FieldRow>
+              <FieldRow
+                label={
+                  <span className="inline-flex items-center gap-1">
+                    Vlr foto extra
+                    {hasDescontoProgressivo && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center justify-center h-3.5 px-1 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[9px] font-semibold cursor-help border border-emerald-200/60 dark:border-emerald-500/30">
+                              %
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
+                            <div>Preço de tabela: {formatCurrency(precoBaseTabela)}</div>
+                            <div>
+                              Preço cobrado: <strong>{formatCurrency(precoEfetivo)}</strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {galeriaHasSales && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Lock className="h-3 w-3 text-muted-foreground/60" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            Sincronizado com a galeria. Editar aqui sobrescreve o valor recebido.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </span>
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={valorFotoExtraValue}
+                    onChange={(e) => setValorFotoExtraValue(e.target.value)}
+                    onBlur={handleValorFotoExtraBlur}
+                    onKeyDown={handleEnterBlur}
+                    onFocus={handleValueFocus}
+                    placeholder="R$ 0,00"
+                    className={INPUT_EDITABLE + " w-24"}
+                  />
+                  {session.extrasOverridden && hasDescontoProgressivo && !galeriaHasSales && (
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Lock className="h-3 w-3 text-muted-foreground/60" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Restaurar valor do pacote? Isso re-vincula os extras à regra congelada do pacote.")) {
+                                onFieldUpdate(session.id, "resyncExtrasWithGallery", true);
+                              }
+                            }}
+                            className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                            aria-label="Restaurar preço do pacote"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                          </button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs">
-                          Sincronizado com a galeria.
+                        <TooltipContent side="top" className="text-xs max-w-xs">
+                          Restaurar valor do pacote (re-vincula à regra congelada)
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
-                </span>
-              }
-            >
-              <Input
-                type="number"
-                min={0}
-                value={qtdFotosExtraValue}
-                onChange={(e) => setQtdFotosExtraValue(e.target.value)}
-                onBlur={handleQtdFotosExtraBlur}
-                onKeyDown={handleEnterBlur}
-                onFocus={handleValueFocus}
-                placeholder="0"
-                className={INPUT_EDITABLE + " w-20"}
-              />
-            </FieldRow>
-            <FieldRow label="Total fotos extras">
-              <span className={VALUE_STRONG}>
-                {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
-              </span>
-              {(() => {
-                const extrasBadgeStatus = hasGaleria
-                  ? extrasTotalCanonico <= 0
-                    ? "sem_vendas"
-                    : extrasPagoCanonico > 0 && extrasPendente > 0
-                      ? "parcial"
-                      : extrasFullyPaid
-                        ? "pago"
-                        : extrasPendente > 0
-                          ? "pendente"
-                          : session.galeriaStatusPagamento
-                  : session.galeriaStatusPagamento;
-                if (extrasBadgeStatus === "parcial") {
-                  return (
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex">
-                            <FotosExtrasPaymentBadge status="parcial" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                          Pago {formatCurrency(extrasPagoCanonico)} · Pendente {formatCurrency(extrasPendente)}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                }
-                return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
-              })()}
-              {session.extrasOverridden && (
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex items-center h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200/60 dark:border-amber-500/30 cursor-help">
-                        Manual
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs text-xs">
-                      Valores fixados manualmente. Para voltar aos valores da galeria, ajuste manualmente.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </FieldRow>
-            {extrasPendente > 0 && (
-              <FieldRow label="Pendente extras">
-                <span className="text-[13px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-                  {formatCurrency(extrasPendente)}
-                </span>
+                </div>
               </FieldRow>
-            )}
-            <FieldRow label="Total produtos">
-              <span className={VALUE_STRONG}>{formatCurrency(valorProdutosTotal)}</span>
-            </FieldRow>
-            <FieldRow label="Adicional">
-              <Input
-                value={adicionalValue}
-                onChange={(e) => setAdicionalValue(e.target.value)}
-                onBlur={handleAdicionalBlur}
-                onKeyDown={handleEnterBlur}
-                onFocus={handleValueFocus}
-                placeholder="R$ 0,00"
-                className={INPUT_EDITABLE + " w-24"}
-              />
-            </FieldRow>
-            <FieldRow label="Obs" align="col">
-              <Textarea
-                value={obsValue}
-                onChange={(e) => setObsValue(e.target.value)}
-                onBlur={handleObsBlur}
-                placeholder="Observações..."
-                className="text-[12px] min-h-[58px] bg-muted/25 dark:bg-muted/35 hover:bg-muted/50 focus:bg-background border border-border/40 hover:border-border/70 focus:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md p-2.5 resize-none transition-all placeholder:text-muted-foreground/45 shadow-2xs leading-relaxed"
-              />
-            </FieldRow>
+            </div>
+          </div>
+        </div>
+
+        {/* BLOCO 2 — Adicionais */}
+        <div className="rounded-2xl border border-stone-200/70 dark:border-border/40 bg-card/40 dark:bg-card/20 p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
+          <div>
+            <SectionHeader
+              icon={Plus}
+              title="ADICIONAIS"
+              subtitle="Fotos extras, produtos e observações."
+            />
+            <div className="mt-2">
+              <FieldRow
+                label={
+                  <span className="inline-flex items-center gap-1">
+                    Qtd fotos extras
+                    {galeriaHasSales && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Lock className="h-3 w-3 text-muted-foreground/60" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            Sincronizado com a galeria.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </span>
+                }
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  value={qtdFotosExtraValue}
+                  onChange={(e) => setQtdFotosExtraValue(e.target.value)}
+                  onBlur={handleQtdFotosExtraBlur}
+                  onKeyDown={handleEnterBlur}
+                  onFocus={handleValueFocus}
+                  placeholder="0"
+                  className={INPUT_EDITABLE + " w-20"}
+                />
+              </FieldRow>
+              <FieldRow label="Total fotos extras">
+                <span className={VALUE_STRONG}>
+                  {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
+                </span>
+                {(() => {
+                  const extrasBadgeStatus = hasGaleria
+                    ? extrasTotalCanonico <= 0
+                      ? "sem_vendas"
+                      : extrasPagoCanonico > 0 && extrasPendente > 0
+                        ? "parcial"
+                        : extrasFullyPaid
+                          ? "pago"
+                          : extrasPendente > 0
+                            ? "pendente"
+                            : session.galeriaStatusPagamento
+                    : session.galeriaStatusPagamento;
+                  if (extrasBadgeStatus === "parcial") {
+                    return (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <FotosExtrasPaymentBadge status="parcial" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Pago {formatCurrency(extrasPagoCanonico)} · Pendente {formatCurrency(extrasPendente)}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  }
+                  return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
+                })()}
+                {session.extrasOverridden && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200/60 dark:border-amber-500/30 cursor-help">
+                          Manual
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Valores fixados manualmente. Para voltar aos valores da galeria, ajuste manualmente.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </FieldRow>
+              {extrasPendente > 0 && (
+                <FieldRow label="Pendente extras">
+                  <span className="text-[13px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+                    {formatCurrency(extrasPendente)}
+                  </span>
+                </FieldRow>
+              )}
+              <FieldRow label="Total produtos">
+                <span className={VALUE_STRONG}>{formatCurrency(valorProdutosTotal)}</span>
+              </FieldRow>
+              <FieldRow label="Adicional">
+                <Input
+                  value={adicionalValue}
+                  onChange={(e) => setAdicionalValue(e.target.value)}
+                  onBlur={handleAdicionalBlur}
+                  onKeyDown={handleEnterBlur}
+                  onFocus={handleValueFocus}
+                  placeholder="R$ 0,00"
+                  className={INPUT_EDITABLE + " w-24"}
+                />
+              </FieldRow>
+              <FieldRow label="Obs" align="col">
+                <Textarea
+                  value={obsValue}
+                  onChange={(e) => setObsValue(e.target.value)}
+                  onBlur={handleObsBlur}
+                  placeholder="Observações..."
+                  className="text-[12px] min-h-[58px] bg-muted/25 dark:bg-muted/35 hover:bg-muted/50 focus:bg-background border border-border/40 hover:border-border/70 focus:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/20 rounded-md p-2.5 resize-none transition-all placeholder:text-muted-foreground/45 shadow-2xs leading-relaxed"
+                />
+              </FieldRow>
+            </div>
           </div>
         </div>
 
         {/* BLOCO 3 — Produtos (resumo operacional) */}
-        <div className="md:px-5 py-4 md:py-0">
-          <SectionHeader
-            icon={Package}
-            title="Produtos"
-            action={
-              onOpenProdutos ? (
-                <button
-                  type="button"
-                  onClick={onOpenProdutos}
-                  className="text-[10px] font-medium text-primary hover:underline uppercase tracking-wide"
-                >
-                  Gerenciar
-                </button>
-              ) : null
-            }
-          />
-          <ProdutosSummaryBlock
-            produtos={session.produtosList}
-            onOpenManager={() => onOpenProdutos?.()}
-            formatCurrency={formatCurrency}
-          />
-          {(session.produtosList?.length ?? 0) > 0 && (
-            <div className="mt-2 border-t border-border/15 pt-1">
-              {(() => {
-                const info = computeProductNextAction(session.produtosList as any);
-                return (
-                  <>
-                    <FieldRow label="Produtos vendidos">
-                      <span className={VALUE_STRONG}>{info.total}</span>
-                    </FieldRow>
-                    <FieldRow label="Total produtos">
-                      <span className={VALUE_STRONG}>
-                        {formatCurrency(valorProdutosTotal)}
-                      </span>
-                    </FieldRow>
-                    <FieldRow label="Produção">
-                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
-                        <span
-                          aria-hidden
-                          className={`h-1.5 w-1.5 rounded-full ${info.dotClass}`}
-                        />
-                        {info.label || "—"}
-                      </span>
-                    </FieldRow>
-                  </>
-                );
-              })()}
+        <div className="rounded-2xl border border-stone-200/70 dark:border-border/40 bg-card/40 dark:bg-card/20 p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
+          <div>
+            <SectionHeader
+              icon={Package}
+              title="PRODUTOS"
+              subtitle="Produtos vinculados a esta sessão."
+              action={
+                onOpenProdutos ? (
+                  <button
+                    type="button"
+                    onClick={onOpenProdutos}
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F6F1EA] dark:bg-[#342A1D] text-[#82643E] dark:text-[#E5C497] border border-[#E5D7C3] dark:border-[#52412B] hover:bg-[#EFE6DA] transition-colors shadow-2xs"
+                  >
+                    Gerenciar
+                  </button>
+                ) : null
+              }
+            />
+            <div className="mt-2">
+              <ProdutosSummaryBlock
+                produtos={session.produtosList}
+                onOpenManager={() => onOpenProdutos?.()}
+                formatCurrency={formatCurrency}
+              />
+              {(session.produtosList?.length ?? 0) > 0 && (
+                <div className="mt-2 border-t border-border/15 pt-1">
+                  {(() => {
+                    const info = computeProductNextAction(session.produtosList as any);
+                    return (
+                      <>
+                        <FieldRow label="Produtos vendidos">
+                          <span className={VALUE_STRONG}>{info.total}</span>
+                        </FieldRow>
+                        <FieldRow label="Total produtos">
+                          <span className={VALUE_STRONG}>
+                            {formatCurrency(valorProdutosTotal)}
+                          </span>
+                        </FieldRow>
+                        <FieldRow label="Produção">
+                          <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
+                            <span
+                              aria-hidden
+                              className={`h-1.5 w-1.5 rounded-full ${info.dotClass}`}
+                            />
+                            {info.label || "—"}
+                          </span>
+                        </FieldRow>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* BLOCO 4 — Ações */}
-        <div className="md:pl-5 pt-4 md:pt-0">
-          <SectionHeader icon={Zap} title="Ações" />
-          <ExpandedActions
-            session={session}
-            onCobrar={() => setShowChargeModal(true)}
-            onCobrarExtras={() => {
-              setShowExtraChargeModal(true);
-            }}
-            onCobrarTudo={
-              extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-                ? () => {
-                    setCombinedIntent("sessao_e_extras");
-                    setShowCombinedChargeModal(true);
-                  }
-                : undefined
-            }
-            extrasPendente={extrasPendente}
-            extrasFullyPaid={extrasFullyPaid}
-            sessaoPendente={pendenteSessaoSugerido}
-            hasGaleria={hasGaleria}
-            onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
-            onRegistrarPagamento={() => setShowManualPaymentModal(true)}
-            canRegistrar={pendenteVisual > 0.001}
-          />
+        <div className="rounded-2xl border border-stone-200/70 dark:border-border/40 bg-card/40 dark:bg-card/20 p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
+          <div>
+            <SectionHeader
+              icon={Zap}
+              title="AÇÕES"
+              subtitle="Ações rápidas para esta sessão."
+            />
+            <div className="mt-2">
+              <ExpandedActions
+                session={session}
+                onCobrar={() => setShowChargeModal(true)}
+                onCobrarExtras={() => {
+                  setShowExtraChargeModal(true);
+                }}
+                onCobrarTudo={
+                  extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+                    ? () => {
+                        setCombinedIntent("sessao_e_extras");
+                        setShowCombinedChargeModal(true);
+                      }
+                    : undefined
+                }
+                extrasPendente={extrasPendente}
+                extrasFullyPaid={extrasFullyPaid}
+                sessaoPendente={pendenteSessaoSugerido}
+                hasGaleria={hasGaleria}
+                onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
+                onRegistrarPagamento={() => setShowManualPaymentModal(true)}
+                canRegistrar={pendenteVisual > 0.001}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -556,10 +564,6 @@ export function WorkflowCardExpanded({
         total={totalVisual}
         valorPago={valorPagoDisplay}
         pendente={pendenteVisual}
-        paymentInput={paymentInput}
-        setPaymentInput={setPaymentInput}
-        onPaymentAdd={handlePaymentAdd}
-        onPaymentKeyDown={handlePaymentKeyDown}
         formatCurrency={formatCurrency}
         creditSlot={
           session.clienteId ? (
@@ -639,14 +643,6 @@ export function WorkflowCardExpanded({
 
 
 
-      <QuickPaymentScopeDialog
-        open={quickPay.scopeOpen}
-        excedente={quickPay.excedente}
-        valorFotoExtra={parseCurrency(String(session.valorFotoExtra || "0"))}
-        onCancel={quickPay.cancelScope}
-        onScopeSessao={quickPay.chooseSessao}
-        onScopeExtras={quickPay.chooseExtras}
-      />
 
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}

@@ -46,7 +46,6 @@ import { GalleryUpgradeModal } from "../GalleryUpgradeModal";
 import { ManualPaymentModal } from "../ManualPaymentModal";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
-import { QuickPaymentScopeDialog } from "../details/QuickPaymentScopeDialog";
 import { OverrideExtrasDialog } from "../details/OverrideExtrasDialog";
 import { WorkflowPackageCombobox } from "../WorkflowPackageCombobox";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
@@ -59,7 +58,6 @@ import {
   useMonthAccessControl,
   useMonthGalleriasForSession,
 } from "@/features/workflow/presentation/WorkflowMonthDataContext";
-import { useQuickPaymentScope } from "../details/useQuickPaymentScope";
 import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import {
@@ -200,17 +198,6 @@ export function WorkflowMobileCard({
       ? fin.qtdExtras
       : Number(session.qtdFotosExtra) || 0;
   }, [fin.qtdExtras, session.qtdFotosExtra]);
-
-  // Pagamento rápido
-  const quickPay = useQuickPaymentScope({
-    sessionId: session.id,
-    pendente: Math.max(0, pendente),
-    hasGaleria,
-    valorFotoExtra: parseMoneyValue(session.valorFotoExtra),
-    qtdFotosExtraAtual: qtdFotosExtras,
-    addPayment,
-    onFieldUpdate,
-  });
 
   // Galerias
   const temSelecao = galerias.some((g) => g.tipo === "selecao");
@@ -942,31 +929,6 @@ export function WorkflowMobileCard({
                     </div>
                   )}
 
-                  {/* Pagamento rápido */}
-                  {pendente > 0.01 && (
-                    <div className="p-3 rounded-lg bg-background/70 border border-border/30 space-y-2">
-                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        Adicionar pagamento rápido
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={quickPay.paymentInput}
-                          onChange={(e) => quickPay.setPaymentInput(e.target.value)}
-                          onKeyDown={quickPay.handlePaymentKeyDown}
-                          placeholder={formatCurrencyBRL(pendente)}
-                          className="h-8 text-xs flex-1"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={quickPay.handlePaymentAdd}
-                          className="h-8 text-xs"
-                        >
-                          Adicionar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="pt-1">
                     <Button
                       size="sm"
@@ -990,7 +952,7 @@ export function WorkflowMobileCard({
                 onClick={() => setShowManualPaymentModal(true)}
               >
                 <DollarSign className="h-4 w-4" />
-                Registrar pagamento
+                Adicionar pagamento
               </Button>
 
               <Button
@@ -998,7 +960,7 @@ export function WorkflowMobileCard({
                 onClick={handleCobrarClick}
               >
                 <Send className="h-4 w-4" />
-                Cobrar sessão
+                Cobrar via link
               </Button>
             </div>
           </div>
@@ -1127,15 +1089,6 @@ export function WorkflowMobileCard({
           nomeSessao={session.pacote || session.nome}
         />
       )}
-
-      <QuickPaymentScopeDialog
-        open={quickPay.scopeOpen}
-        excedente={quickPay.excedente}
-        valorFotoExtra={parseMoneyValue(session.valorFotoExtra)}
-        onCancel={quickPay.cancelScope}
-        onScopeSessao={quickPay.chooseSessao}
-        onScopeExtras={quickPay.chooseExtras}
-      />
 
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}

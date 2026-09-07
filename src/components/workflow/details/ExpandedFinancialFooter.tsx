@@ -1,97 +1,88 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
-import { HAIRLINE, LABEL_CLS } from "./cardTokens";
+import { Calculator, CheckCircle2, Clock } from "lucide-react";
 
 interface Props {
   total: number;
   valorPago: number;
   pendente: number;
-  paymentInput: string;
-  setPaymentInput: (v: string) => void;
-  onPaymentAdd: () => void;
-  onPaymentKeyDown: (e: React.KeyboardEvent) => void;
   formatCurrency: (v: any) => string;
   creditSlot?: React.ReactNode;
 }
 
 /**
- * Footer financeiro reformulado — tokens semânticos, hairlines verticais
- * entre métricas, tipografia editorial.
+ * Footer financeiro com 3 métricas em alto destaque (TOTAL, PAGO, PENDENTE).
+ * Remove o pagamento rápido conforme solicitado para evitar ambiguidades.
  */
 export function ExpandedFinancialFooter({
   total,
   valorPago,
   pendente,
-  paymentInput,
-  setPaymentInput,
-  onPaymentAdd,
-  onPaymentKeyDown,
   formatCurrency,
   creditSlot,
 }: Props) {
-  return (
-    <div className={`mt-8 pt-5 border-t ${HAIRLINE}`}>
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div className="flex items-stretch divide-x divide-border/20">
-          <div className="flex flex-col pr-6">
-            <span className={LABEL_CLS}>Total</span>
-            <span className="text-[20px] font-semibold tabular-nums text-foreground leading-tight">
-              {formatCurrency(total)}
-            </span>
-          </div>
-          <div className="flex flex-col px-6">
-            <span className={LABEL_CLS}>Pago</span>
-            <span className="text-[20px] font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
-              {formatCurrency(valorPago)}
-            </span>
-          </div>
-          <div className="flex flex-col pl-6">
-            <span className={LABEL_CLS}>Pendente</span>
-            <span
-              className={`text-[20px] font-semibold tabular-nums leading-tight ${
-                pendente > 0.001
-                  ? "text-destructive"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
-              {formatCurrency(pendente)}
-            </span>
-          </div>
-        </div>
+  const isPendentePositivo = pendente > 0.001;
 
-        <div className="flex flex-col gap-1.5 items-end">
-          <span className={LABEL_CLS}>Pagamento rápido</span>
-          <div className="flex items-center gap-2">
-            {creditSlot}
-            <div className="flex items-center rounded-lg border border-border/50 bg-muted/25 dark:bg-muted/35 hover:border-border/80 focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:bg-background transition-all shadow-2xs p-0.5">
-              <span className="px-2.5 py-1 text-xs font-semibold text-muted-foreground select-none">
-                R$
+  return (
+    <div className="mt-5 rounded-2xl border border-stone-200/60 dark:border-border/40 bg-card/40 dark:bg-card/20 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 sm:gap-6">
+        <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+          {/* TOTAL */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-[#F5EDE1] dark:bg-[#342A1D] text-[#8C6B3F] dark:text-[#E5C497] flex items-center justify-center shrink-0 shadow-2xs">
+              <Calculator className="h-5 w-5 stroke-[2.2]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                Total
               </span>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={paymentInput}
-                onChange={(e) => setPaymentInput(e.target.value)}
-                onKeyDown={onPaymentKeyDown}
-                className="h-7 w-24 bg-transparent border-0 text-xs font-semibold text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-0 focus:outline-none px-1 tabular-nums [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-none"
-                autoComplete="off"
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={onPaymentAdd}
-                className="h-7 px-2.5 rounded-[5px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white gap-1 text-xs font-medium shadow-none transition-all"
-                aria-label="Adicionar pagamento rápido"
+              <span className="text-xl sm:text-2xl font-black tabular-nums text-foreground tracking-tight leading-tight">
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
+
+          {/* PAGO */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-[#E8F6ED] dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-2xs">
+              <CheckCircle2 className="h-5 w-5 stroke-[2.2]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                Pago
+              </span>
+              <span className="text-xl sm:text-2xl font-black tabular-nums text-emerald-600 dark:text-emerald-400 tracking-tight leading-tight">
+                {formatCurrency(valorPago)}
+              </span>
+            </div>
+          </div>
+
+          {/* PENDENTE */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-[#FAF0E6] dark:bg-amber-950/40 text-[#C04A2A] dark:text-amber-400 flex items-center justify-center shrink-0 shadow-2xs">
+              <Clock className="h-5 w-5 stroke-[2.2]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                Pendente
+              </span>
+              <span
+                className={`text-xl sm:text-2xl font-black tabular-nums tracking-tight leading-tight ${
+                  isPendentePositivo
+                    ? "text-[#C04A2A] dark:text-rose-400"
+                    : "text-emerald-600 dark:text-emerald-400"
+                }`}
               >
-                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-                <span>Adicionar</span>
-              </Button>
+                {formatCurrency(pendente)}
+              </span>
             </div>
           </div>
         </div>
+
+        {creditSlot && (
+          <div className="shrink-0">
+            {creditSlot}
+          </div>
+        )}
       </div>
     </div>
   );

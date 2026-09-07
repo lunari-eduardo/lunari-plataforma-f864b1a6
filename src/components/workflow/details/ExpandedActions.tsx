@@ -56,18 +56,17 @@ export function ExpandedActions({
   const showDropdown = canCobrarExtras || extrasPendente > 0;
 
   return (
-    <div className="flex flex-col gap-2 items-stretch">
+    <div className="flex flex-col gap-2.5 items-stretch">
       {showDropdown ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              size="sm"
               disabled={!canCobrarSessao && !canCobrarExtras}
-              className="gap-2 w-full"
+              className="h-10 w-full rounded-xl bg-gradient-to-r from-[#1C1815] to-[#2B231D] text-[#FAF6F0] hover:from-[#2B231D] hover:to-[#382E25] border border-[#3E342B] font-medium text-xs shadow-sm flex items-center justify-center gap-2 transition-all"
             >
-              <Send className="h-3.5 w-3.5" />
-              Cobrar
-              <ChevronDown className="h-3 w-3 opacity-70 ml-auto" />
+              <Send className="h-3.5 w-3.5 text-[#E0C6A5]" />
+              Cobrar via link
+              <ChevronDown className="h-3.5 w-3.5 text-[#E0C6A5]/70 ml-auto" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
@@ -115,13 +114,12 @@ export function ExpandedActions({
         </DropdownMenu>
       ) : (
         <Button
-          size="sm"
           onClick={onCobrar}
           disabled={!canCobrarSessao}
-          className="gap-2 w-full"
+          className="h-10 w-full rounded-xl bg-gradient-to-r from-[#1C1815] to-[#2B231D] text-[#FAF6F0] hover:from-[#2B231D] hover:to-[#382E25] border border-[#3E342B] font-medium text-xs shadow-sm flex items-center justify-center gap-2 transition-all"
         >
-          <Send className="h-3.5 w-3.5" />
-          Cobrar sessão
+          <Send className="h-3.5 w-3.5 text-[#E0C6A5]" />
+          Cobrar via link
         </Button>
       )}
 
@@ -130,14 +128,12 @@ export function ExpandedActions({
           <TooltipTrigger asChild>
             <span className="w-full">
               <Button
-                variant="outline"
-                size="sm"
                 onClick={onRegistrarPagamento}
                 disabled={!canRegistrar}
-                className="gap-2 w-full border-border/30"
+                className="h-10 w-full rounded-xl bg-gradient-to-r from-[#1C1815] to-[#2B231D] text-[#FAF6F0] hover:from-[#2B231D] hover:to-[#382E25] border border-[#3E342B] font-medium text-xs shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
-                <Wallet className="h-4 w-4" />
-                Registrar pagamento
+                <CreditCard className="h-3.5 w-3.5 text-[#E0C6A5]" />
+                Adicionar pagamento
               </Button>
             </span>
           </TooltipTrigger>
@@ -149,20 +145,20 @@ export function ExpandedActions({
         </Tooltip>
       </TooltipProvider>
 
-      <div className="w-full border-t border-border/15 my-1" />
-
-      <span className={LABEL_CLS}>Atalhos</span>
+      <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-2 mb-0.5">
+        Atalhos
+      </span>
       <div className="flex flex-col gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={onAbrirPagamentos}
-          className="gap-2 w-full border-border/30"
-          aria-label="Pagamentos"
+          className="h-9 w-full rounded-xl border border-stone-200/80 dark:border-border/60 bg-white dark:bg-card hover:bg-stone-50 dark:hover:bg-muted text-stone-700 dark:text-stone-200 text-xs font-medium gap-2 shadow-2xs transition-all justify-center"
+          aria-label="Histórico Financeiro"
         >
           <CreditCard className="h-4 w-4 text-muted-foreground" />
-          <span>Pagamentos</span>
+          <span>Histórico Financeiro</span>
         </Button>
 
         {session.clienteId && (
@@ -171,7 +167,7 @@ export function ExpandedActions({
             clienteId={session.clienteId}
             clienteNome={session.nome}
             iconOnly={false}
-            className="border-border/30"
+            className="h-9 w-full rounded-xl border border-stone-200/80 dark:border-border/60 bg-white dark:bg-card hover:bg-stone-50 dark:hover:bg-muted text-stone-700 dark:text-stone-200 text-xs font-medium shadow-2xs transition-all justify-center"
           />
         )}
       </div>

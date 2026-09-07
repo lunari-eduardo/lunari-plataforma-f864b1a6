@@ -27,14 +27,17 @@ export function ProdutosSummaryBlock({
 
   if (list.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-2 py-3">
-        <span className="text-[11px] text-muted-foreground italic">
+      <div className="flex flex-col items-center justify-center text-center gap-3 py-6 px-2 my-auto">
+        <div className="w-12 h-12 rounded-full bg-[#F7F2EB] dark:bg-stone-800/60 border border-[#EAE0D1] dark:border-stone-700/60 flex items-center justify-center text-[#8C6D46] dark:text-amber-400 shrink-0 shadow-2xs">
+          <Package className="h-6 w-6 stroke-[1.5]" />
+        </div>
+        <span className="text-xs text-muted-foreground">
           Nenhum produto nesta sessão.
         </span>
         <button
           type="button"
           onClick={onOpenManager}
-          className="text-[11px] text-primary hover:underline"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg border border-[#A68656]/60 dark:border-amber-800/60 text-xs font-semibold text-[#6E4F28] dark:text-amber-300 hover:bg-[#FDFBF7] dark:hover:bg-amber-950/20 transition-all cursor-pointer shadow-2xs"
         >
           + Adicionar produto
         </button>
