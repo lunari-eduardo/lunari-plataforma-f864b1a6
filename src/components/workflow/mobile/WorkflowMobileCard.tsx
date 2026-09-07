@@ -121,6 +121,7 @@ export function WorkflowMobileCard({
 
   // Campos editáveis
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
+  const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || "");
   const [valorFotoExtraValue, setValorFotoExtraValue] = useState(
     session.valorFotoExtra || "",
   );
@@ -134,9 +135,10 @@ export function WorkflowMobileCard({
 
   useEffect(() => {
     setDescontoValue(session.desconto || "");
+    setAdicionalValue(session.valorAdicional || "");
     setValorFotoExtraValue(session.valorFotoExtra || "");
     setObsValue(session.observacoes || "");
-  }, [session.desconto, session.valorFotoExtra, session.observacoes]);
+  }, [session.desconto, session.valorAdicional, session.valorFotoExtra, session.observacoes]);
 
   // Cálculos financeiros (RPC canonica)
   const { calc: extraCalc, resolvedGalleryId } = useGalleryExtraCalc(
@@ -303,6 +305,13 @@ export function WorkflowMobileCard({
     onFieldUpdate(session.id, "valorFotoExtra", formatted);
   }, [valorFotoExtraValue, session.id, onFieldUpdate]);
 
+  const handleAdicionalBlur = useCallback(() => {
+    const num = parseMoneyValue(adicionalValue);
+    const formatted = formatCurrencyBRL(num);
+    setAdicionalValue(formatted);
+    onFieldUpdate(session.id, "valorAdicional", formatted);
+  }, [adicionalValue, session.id, onFieldUpdate]);
+
   const handleObsBlur = useCallback(() => {
     if (obsValue !== session.observacoes) {
       onFieldUpdate(session.id, "observacoes", obsValue);
@@ -318,12 +327,23 @@ export function WorkflowMobileCard({
   );
   const productActionInfo = computeProductNextAction(produtosVendidos);
 
-  // Extras da galeria
-  const extrasPendente = fin.pendenteExtras;
-  const extrasTotalCanonico = fin.totalExtras;
-  const extrasPagoCanonico = fin.pagoExtras;
-  const extrasFullyPaid = extrasTotalCanonico > 0 && extrasPendente <= 0.01;
-  const pendenteSessaoSugerido = fin.pendenteSessao;
+  // Extras da galeria (fonte canônica alinhada com WorkflowCardExpanded)
+  const fallbackExtrasTotal =
+    (Number(session.qtdFotosExtra) || 0) * parseMoneyValue(session.valorFotoExtra);
+  const extrasTotalCanonico =
+    (fin.extrasLiquido ?? 0) > 0 ? fin.extrasLiquido : fallbackExtrasTotal;
+  const extrasPagoCanonico = fin.extrasPago ?? 0;
+  const extrasPendente = fin.extrasPend ?? 0;
+  const extrasFullyPaid = extrasPendente <= 0.001;
+
+  // Pendente da sessão (fonte canônica alinhada com WorkflowCardExpanded)
+  const valorTotalFallback = parseMoneyValue(session.total);
+  const pendenteVisual =
+    fin.totalVisual > 0 || fin.pagoTotal > 0
+      ? fin.pendenteTot
+      : Math.max(0, valorTotalFallback - parseMoneyValue(session.valorPago));
+  const pendenteSessaoSugerido =
+    fin.totalVisual > 0 ? (fin.pendenteSess ?? 0) : pendenteVisual;
 
   // Gatilho do botão Cobrar
   const handleCobrarClick = useCallback(() => {
@@ -503,10 +523,12 @@ export function WorkflowMobileCard({
                 {isPago ? "Pago" : "Pendente"}
               </span>
 
-              {/* Indicador de fotos extras/fotos */}
+              {/* Indicador de fotos extras */}
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Camera className="h-3.5 w-3.5" />
-                <span>{qtdFotosExtras} fotos</span>
+                <span>
+                  {qtdFotosExtras} {qtdFotosExtras === 1 ? "extra" : "extras"}
+                </span>
               </div>
             </div>
 
@@ -617,7 +639,7 @@ export function WorkflowMobileCard({
                       Valor base
                     </span>
                     <span className="font-semibold text-primary">
-                      {formatCurrencyBRL(session.valorPacote || 0)}
+                      {formatCurrencyBRL(session.valorPacote || (session.regras_congeladas?.pacote as any)?.valorBase || 0)}
                     </span>
                   </div>
 
@@ -630,6 +652,20 @@ export function WorkflowMobileCard({
                       value={descontoValue}
                       onChange={(e) => setDescontoValue(e.target.value)}
                       onBlur={handleDescontoBlur}
+                      placeholder="R$ 0,00"
+                      className="h-7 w-24 text-right text-xs bg-background/50"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/20">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Plus className="h-3.5 w-3.5" />
+                      Valor adicional
+                    </span>
+                    <Input
+                      value={adicionalValue}
+                      onChange={(e) => setAdicionalValue(e.target.value)}
+                      onBlur={handleAdicionalBlur}
                       placeholder="R$ 0,00"
                       className="h-7 w-24 text-right text-xs bg-background/50"
                     />
@@ -931,22 +967,15 @@ export function WorkflowMobileCard({
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowManualPaymentModal(true)}
-                      className="flex-1 h-8 text-xs"
-                    >
-                      Registrar pagamento
-                    </Button>
+                  <div className="pt-1">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setWorkflowPaymentsOpen(true)}
-                      className="flex-1 h-8 text-xs"
+                      className="w-full h-8 text-xs gap-1.5"
                     >
-                      Histórico
+                      <DollarSign className="h-3.5 w-3.5" />
+                      Histórico financeiro
                     </Button>
                   </div>
                 </div>
@@ -958,16 +987,10 @@ export function WorkflowMobileCard({
               <Button
                 variant="outline"
                 className="flex-1 h-10 text-xs font-medium gap-1.5"
-                onClick={() => {
-                  if (session.clienteId) {
-                    navigate(`/app/clientes/${session.clienteId}`);
-                  } else {
-                    toast.info("Esta sessão não possui cliente vinculado.");
-                  }
-                }}
+                onClick={() => setShowManualPaymentModal(true)}
               >
-                <Eye className="h-4 w-4" />
-                Ver detalhes
+                <DollarSign className="h-4 w-4" />
+                Registrar pagamento
               </Button>
 
               <Button
@@ -985,15 +1008,19 @@ export function WorkflowMobileCard({
       {/* MODAIS CONTROLADOS PELO CARD */}
       {modalProdutosOpen && (
         <GerenciarProdutosModal
-          isOpen={modalProdutosOpen}
-          onClose={() => setModalProdutosOpen(false)}
+          open={modalProdutosOpen}
+          onOpenChange={setModalProdutosOpen}
           sessionId={session.id}
-          produtosAtuais={(session.produtosList as any) || []}
-          onProdutosChange={(novos) =>
-            onFieldUpdate(session.id, "produtosList", novos)
-          }
+          clienteName={session.nome}
+          produtos={(session.produtosList as any) || []}
           productOptions={productOptions}
-          formatCurrency={formatCurrencyBRL}
+          onSave={async (novosProdutos) => {
+            const produtosCorrigidos = novosProdutos.map((p) => ({
+              ...p,
+              valorUnitario: p.tipo === "incluso" ? 0 : p.valorUnitario,
+            }));
+            await onFieldUpdate(session.id, "produtosList", produtosCorrigidos);
+          }}
         />
       )}
 
@@ -1050,8 +1077,8 @@ export function WorkflowMobileCard({
           isOpen={showManualPaymentModal}
           onClose={() => setShowManualPaymentModal(false)}
           session={session}
-          sessaoPendente={pendenteSessaoSugerido}
-          extrasPendente={extrasPendente}
+          sessaoPendente={Math.max(0, Number(pendenteSessaoSugerido) || 0)}
+          extrasPendente={Math.max(0, Number(extrasPendente) || 0)}
           hasGaleria={hasGaleria}
         />
       )}
@@ -1064,7 +1091,7 @@ export function WorkflowMobileCard({
           clienteNome={session.nome || "Cliente"}
           clienteWhatsapp={session.whatsapp}
           sessionId={session.sessionId || session.id}
-          valorSugerido={pendenteSessaoSugerido}
+          valorSugerido={Math.max(0, Number(pendenteSessaoSugerido) || 0)}
         />
       )}
 
@@ -1077,7 +1104,7 @@ export function WorkflowMobileCard({
           clienteWhatsapp={session.whatsapp}
           sessionId={session.sessionId || session.id}
           galeriaId={resolvedGalleryId || null}
-          valorSugerido={extrasPendente}
+          valorSugerido={Math.max(0, Number(extrasPendente) || 0)}
           finalidade="fotos_extras"
           qtdFotos={qtdFotosExtras}
           nomeSessao={session.pacote || session.nome}
@@ -1093,8 +1120,8 @@ export function WorkflowMobileCard({
           clienteWhatsapp={session.whatsapp}
           sessionId={session.sessionId || session.id}
           galeriaId={resolvedGalleryId ?? null}
-          valorSessaoComponente={pendenteSessaoSugerido}
-          valorExtrasComponente={extrasPendente}
+          valorSessaoComponente={Math.max(0, Number(pendenteSessaoSugerido) || 0)}
+          valorExtrasComponente={Math.max(0, Number(extrasPendente) || 0)}
           qtdFotosExtras={qtdFotosExtras}
           snapshotFotosIncluidas={extraCalc?.included_count ?? null}
           nomeSessao={session.pacote || session.nome}

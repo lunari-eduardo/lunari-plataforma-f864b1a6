@@ -102,7 +102,7 @@ export function ChargeModalForm({
             <strong className="text-foreground">R$ {(valorExtrasComponente ?? 0).toFixed(2).replace('.', ',')}</strong>
           </div>
           <div className="text-sm font-bold text-primary">
-            Total R$ {valor.toFixed(2).replace('.', ',')}
+            Total R$ {(Number(valor) || 0).toFixed(2).replace('.', ',')}
           </div>
         </div>
       )}
@@ -114,7 +114,7 @@ export function ChargeModalForm({
             Fotos extras selecionadas: <strong className="text-foreground">{qtdFotos}</strong>
           </div>
           <div className="text-sm font-bold text-primary">
-            Total R$ {valor.toFixed(2).replace('.', ',')}
+            Total R$ {(Number(valor) || 0).toFixed(2).replace('.', ',')}
           </div>
         </div>
       )}

@@ -45,7 +45,7 @@ export function formatFullDateLong(dateString?: string | null): string {
 }
 
 export function formatCurrencyBRL(value: unknown): string {
-  const num = Number(value) || 0;
+  const num = parseMoneyValue(value);
   return `R$ ${num.toFixed(2).replace(".", ",")}`;
 }
 
