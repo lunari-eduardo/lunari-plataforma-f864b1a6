@@ -1,4 +1,5 @@
 import { enrichClienteIfMissing } from "../_shared/enrich-cliente.ts";
+import { getPhotographerAsaasConfig } from "../_shared/user-asaas.ts";
 
 /**
  * Enriquece o cadastro do cliente com dados vindos do Asaas após pagamento
@@ -11,22 +12,11 @@ export async function enrichClienteFromAsaasPayment(
   photographerUserId: string,
 ) {
   try {
-    const { data: integ } = await adminClient
-      .from("usuarios_integracoes")
-      .select("access_token, dados_extras")
-      .eq("user_id", photographerUserId)
-      .eq("provedor", "asaas")
-      .eq("status", "ativo")
-      .order("is_default", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!integ?.access_token) return;
-    const env = (integ.dados_extras as any)?.environment === "production" ? "production" : "sandbox";
-    const baseUrl = env === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
+    const asaasConfig = await getPhotographerAsaasConfig(adminClient, photographerUserId);
+    if (!asaasConfig) return;
 
-    const custRes = await fetch(`${baseUrl}/v3/customers/${asaasCustomerId}`, {
-      headers: { access_token: integ.access_token },
+    const custRes = await fetch(`${asaasConfig.baseUrl}/v3/customers/${asaasCustomerId}`, {
+      headers: { access_token: asaasConfig.apiKey },
     });
     if (!custRes.ok) {
       console.warn(`[enrich] GET customer ${asaasCustomerId} → ${custRes.status}`);

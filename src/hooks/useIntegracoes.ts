@@ -99,7 +99,7 @@ export function useIntegracoes(): UseIntegracoesReturn {
     try {
       const { data, error } = await supabase
         .from('usuarios_integracoes')
-        .select('*')
+        .select('id, user_id, provedor, mp_user_id, status, conectado_em, expira_em, dados_extras, is_default')
         .eq('user_id', user.id);
 
       if (error) {
@@ -534,32 +534,29 @@ export function useIntegracoes(): UseIntegracoesReturn {
   const saveAsaas = useCallback(async (apiKey: string, asaasSettingsParam: AsaasSettings) => {
     if (!user) { toast.error('Você precisa estar logado'); return; }
     try {
-      const { error } = await supabase
-        .from('usuarios_integracoes')
-        .upsert({
-          user_id: user.id,
-          provedor: 'asaas',
-          status: 'ativo',
-          access_token: apiKey,
-          dados_extras: { ...asaasSettingsParam },
-          conectado_em: new Date().toISOString(),
-        }, { onConflict: 'user_id,provedor' });
-      if (error) throw error;
-      
-      // Sincronizar configuração de antecipação com a API do Asaas
-      try {
-        await supabase.functions.invoke('sync-asaas-anticipation', {
-          body: { automaticAnticipation: asaasSettingsParam.ireiAntecipar },
-        });
-      } catch (syncErr) {
-        console.warn('[useIntegracoes] sync-asaas-anticipation background error:', syncErr);
+      const { data: result, error } = await supabase.functions.invoke('asaas-connect-account', {
+        body: {
+          apiKey: apiKey.trim(),
+          environment: asaasSettingsParam.environment || 'sandbox',
+          settings: asaasSettingsParam,
+          setAsDefault: true,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Falha ao conectar com o Asaas');
       }
 
-      toast.success('Asaas conectado com sucesso!');
+      if (result && !result.success) {
+        throw new Error(result.error || 'Erro ao validar chave com o Asaas');
+      }
+
+      toast.success('Asaas conectado e validado com sucesso!');
       await fetchIntegracoes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useIntegracoes] Save Asaas error:', error);
-      toast.error('Erro ao salvar configuração Asaas');
+      toast.error(error.message || 'Erro ao salvar configuração Asaas');
+      throw error;
     }
   }, [user, fetchIntegracoes]);
 

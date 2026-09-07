@@ -95,7 +95,7 @@ export function usePaymentIntegration() {
 
       const { data: integrations, error } = await supabase
         .from('usuarios_integracoes')
-        .select('id, provedor, status, dados_extras, conectado_em, is_default, mp_user_id, expira_em, access_token')
+        .select('id, provedor, status, dados_extras, conectado_em, is_default, mp_user_id, expira_em')
         .eq('user_id', user.id)
         .in('provedor', ['pix_manual', 'infinitepay', 'mercadopago', 'asaas'])
         .order('created_at', { ascending: false });
@@ -209,24 +209,42 @@ export function usePaymentIntegration() {
       if (!user) throw new Error('User not authenticated');
       const { apiKey, settings, setAsDefault: setDefault = true } = data;
 
-      const { data: existing } = await supabase.from('usuarios_integracoes').select('id, dados_extras').eq('user_id', user.id).eq('provedor', 'asaas').maybeSingle();
+      const { data: existing } = await supabase
+        .from('usuarios_integracoes')
+        .select('id, dados_extras')
+        .eq('user_id', user.id)
+        .eq('provedor', 'asaas')
+        .maybeSingle();
 
       const updatedExtras = setUnifiedPaymentSettings(existing?.dados_extras || {}, settings);
 
-      if (existing) {
-        const { error } = await supabase.from('usuarios_integracoes').update({ status: 'ativo', access_token: apiKey, dados_extras: toJsonData(updatedExtras), is_default: setDefault, conectado_em: new Date().toISOString() }).eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('usuarios_integracoes').insert([{ user_id: user.id, provedor: 'asaas', status: 'ativo', access_token: apiKey, dados_extras: toJsonData(updatedExtras), is_default: setDefault, conectado_em: new Date().toISOString() }]);
-        if (error) throw error;
+      const { data: result, error } = await supabase.functions.invoke('asaas-connect-account', {
+        body: {
+          apiKey: apiKey.trim(),
+          environment: settings.environment || 'sandbox',
+          settings: updatedExtras,
+          setAsDefault: setDefault,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Falha ao conectar com o Asaas');
       }
 
-      if (setDefault) {
-        await supabase.from('usuarios_integracoes').update({ is_default: false }).eq('user_id', user.id).neq('provedor', 'asaas').in('provedor', ['pix_manual', 'infinitepay', 'mercadopago']);
+      if (result && !result.success) {
+        throw new Error(result.error || 'Erro ao validar chave de API com o Asaas');
       }
+
+      return result;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payment-integration'] }); toast.success('Asaas configurado com sucesso!'); },
-    onError: (error) => { console.error('Error saving Asaas:', error); toast.error('Erro ao salvar configuração Asaas'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment-integration'] });
+      toast.success('Asaas validado e configurado com sucesso!');
+    },
+    onError: (error: any) => {
+      console.error('Error saving Asaas:', error);
+      toast.error(error.message || 'Erro ao salvar configuração Asaas');
+    },
   });
 
   const updateAsaasSettings = useMutation({

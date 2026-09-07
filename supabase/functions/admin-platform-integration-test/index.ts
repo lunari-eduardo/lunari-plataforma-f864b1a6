@@ -1,5 +1,6 @@
 // Admin-only: testa a chave Asaas da plataforma chamando GET /v3/customers?limit=1.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,11 +64,13 @@ Deno.serve(async (req) => {
       ? "https://api.asaas.com"
       : "https://api-sandbox.asaas.com";
 
+    const apiKey = await decryptToken(integ.api_key);
+
     let status = "ok";
     let message = "Conexão OK";
     try {
       const res = await fetch(`${baseUrl}/v3/customers?limit=1`, {
-        headers: { access_token: integ.api_key },
+        headers: { access_token: apiKey },
       });
       if (!res.ok) {
         status = "error";

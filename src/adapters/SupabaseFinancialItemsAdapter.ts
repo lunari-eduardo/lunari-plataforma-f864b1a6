@@ -18,32 +18,48 @@ export interface ItemFinanceiroSupabase extends ItemFinanceiro {
 }
 
 
-// Itens padrão que são inseridos automaticamente para novos usuários
-const DEFAULT_FINANCIAL_ITEMS: Array<{ nome: string; grupo_principal: GrupoPrincipal }> = [
-  // Despesas Fixas
-  { nome: 'DAS', grupo_principal: 'Despesa Fixa' },
+// Itens padrão que são inseridos automaticamente para novos usuários (27 categorias oficiais)
+export const DEFAULT_FINANCIAL_ITEMS: Array<{
+  nome: string;
+  grupo_principal: GrupoPrincipal;
+  is_system?: boolean;
+}> = [
+  // 1. Receitas de vendas (Receita Operacional) - 1 categoria
+  { nome: 'Venda avulsa', grupo_principal: 'Receita Operacional', is_system: true },
+
+  // 2. Outras receitas (Receita Não Operacional) - 6 categorias
+  { nome: 'Aportes', grupo_principal: 'Receita Não Operacional' },
+  { nome: 'Reembolsos', grupo_principal: 'Receita Não Operacional' },
+  { nome: 'Juros e rendimentos', grupo_principal: 'Receita Não Operacional' },
+  { nome: 'Locação de espaço/equipamento', grupo_principal: 'Receita Não Operacional' },
+  { nome: 'Venda de equipamento', grupo_principal: 'Receita Não Operacional' },
+  { nome: 'Outras receitas', grupo_principal: 'Receita Não Operacional' },
+
+  // 3. Despesas fixas (Despesa Fixa) - 8 categorias
   { nome: 'Aluguel', grupo_principal: 'Despesa Fixa' },
   { nome: 'Água', grupo_principal: 'Despesa Fixa' },
-  { nome: 'Adobe', grupo_principal: 'Despesa Fixa' },
+  { nome: 'Energia', grupo_principal: 'Despesa Fixa' },
   { nome: 'Internet', grupo_principal: 'Despesa Fixa' },
-  { nome: 'Energia Elétrica', grupo_principal: 'Despesa Fixa' },
+  { nome: 'Software', grupo_principal: 'Despesa Fixa' },
+  { nome: 'Colaboradores', grupo_principal: 'Despesa Fixa' },
   { nome: 'Pró-labore', grupo_principal: 'Despesa Fixa' },
-  { nome: 'Colaborador', grupo_principal: 'Despesa Fixa' },
-  { nome: 'Assinatura', grupo_principal: 'Despesa Fixa' },
-  { nome: 'Canva', grupo_principal: 'Despesa Fixa' },
-  // Despesas Variáveis
-  { nome: 'Combustível', grupo_principal: 'Despesa Variável' },
-  { nome: 'Alimentação', grupo_principal: 'Despesa Variável' },
+  { nome: 'Contabilidade', grupo_principal: 'Despesa Fixa' },
+
+  // 4. Gastos do dia a dia (Despesa Variável) - 9 categorias
   { nome: 'Marketing', grupo_principal: 'Despesa Variável' },
-  { nome: 'Fornecedor 1', grupo_principal: 'Despesa Variável' },
-  { nome: 'Fornecedor 2', grupo_principal: 'Despesa Variável' },
+  { nome: 'Combustível e transporte', grupo_principal: 'Despesa Variável' },
+  { nome: 'Materiais e insumos', grupo_principal: 'Despesa Variável' },
+  { nome: 'Fornecedores e serviços', grupo_principal: 'Despesa Variável' },
+  { nome: 'Impostos', grupo_principal: 'Despesa Variável' },
+  { nome: 'Manutenção', grupo_principal: 'Despesa Variável' },
+  { nome: 'Taxas e tarifas', grupo_principal: 'Despesa Variável' },
   { nome: 'Cursos e treinamentos', grupo_principal: 'Despesa Variável' },
-  // Investimentos
-  { nome: 'Acervo/Cenário', grupo_principal: 'Investimento' },
+  { nome: 'Outras despesas', grupo_principal: 'Despesa Variável' },
+
+  // 5. Investimentos (Investimento) - 3 categorias
   { nome: 'Equipamentos', grupo_principal: 'Investimento' },
-  // Receitas Não Operacionais
-  { nome: 'Receita Extra', grupo_principal: 'Receita Não Operacional' },
-  { nome: 'Vendas de Equipamentos', grupo_principal: 'Receita Não Operacional' }
+  { nome: 'Móveis e estrutura', grupo_principal: 'Investimento' },
+  { nome: 'Acervo e cenários', grupo_principal: 'Investimento' },
 ];
 
 export class SupabaseFinancialItemsAdapter {
@@ -52,7 +68,7 @@ export class SupabaseFinancialItemsAdapter {
   private static initPromises = new Map<string, Promise<void>>();
 
   /**
-   * Inicializar itens padrão para um novo usuário (idempotente, race-safe)
+   * Inicializar itens padrão para um novo usuário (idempotente, individual e race-safe)
    */
   static async initializeDefaultItems(userId: string): Promise<void> {
     const cached = this.initPromises.get(userId);
@@ -60,7 +76,16 @@ export class SupabaseFinancialItemsAdapter {
 
     const promise = (async () => {
       try {
-        // Verificação rápida — evita INSERT desnecessário quando usuário já tem itens
+        // Tenta executar a procedure de seed do banco primeiro
+        const { error: rpcError } = await supabase.rpc('seed_user_financial_categories' as any, {
+          p_user_id: userId,
+        });
+
+        if (!rpcError) {
+          return;
+        }
+
+        // Fallback no client (se RPC falhar temporariamente):
         const { data: existing } = await supabase
           .from('fin_items_master')
           .select('id')
@@ -69,29 +94,24 @@ export class SupabaseFinancialItemsAdapter {
 
         if (existing && existing.length > 0) return;
 
-        const itemsToInsert = DEFAULT_FINANCIAL_ITEMS.map(item => ({
+        const itemsToInsert = DEFAULT_FINANCIAL_ITEMS.map((item) => ({
           user_id: userId,
           nome: item.nome,
           grupo_principal: item.grupo_principal,
           ativo: true,
-          is_default: true
+          is_default: true,
+          is_system: item.is_system || false,
         }));
 
-        // O índice único (user_id, lower(nome), grupo_principal) garante idempotência
-        // mesmo se duas chamadas paralelas escaparem do cache acima.
         const { error } = await supabase
           .from('fin_items_master')
-          .upsert(itemsToInsert, {
+          .upsert(itemsToInsert as any, {
             onConflict: 'user_id,nome,grupo_principal',
-            ignoreDuplicates: true
+            ignoreDuplicates: true,
           });
 
-        // Erros de unique violation (23505) são esperados em race e devem ser silenciados
         if (error && (error as any).code !== '23505') throw error;
-
-        console.log(`✅ Itens financeiros padrão garantidos para ${userId}`);
       } catch (error) {
-        // Ao falhar, remove cache para permitir nova tentativa em chamada futura
         this.initPromises.delete(userId);
         console.error('Erro ao inicializar itens padrão:', error);
         throw error;
@@ -304,6 +324,21 @@ export class SupabaseFinancialItemsAdapter {
    */
   static async deleteItem(id: string): Promise<void> {
     try {
+      const { data: item } = await supabase
+        .from('fin_items_master')
+        .select('id, nome, grupo_principal, is_system')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (
+        item &&
+        (item.is_system ||
+          (item.nome?.trim().toLowerCase() === 'venda avulsa' &&
+            item.grupo_principal === 'Receita Operacional'))
+      ) {
+        throw new Error('A categoria "Venda avulsa" é padrão do sistema e não pode ser excluída.');
+      }
+
       const { error } = await supabase
         .from('fin_items_master')
         .delete()

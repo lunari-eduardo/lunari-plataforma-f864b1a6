@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPhotographerAsaasConfig } from "../_shared/user-asaas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,31 +99,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch Asaas integration
-    const { data: integracao } = await supabase
-      .from("usuarios_integracoes")
-      .select("access_token, dados_extras")
-      .eq("user_id", userId)
-      .eq("provedor", "asaas")
-      .eq("status", "ativo")
-      .order("is_default", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Fetch Asaas integration com chave decifrada
+    const asaasConfig = await getPhotographerAsaasConfig(supabase, userId);
 
-    if (!integracao?.access_token) {
+    if (!asaasConfig) {
       return new Response(
         JSON.stringify({ success: false, error: "Integração Asaas não configurada ou inativa" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const settings = (integracao.dados_extras || {}) as { environment?: string };
-    const asaasBaseUrl = settings.environment === "production"
-      ? "https://api.asaas.com"
-      : "https://api-sandbox.asaas.com";
-
-    const asaasApiKey = integracao.access_token;
+    const asaasBaseUrl = asaasConfig.baseUrl;
+    const asaasApiKey = asaasConfig.apiKey;
 
     if (action === "simulate") {
       const simResp = await fetch(

@@ -15,6 +15,8 @@
  *      até que o admin configure a chave no painel.
  */
 
+import { decryptToken } from "./crypto.ts";
+
 export interface PlatformAsaasConfig {
   apiKey: string;
   baseUrl: string;
@@ -38,8 +40,9 @@ export async function getPlatformAsaasConfig(
       const environment = (data.environment === "production" ? "production" : "sandbox") as
         | "sandbox"
         | "production";
+      const decryptedKey = await decryptToken(data.api_key);
       return {
-        apiKey: data.api_key,
+        apiKey: decryptedKey,
         environment,
         baseUrl: environment === "production"
           ? "https://api.asaas.com"

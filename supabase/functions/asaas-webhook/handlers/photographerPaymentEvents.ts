@@ -1,5 +1,6 @@
 import { checkAndLogEvent, markEventProcessed } from "../types.ts";
 import { enrichClienteFromAsaasPayment } from "../enrichment.ts";
+import { getPhotographerAsaasConfig } from "../../_shared/user-asaas.ts";
 
 export async function findCobranca(adminClient: any, payment: any) {
   // 1. Busca prioritária O(1) por externalReference (UUID da cobrança Lunari)
@@ -164,23 +165,11 @@ export async function syncAnticipationForPayment(
     let anticipation = providedAnticipation;
 
     if (!anticipation && cobranca?.user_id && payment?.id) {
-      const { data: integ } = await adminClient
-        .from("usuarios_integracoes")
-        .select("access_token, dados_extras")
-        .eq("user_id", cobranca.user_id)
-        .eq("provedor", "asaas")
-        .eq("status", "ativo")
-        .order("is_default", { ascending: false })
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const asaasConfig = await getPhotographerAsaasConfig(adminClient, cobranca.user_id);
 
-      if (integ?.access_token) {
-        const env = (integ.dados_extras as any)?.environment === "production" ? "production" : "sandbox";
-        const baseUrl = env === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
-
-        const antRes = await fetch(`${baseUrl}/v3/anticipations?payment=${payment.id}&limit=10`, {
-          headers: { access_token: integ.access_token },
+      if (asaasConfig) {
+        const antRes = await fetch(`${asaasConfig.baseUrl}/v3/anticipations?payment=${payment.id}&limit=10`, {
+          headers: { access_token: asaasConfig.apiKey },
         });
 
         if (antRes.ok) {

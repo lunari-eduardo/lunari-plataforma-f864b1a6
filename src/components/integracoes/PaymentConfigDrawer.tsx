@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -319,7 +320,7 @@ export function PaymentConfigDrawer({
           {/* ── Asaas ── */}
           {provider === 'asaas' && (
             <>
-              {isNewAsaas && (
+              {isNewAsaas ? (
                 <div className="space-y-2">
                   <Label>API Key</Label>
                   <div className="relative">
@@ -335,6 +336,18 @@ export function PaymentConfigDrawer({
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">Encontre sua API Key em Asaas {'>'} Integrações {'>'} API</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 p-3 rounded-lg border border-border/80 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Chave Asaas conectada</span>
+                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50/50 text-[10px]">
+                      AES-256
+                    </Badge>
+                  </div>
+                  <p className="font-mono text-xs text-foreground tracking-wider">
+                    {(existingIntegration?.dadosExtrasRaw as any)?.key_mask || '••••••••••••••••'}
+                  </p>
                 </div>
               )}
 
@@ -598,7 +611,7 @@ export function PaymentConfigDrawer({
                 onClick={isNewAsaas ? handleSaveAsaas : handleSaveAsaasSettings}
                 disabled={isNewAsaas ? (!asaasApiKey.trim() || saveAsaasPending) : updateAsaasSettings.isPending}
               >
-                {(saveAsaasPending || updateAsaasSettings.isPending) ? 'Salvando...' : 'Salvar Configurações'}
+                {(saveAsaasPending || updateAsaasSettings.isPending) ? (saveAsaasPending ? 'Validando no Asaas...' : 'Salvando...') : 'Salvar Configurações'}
               </Button>
             </>
           )}

@@ -71,6 +71,10 @@ export default function CategoriaSideSheet({
     }
   }
 
+  const isSystemCategory =
+    Boolean((item as any)?.is_system) ||
+    (item?.nome?.trim().toLowerCase() === 'venda avulsa' && grupo === 'Receita Operacional');
+
   return (
     <SidePanel
       open={open}
@@ -86,7 +90,7 @@ export default function CategoriaSideSheet({
       footer={
         <SidePanel.Footer
           left={
-            mode === 'edit' && item && onDelete ? (
+            mode === 'edit' && item && onDelete && !isSystemCategory ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -96,6 +100,10 @@ export default function CategoriaSideSheet({
                 <Trash2 className="size-4 mr-1.5" />
                 Excluir
               </Button>
+            ) : isSystemCategory ? (
+              <span className="text-xs text-muted-foreground italic">
+                Categoria padrão do sistema (não pode ser excluída)
+              </span>
             ) : null
           }
           right={

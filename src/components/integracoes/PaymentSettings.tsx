@@ -244,18 +244,22 @@ export function PaymentSettings() {
 
   const handleSaveAsaas = async () => {
     if (!asaasApiKey.trim()) return;
-    await saveAsaas.mutateAsync({
-      apiKey: asaasApiKey.trim(),
-      settings: {
-        environment: asaasEnvironment, habilitarPix: asaasHabilitarPix,
-        habilitarCartao: asaasHabilitarCartao, habilitarBoleto: asaasHabilitarBoleto,
-        maxParcelas: parseInt(asaasMaxParcelas), absorverTaxa: asaasAbsorverTaxa,
-        ireiAntecipar: asaasIreiAntecipar, repassarTaxaAntecipacao: asaasRepassarAntecipacao,
-        incluirTaxaAntecipacao: asaasIreiAntecipar && asaasRepassarAntecipacao,
-      },
-      setAsDefault: !data?.hasPayment,
-    });
-    setDrawerOpen(false);
+    try {
+      await saveAsaas.mutateAsync({
+        apiKey: asaasApiKey.trim(),
+        settings: {
+          environment: asaasEnvironment, habilitarPix: asaasHabilitarPix,
+          habilitarCartao: asaasHabilitarCartao, habilitarBoleto: asaasHabilitarBoleto,
+          maxParcelas: parseInt(asaasMaxParcelas), absorverTaxa: asaasAbsorverTaxa,
+          ireiAntecipar: asaasIreiAntecipar, repassarTaxaAntecipacao: asaasRepassarAntecipacao,
+          incluirTaxaAntecipacao: asaasIreiAntecipar && asaasRepassarAntecipacao,
+        },
+        setAsDefault: !data?.hasPayment,
+      });
+      setDrawerOpen(false);
+    } catch {
+      // Erro tratado pelo hook (toast), mantém o drawer aberto para correção
+    }
   };
 
   const handleSaveAsaasSettings = async () => {

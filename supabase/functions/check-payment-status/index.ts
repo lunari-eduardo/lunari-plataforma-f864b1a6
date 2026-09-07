@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -336,11 +337,12 @@ async function getPhotographerAsaasConfig(supabase: any, userId: string) {
     return null;
   }
 
+  const apiKey = await decryptToken(integracao.access_token);
   const env = integracao.dados_extras?.environment || integracao.dados_extras?.gestao_settings?.environment || "sandbox";
   const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
 
   console.log(`[check-payment-status] Using photographer's Asaas key (env: ${env})`);
-  return { apiKey: integracao.access_token, baseUrl };
+  return { apiKey, baseUrl };
 }
 
 async function handleAsaasInstallmentCheck(supabase: any, cobranca: any, config: { apiKey: string; baseUrl: string }) {

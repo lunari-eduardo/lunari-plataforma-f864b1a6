@@ -1,6 +1,7 @@
 // Admin-only: persiste/atualiza credenciais Asaas usadas exclusivamente
 // pelas assinaturas Lunari (tabela platform_integrations).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,6 +56,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validação ativa prévia se for Asaas
+    if (provider === "asaas") {
+      const testUrl = environment === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
+      const testRes = await fetch(`${testUrl}/v3/myAccount/status`, {
+        headers: { access_token: apiKey },
+      });
+      if (!testRes.ok) {
+        return new Response(
+          JSON.stringify({ error: `Chave de API inválida no Asaas (${environment}): HTTP ${testRes.status}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const encryptedKey = await encryptToken(apiKey);
+
     // Upsert por (provider, scope)
     const { data, error } = await admin
       .from("platform_integrations")
@@ -63,7 +80,7 @@ Deno.serve(async (req) => {
           provider,
           scope,
           environment,
-          api_key: apiKey,
+          api_key: encryptedKey,
           updated_by: user.id,
           last_test_status: null,
           last_test_message: null,

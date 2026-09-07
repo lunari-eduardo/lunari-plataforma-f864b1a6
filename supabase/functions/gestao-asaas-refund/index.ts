@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
+import { getPhotographerAsaasConfig } from '../_shared/user-asaas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,30 +50,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar integração Asaas
-    const { data: integracao, error: integError } = await supabase
-      .from('usuarios_integracoes')
-      .select('access_token, dados_extras')
-      .eq('user_id', userId)
-      .eq('provedor', 'asaas')
-      .eq('status', 'ativo')
-      .order('is_default', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Buscar integração Asaas com token decifrado
+    const asaasConfig = await getPhotographerAsaasConfig(supabase, userId);
 
-    if (integError || !integracao?.access_token) {
+    if (!asaasConfig) {
       return new Response(
         JSON.stringify({ success: false, error: 'Integração Asaas não configurada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const asaasApiKey = integracao.access_token;
-    const environment = (integracao.dados_extras as any)?.environment;
-    const asaasBaseUrl = environment === 'production'
-      ? 'https://api.asaas.com'
-      : 'https://api-sandbox.asaas.com';
+    const asaasApiKey = asaasConfig.apiKey;
+    const asaasBaseUrl = asaasConfig.baseUrl;
 
     // Resolver asaas_payment_id
     let asaasPaymentId: string | null = null;

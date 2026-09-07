@@ -2,8 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -12,18 +12,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ success: false, error: "Não autenticado" }),
+        JSON.stringify({ success: false, error: "Não autorizado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
@@ -38,29 +38,19 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { automaticAnticipation } = body as { automaticAnticipation?: boolean };
 
-    // Fetch Asaas integration
-    const { data: integracao, error: integErr } = await supabase
-      .from("usuarios_integracoes")
-      .select("id, access_token, dados_extras")
-      .eq("user_id", userId)
-      .eq("provedor", "asaas")
-      .eq("status", "ativo")
-      .order("is_default", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (integErr || !integracao?.access_token) {
+    // Fetch Asaas integration com chave decifrada
+    const asaasConfig = await getPhotographerAsaasConfig(supabase, userId);
+    if (!asaasConfig) {
       return new Response(
         JSON.stringify({ success: false, error: "Integração Asaas ativa não encontrada" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const dadosExtras = (integracao.dados_extras || {}) as Record<string, any>;
+    const dadosExtras = asaasConfig.dadosExtras;
+    const baseUrl = asaasConfig.baseUrl;
+    const apiKey = asaasConfig.apiKey;
     const env = dadosExtras.environment === "production" ? "production" : "sandbox";
-    const baseUrl = env === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
-    const apiKey = integracao.access_token;
 
     const shouldEnable = automaticAnticipation !== undefined 
       ? automaticAnticipation 
@@ -136,7 +126,7 @@ Deno.serve(async (req) => {
         dados_extras: newDadosExtras,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", integracao.id);
+      .eq("id", asaasConfig.integrationId);
 
     return new Response(
       JSON.stringify({

@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { resolveCallerAuth, corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
 import { normalizeAsaasFees } from "../_shared/asaas-helpers.ts";
+import { getPhotographerAsaasConfig } from "../_shared/user-asaas.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -32,28 +33,13 @@ Deno.serve(async (req) => {
       return errorResponse("userId é obrigatório", 400, "MISSING_USER_ID");
     }
 
-    const { data: integracao, error: integErr } = await supabase
-      .from("usuarios_integracoes")
-      .select("access_token, dados_extras")
-      .eq("user_id", userId)
-      .eq("provedor", "asaas")
-      .eq("status", "ativo")
-      .order("is_default", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (integErr || !integracao?.access_token) {
+    const asaasConfig = await getPhotographerAsaasConfig(supabase, userId);
+    if (!asaasConfig) {
       return errorResponse("Integração Asaas não configurada", 400, "ASAAS_NOT_CONFIGURED");
     }
 
-    const settings = (integracao.dados_extras || {}) as { environment?: string };
-    const baseUrl = settings.environment === "production"
-      ? "https://api.asaas.com"
-      : "https://api-sandbox.asaas.com";
-
-    const res = await fetch(`${baseUrl}/v3/myAccount/fees`, {
-      headers: { access_token: integracao.access_token },
+    const res = await fetch(`${asaasConfig.baseUrl}/v3/myAccount/fees`, {
+      headers: { access_token: asaasConfig.apiKey },
     });
 
     if (!res.ok) {

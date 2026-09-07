@@ -4,6 +4,7 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
 import { ensureAsaasWebhookSubscription, normalizeAsaasFees, calculateCreditFees, putAsaasCustomer, requestAsaasAnticipation } from "../asaas-helpers.ts";
+import { decryptToken } from "../crypto.ts";
 
 function cleanEmail(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -182,6 +183,8 @@ export async function createAsaasPayment(
     apiKey = integ.access_token;
     dadosExtras = integ.dados_extras;
   }
+
+  apiKey = await decryptToken(apiKey);
 
   const rawSettings = (dadosExtras || {}) as Record<string, any>;
   const settings = {
