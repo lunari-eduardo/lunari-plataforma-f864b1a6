@@ -65,6 +65,7 @@ import {
   formatFullDateLong,
   parseMoneyValue,
 } from "./workflowMobileUtils";
+import { getContrastColor } from "@/lib/colorUtils";
 
 interface WorkflowMobileCardProps {
   session: SessionData;
@@ -360,27 +361,76 @@ export function WorkflowMobileCard({
           onClick={onToggleExpand}
           className="p-3.5 sm:p-4 cursor-pointer active:bg-accent/30 transition-colors select-none"
         >
-          {/* Linha 1: Status Dot + Nome + Menu Ações */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span
-                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                style={{ backgroundColor: statusColor }}
-                title={session.status || "Sem status"}
-              />
+          {/* Linha 1: Nome + Status Dropdown + Menu Ações */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0 flex-1">
               {session.clienteId ? (
                 <Link
                   to={`/app/clientes/${session.clienteId}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-[15px] text-foreground hover:text-primary transition-colors truncate"
+                  className="font-semibold text-sm sm:text-[15px] text-foreground hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-none"
                 >
                   {session.nome}
                 </Link>
               ) : (
-                <span className="font-semibold text-[15px] text-foreground truncate">
+                <span className="font-semibold text-sm sm:text-[15px] text-foreground truncate max-w-[200px] sm:max-w-none">
                   {session.nome}
                 </span>
               )}
+
+              {/* Status da sessão em Dropdown ao lado do nome */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 inline-flex items-center"
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all shadow-2xs hover:opacity-90 active:scale-95 shrink-0 select-none cursor-pointer"
+                      style={
+                        session.status
+                          ? {
+                              backgroundColor: statusColor,
+                              color: getContrastColor(statusColor),
+                            }
+                          : {
+                              backgroundColor: "transparent",
+                              color: "var(--muted-foreground)",
+                              border: "1px dashed rgba(156, 163, 175, 0.5)",
+                            }
+                      }
+                      title="Alterar status da sessão"
+                    >
+                      <span className="truncate max-w-[130px]">
+                        {session.status || "Sem status"}
+                      </span>
+                      <ChevronDown className="h-2.5 w-2.5 opacity-75 shrink-0" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48 z-50">
+                    <DropdownMenuItem
+                      onClick={() => onStatusChange(session.id, "")}
+                      className="text-muted-foreground italic text-xs"
+                    >
+                      Limpar status
+                    </DropdownMenuItem>
+                    {statusOptions.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt}
+                        onClick={() => onStatusChange(session.id, opt)}
+                        className="text-xs gap-2 cursor-pointer"
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: getStatusColor(opt) }}
+                        />
+                        <span className="truncate">{opt}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {/* Ações contextuais */}
