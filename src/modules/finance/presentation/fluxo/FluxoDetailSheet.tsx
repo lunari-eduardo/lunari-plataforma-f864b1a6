@@ -37,6 +37,16 @@ interface FluxoDetailSheetProps {
 
 function formatDate(iso: string) {
   try {
+    const match = iso.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      const [_, datePart, hh, mm, ss] = match;
+      const isZeroTime = !hh || (hh === '00' && mm === '00' && (!ss || ss === '00'));
+      if (isZeroTime) {
+        const parsed = parseISO(`${datePart}T12:00:00`);
+        if (isNaN(parsed.getTime())) return iso;
+        return format(parsed, 'dd/MM/yy');
+      }
+    }
     const parsed = iso.includes('T') || iso.includes(' ') ? new Date(iso) : parseISO(`${iso}T12:00:00`);
     if (isNaN(parsed.getTime())) return iso;
     return format(parsed, 'dd/MM/yy - HH:mm');

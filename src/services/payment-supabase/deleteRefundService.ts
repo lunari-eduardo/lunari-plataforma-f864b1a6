@@ -145,12 +145,13 @@ export async function refundPayment(
     }
 
     let cobrancaIdToUpdate: string | null = null;
+    let parcelaIdToUpdate: string | null = null;
     if (paymentId.startsWith('asaas-parcela-')) {
-      const parcelaId = paymentId.replace('asaas-parcela-', '');
+      parcelaIdToUpdate = paymentId.replace('asaas-parcela-', '');
       const { data: parcela } = await supabase
         .from('cobranca_parcelas')
         .select('cobranca_id')
-        .eq('id', parcelaId)
+        .eq('id', parcelaIdToUpdate)
         .maybeSingle();
       if (parcela?.cobranca_id) {
         cobrancaIdToUpdate = parcela.cobranca_id;
@@ -167,7 +168,19 @@ export async function refundPayment(
           .update({ status: 'estornado', updated_at: new Date().toISOString() })
           .eq('id', cobrancaIdToUpdate)
           .eq('user_id', user.id);
-        console.log('✅ Status de cobrança atualizado para estornado:', cobrancaIdToUpdate);
+        
+        if (parcelaIdToUpdate) {
+          await supabase
+            .from('cobranca_parcelas')
+            .update({ status: 'estornado', updated_at: new Date().toISOString() })
+            .eq('id', parcelaIdToUpdate);
+        } else {
+          await supabase
+            .from('cobranca_parcelas')
+            .update({ status: 'estornado', updated_at: new Date().toISOString() })
+            .eq('cobranca_id', cobrancaIdToUpdate);
+        }
+        console.log('✅ Status de cobrança/parcela atualizado para estornado:', cobrancaIdToUpdate);
       }
     }
 
@@ -182,6 +195,7 @@ export async function refundPayment(
         user_id: user.id,
         cliente_id: binding.cliente_id,
         session_id: binding.session_id,
+        cobranca_id: cobrancaIdToUpdate,
         tipo: 'estorno',
         valor: valor,
         data_transacao: new Date().toISOString().split('T')[0],
@@ -192,7 +206,7 @@ export async function refundPayment(
     if (error) {
       console.error('❌ Erro ao criar estorno em clientes_transacoes:', error);
     } else {
-      console.log('✅ Estorno criado com sucesso em clientes_transacoes:', { paymentId, valor });
+      console.log('✅ Estorno criado com sucesso em clientes_transacoes:', { paymentId, valor, cobrancaId: cobrancaIdToUpdate });
     }
 
     if (keepAsCredit) {

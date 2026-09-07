@@ -32,11 +32,11 @@ function iconForLinha(l: LinhaExtrato) {
 }
 
 export function isAtrasada(l: LinhaExtrato) {
-  return (
-    l.status === 'Faturado' &&
-    !!l.data &&
-    parseISO(`${l.data}T12:00:00`).getTime() < new Date().setHours(0, 0, 0, 0)
-  );
+  if (l.status !== 'Faturado' || !l.data) return false;
+  const match = l.data.match(/^(\d{4}-\d{2}-\d{2})/);
+  const datePart = match ? match[1] : l.data.slice(0, 10);
+  const d = parseISO(`${datePart}T12:00:00`);
+  return !isNaN(d.getTime()) && d.getTime() < new Date().setHours(0, 0, 0, 0);
 }
 
 function statusStyle(l: LinhaExtrato): { label: string; className: string } {
@@ -76,7 +76,16 @@ const PROVEDOR_LABEL: Record<string, string> = {
 
 function formatDate(iso: string) {
   try {
-    // Se a string já tiver um 'T', ela já é um timestamp completo
+    const match = iso.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      const [_, datePart, hh, mm, ss] = match;
+      const isZeroTime = !hh || (hh === '00' && mm === '00' && (!ss || ss === '00'));
+      if (isZeroTime) {
+        const parsed = parseISO(`${datePart}T12:00:00`);
+        if (isNaN(parsed.getTime())) return iso;
+        return format(parsed, 'dd/MM/yy');
+      }
+    }
     const parsed = iso.includes('T') || iso.includes(' ') ? new Date(iso) : parseISO(`${iso}T12:00:00`);
     if (isNaN(parsed.getTime())) return iso;
     return format(parsed, 'dd/MM/yy - HH:mm');

@@ -158,6 +158,32 @@ export function ManualPaymentModal({
       /* noop */
     }
 
+    let payloadEscopo = escopo;
+    let valorSessaoComponente: number | undefined = undefined;
+    let valorExtrasComponente: number | undefined = undefined;
+
+    if (escopo === "sessao_e_extras") {
+      // Regra canônica: "sessão primeiro, extras depois"
+      const sessaoComp = Math.min(valorFinal, Math.max(0, sessaoPendente));
+      const extrasComp = Number(Math.max(0, valorFinal - sessaoComp).toFixed(2));
+
+      if (extrasComp <= 0) {
+        payloadEscopo = "sessao";
+      } else {
+        valorSessaoComponente = Number(sessaoComp.toFixed(2));
+        valorExtrasComponente = extrasComp;
+      }
+    } else if (escopo === "fotos_extras") {
+      valorExtrasComponente = valorFinal;
+    } else if (escopo === "sessao") {
+      valorSessaoComponente = valorFinal;
+    }
+
+    const qtdFotos =
+      session.qtdFotosExtra != null && Number(session.qtdFotosExtra) > 0
+        ? Number(session.qtdFotosExtra)
+        : undefined;
+
     try {
       const { registerManualPayment } = await import("@/modules/billing");
       const result = await runCapability(registerManualPayment, {
@@ -165,8 +191,11 @@ export function ManualPaymentModal({
         valor: valorFinal,
         dataPagamento: data,
         meio,
-        escopo,
+        escopo: payloadEscopo,
         observacao: observacao.trim() || undefined,
+        valorSessaoComponente,
+        valorExtrasComponente,
+        qtdFotos,
       });
 
       if (isErr(result)) {
@@ -335,7 +364,7 @@ export function ManualPaymentModal({
               <Label className="text-xs">Data</Label>
               <Input
                 type="date"
-                value={data}
+                value={data ? data.slice(0, 10) : todayISO()}
                 max={todayISO()}
                 onChange={(e) => setData(e.target.value)}
                 className={`h-9 text-sm ${dataInvalida ? "border-destructive" : ""}`}

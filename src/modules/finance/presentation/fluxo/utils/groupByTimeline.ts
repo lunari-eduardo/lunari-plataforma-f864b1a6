@@ -16,6 +16,15 @@ export interface TimelineGroup {
 function safeDate(iso: string): Date | null {
   if (!iso) return null;
   try {
+    const match = iso.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      const [_, datePart, hh, mm, ss] = match;
+      const isZeroTime = !hh || (hh === '00' && mm === '00' && (!ss || ss === '00'));
+      if (isZeroTime) {
+        const d = parseISO(`${datePart}T12:00:00`);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+    }
     const d = iso.length === 10 ? parseISO(`${iso}T12:00:00`) : parseISO(iso);
     return Number.isNaN(d.getTime()) ? null : d;
   } catch {

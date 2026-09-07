@@ -412,7 +412,7 @@ export function WorkflowMobileCard({
         >
           {/* Linha 1: Nome do Cliente + Ações Contextuais */}
           <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 flex items-center">
               {session.clienteId ? (
                 <Link
                   to={`/app/clientes/${session.clienteId}`}
@@ -423,12 +423,12 @@ export function WorkflowMobileCard({
                     }
                     e.stopPropagation();
                   }}
-                  className="font-semibold text-[15px] text-foreground hover:text-primary transition-colors truncate block"
+                  className="font-semibold text-[15px] text-foreground hover:text-primary transition-colors truncate max-w-full inline-block"
                 >
                   {session.nome}
                 </Link>
               ) : (
-                <span className="font-semibold text-[15px] text-foreground truncate block">
+                <span className="font-semibold text-[15px] text-foreground truncate max-w-full inline-block">
                   {session.nome}
                 </span>
               )}

@@ -103,6 +103,18 @@ export async function fetchUnifiedSessionPayments(sessionId: string): Promise<Se
 
       // Estornos aparecem como tipo especial
       if (isEstorno) {
+        const linkedCob = t.cobranca_id ? cobrancasById.get(t.cobranca_id) : null;
+        let estornoOrigem: SessionPaymentExtended['origem'] = 'supabase';
+        if (linkedCob?.provedor === 'asaas' || t.descricao?.toLowerCase().includes('asaas')) {
+          estornoOrigem = 'asaas';
+        } else if (linkedCob?.provedor === 'mercadopago' || t.descricao?.toLowerCase().includes('mp #') || t.descricao?.toLowerCase().includes('mercado pago')) {
+          estornoOrigem = 'mercadopago';
+        } else if (linkedCob?.provedor === 'infinitepay' || t.descricao?.toLowerCase().includes('infinitepay')) {
+          estornoOrigem = 'infinitepay';
+        } else if (t.descricao?.toLowerCase().includes('crédito') || t.descricao?.toLowerCase().includes('credito')) {
+          estornoOrigem = 'credito';
+        }
+
         allPayments.push({
           id: t.id,
           valor: Number(t.valor) || 0,
@@ -110,10 +122,11 @@ export async function fetchUnifiedSessionPayments(sessionId: string): Promise<Se
           createdAt: t.created_at || undefined,
           tipo: 'estorno',
           statusPagamento: 'estornado',
-          origem: 'supabase',
+          origem: estornoOrigem,
           editavel: false,
           observacoes: t.descricao?.replace(/\s*\[REF:[^\]]+\]/, '') || 'Estorno',
           finalidade: 'estorno',
+          cobrancaId: t.cobranca_id || undefined,
         });
         continue;
       }

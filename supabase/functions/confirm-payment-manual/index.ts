@@ -45,6 +45,7 @@ interface Body {
   /** Componentes quando finalidade='sessao_e_extras' */
   valorExtrasComponente?: number;
   valorSessaoComponente?: number;
+  qtdFotos?: number;
   /** Metadados opcionais de auditoria */
   source?: string;
 }
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
     // Ownership galeria + resolver cliente/session_id
     const { data: gal } = await admin
       .from("galerias")
-      .select("id, user_id, cliente_id, session_id")
+      .select("id, user_id, cliente_id, session_id, fotos_selecionadas, fotos_incluidas, valor_total_vendido, valor_foto_extra")
       .eq("id", galleryId)
       .maybeSingle();
     if (!gal || gal.user_id !== userId) {
@@ -137,6 +138,74 @@ Deno.serve(async (req) => {
     }
     sessionId = sessionId ?? gal.session_id ?? null;
     const clienteId = gal.cliente_id;
+
+    // ─────────────────────────────────────────────────────────────
+    // Resolução de componentes e qtd_fotos
+    // ─────────────────────────────────────────────────────────────
+    let valorSessaoComponente: number | null = null;
+    let valorExtrasComponente: number | null = null;
+    let qtdFotos: number | null =
+      body.qtdFotos != null && Number(body.qtdFotos) > 0
+        ? Math.trunc(Number(body.qtdFotos))
+        : null;
+
+    if (finalidade === "sessao_e_extras") {
+      const vExtRaw = body.valorExtrasComponente != null ? Number(body.valorExtrasComponente) : NaN;
+      const vSessRaw = body.valorSessaoComponente != null ? Number(body.valorSessaoComponente) : NaN;
+
+      if (Number.isFinite(vExtRaw) && vExtRaw > 0 && Number.isFinite(vSessRaw) && vSessRaw >= 0) {
+        valorExtrasComponente = Number(vExtRaw.toFixed(2));
+        valorSessaoComponente = Number(vSessRaw.toFixed(2));
+      } else if (Number.isFinite(vExtRaw) && vExtRaw > 0) {
+        valorExtrasComponente = Number(vExtRaw.toFixed(2));
+        valorSessaoComponente = Math.max(0, Number((valorManual - valorExtrasComponente).toFixed(2)));
+      } else if (Number.isFinite(vSessRaw) && vSessRaw >= 0) {
+        valorSessaoComponente = Number(vSessRaw.toFixed(2));
+        valorExtrasComponente = Math.max(0, Number((valorManual - valorSessaoComponente).toFixed(2)));
+      } else {
+        const galExt = Number(gal.valor_total_vendido ?? 0);
+        if (galExt > 0 && galExt < valorManual) {
+          valorExtrasComponente = Number(galExt.toFixed(2));
+          valorSessaoComponente = Number((valorManual - valorExtrasComponente).toFixed(2));
+        } else {
+          valorExtrasComponente = valorManual;
+          valorSessaoComponente = 0;
+        }
+      }
+
+      // Ajuste fino para fechar a soma com valorManual exatamente
+      const somaComp = Number(((valorSessaoComponente ?? 0) + (valorExtrasComponente ?? 0)).toFixed(2));
+      if (Math.abs(somaComp - Number(valorManual.toFixed(2))) > 0.001) {
+        valorSessaoComponente = Math.max(0, Number((valorManual - (valorExtrasComponente ?? 0)).toFixed(2)));
+      }
+
+      // Inferência de qtd_fotos se não fornecido
+      if (!qtdFotos || qtdFotos <= 0) {
+        const galDiff = Math.max(0, (gal.fotos_selecionadas ?? 0) - (gal.fotos_incluidas ?? 0));
+        if (galDiff > 0) {
+          qtdFotos = galDiff;
+        } else if (sessionId) {
+          const { data: cs } = await admin
+            .from("clientes_sessoes")
+            .select("qtd_fotos_extra")
+            .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+            .limit(1)
+            .maybeSingle();
+          if (cs?.qtd_fotos_extra && cs.qtd_fotos_extra > 0) {
+            qtdFotos = cs.qtd_fotos_extra;
+          }
+        }
+        if (!qtdFotos || qtdFotos <= 0) {
+          qtdFotos = 1;
+        }
+      }
+    } else if (finalidade === "fotos_extras") {
+      valorExtrasComponente = valorManual;
+      if (!qtdFotos || qtdFotos <= 0) {
+        const galDiff = Math.max(0, (gal.fotos_selecionadas ?? 0) - (gal.fotos_incluidas ?? 0));
+        qtdFotos = galDiff > 0 ? galDiff : 1;
+      }
+    }
 
     // ─────────────────────────────────────────────────────────────
     // 2.3 — cancelar cobranças pendentes digitais da mesma galeria
@@ -188,11 +257,6 @@ Deno.serve(async (req) => {
     // 3 — criar cobrança manual (se necessário)
     // ─────────────────────────────────────────────────────────────
     if (!cobrancaId) {
-      const componenteExtras =
-        finalidade === "sessao_e_extras"
-          ? body.valorExtrasComponente ?? null
-          : null;
-
       const { data: inserted, error: insErr } = await admin
         .from("cobrancas")
         .insert({
@@ -202,7 +266,9 @@ Deno.serve(async (req) => {
           cliente_id: clienteId,
           valor: valorManual,
           valor_liquido: valorManual,
-          valor_extras_componente: componenteExtras,
+          valor_sessao_componente: valorSessaoComponente,
+          valor_extras_componente: valorExtrasComponente,
+          qtd_fotos: qtdFotos,
           tipo_cobranca: "presencial",
           finalidade,
           provedor: "manual",
@@ -223,7 +289,13 @@ Deno.serve(async (req) => {
       // 4 — atualizar valor apenas se ainda pendente
       await admin
         .from("cobrancas")
-        .update({ valor: valorManual, updated_at: now })
+        .update({
+          valor: valorManual,
+          valor_sessao_componente: valorSessaoComponente,
+          valor_extras_componente: valorExtrasComponente,
+          qtd_fotos: qtdFotos ?? undefined,
+          updated_at: now,
+        })
         .eq("id", cobrancaId)
         .eq("status", "pendente");
     }

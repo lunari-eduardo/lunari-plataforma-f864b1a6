@@ -25,6 +25,9 @@ const Input = z
     meio: z.enum(["pix", "dinheiro", "transferencia", "cartao_externo", "outro"]),
     escopo: z.enum(["sessao", "fotos_extras", "sessao_e_extras"]).default("sessao"),
     observacao: z.string().max(240).optional(),
+    valorSessaoComponente: z.number().nonnegative().optional(),
+    valorExtrasComponente: z.number().nonnegative().optional(),
+    qtdFotos: z.number().int().positive().optional(),
   })
   .strict();
 
@@ -74,7 +77,7 @@ export const registerManualPayment = defineCommand({
   needsApproval: true,
   idempotencyKey: (i) =>
     `billing.manual:${i.sessionId}:${i.valor}:${i.dataPagamento}:${i.meio}:${i.escopo}`,
-  async handler({ sessionId, valor, dataPagamento, meio, escopo, observacao }, ctx) {
+  async handler({ sessionId, valor, dataPagamento, meio, escopo, observacao, valorSessaoComponente, valorExtrasComponente, qtdFotos }, ctx) {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id ?? ctx.user?.id;
     if (!userId) return err(domainError("UNAUTHENTICATED", "Sessão expirada."));
@@ -86,15 +89,55 @@ export const registerManualPayment = defineCommand({
 
     const label = MEIO_LABEL[meio];
     const metodoManual = MEIO_TO_METODO_MANUAL[meio];
-    const escopoTag = escopo === "sessao" ? "" : ` (${escopo.replace("_", " ")})`;
+
+    let effEscopo = escopo;
+    let vSessaoComp = valorSessaoComponente;
+    let vExtrasComp = valorExtrasComponente;
+    let finalQtdFotos = qtdFotos;
+
+    // Resolução e validação de componentes para sessao_e_extras
+    if (escopo === "sessao_e_extras") {
+      if (vExtrasComp === undefined || vSessaoComp === undefined) {
+        const { data: sessRow } = await supabase
+          .from("clientes_sessoes")
+          .select("valor_total, valor_pago, qtd_fotos_extra")
+          .or(`session_id.eq.${binding.session_id},id.eq.${binding.id}`)
+          .limit(1)
+          .maybeSingle();
+
+        const totalSessao = Number(sessRow?.valor_total ?? 0);
+        const pagoSessao = Number(sessRow?.valor_pago ?? 0);
+        const pendSessao = Math.max(0, Number((totalSessao - pagoSessao).toFixed(2)));
+
+        if (pendSessao > 0 && valor > pendSessao) {
+          vSessaoComp = pendSessao;
+          vExtrasComp = Number((valor - pendSessao).toFixed(2));
+        } else if (pendSessao > 0 && valor <= pendSessao) {
+          vSessaoComp = valor;
+          vExtrasComp = 0;
+          effEscopo = "sessao";
+        } else {
+          vSessaoComp = 0;
+          vExtrasComp = valor;
+        }
+
+        if (!finalQtdFotos && sessRow?.qtd_fotos_extra) {
+          finalQtdFotos = sessRow.qtd_fotos_extra;
+        }
+      } else if (vExtrasComp <= 0) {
+        effEscopo = "sessao";
+      }
+    }
+
+    const escopoTag = effEscopo === "sessao" ? "" : ` (${effEscopo.replace("_", " ")})`;
     const descBase = observacao?.trim() || `Pagamento ${label}${escopoTag}`;
-    const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${escopo}`;
-    const intentMark = `[INTENT:${intentKey}:${escopo}]`;
+    const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${effEscopo}`;
+    const intentMark = `[INTENT:${intentKey}:${effEscopo}]`;
 
     // ────────────────────────────────────────────────────────────
     // Caminho 1: extras COM galeria → edge confirm-payment-manual
     // ────────────────────────────────────────────────────────────
-    if (escopo === "fotos_extras" || escopo === "sessao_e_extras") {
+    if (effEscopo === "fotos_extras" || effEscopo === "sessao_e_extras") {
       const { data: gal } = await supabase
         .from("galerias")
         .select("id")
@@ -118,8 +161,10 @@ export const registerManualPayment = defineCommand({
               valorManual: valor,
               observacao: observacao?.trim() || undefined,
               paidAt: paidAtIso,
-              finalidade: escopo === "sessao_e_extras" ? "sessao_e_extras" : "fotos_extras",
-              valorExtrasComponente: escopo === "sessao_e_extras" ? valor : undefined,
+              finalidade: effEscopo === "sessao_e_extras" ? "sessao_e_extras" : "fotos_extras",
+              valorSessaoComponente: effEscopo === "sessao_e_extras" ? vSessaoComp : undefined,
+              valorExtrasComponente: effEscopo === "sessao_e_extras" ? vExtrasComp : valor,
+              qtdFotos: finalQtdFotos,
               source: "studio_workflow",
             },
           },
@@ -127,8 +172,9 @@ export const registerManualPayment = defineCommand({
 
         if (edgeErr || !edgeData?.success) {
           ctx.log.error("confirm-payment-manual failed", { edgeErr, edgeData });
+          const errMsg = edgeData?.details || edgeData?.error || edgeErr?.message || "Não foi possível registrar o pagamento (galeria).";
           return err(
-            domainError("EXTERNAL", "Não foi possível registrar o pagamento (galeria).", {
+            domainError("EXTERNAL", errMsg, {
               retriable: true,
               details: { edgeErr: edgeErr?.message, edgeData },
             }),
@@ -163,7 +209,7 @@ export const registerManualPayment = defineCommand({
           paymentId,
           valor,
           meio,
-          escopo,
+          escopo: effEscopo,
           photographerId: userId,
           alreadyPaid,
           cancelledPendingIds,
@@ -212,7 +258,7 @@ export const registerManualPayment = defineCommand({
       paymentId,
       valor,
       meio,
-      escopo,
+      escopo: effEscopo,
       photographerId: userId,
       syncedGallery: false,
     });
