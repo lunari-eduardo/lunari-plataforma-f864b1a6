@@ -76,6 +76,16 @@ export class SupabaseFinancialItemsAdapter {
 
     const promise = (async () => {
       try {
+        // Se o usuário já possui categorias cadastradas, não re-inicializa
+        // para respeitar exclusões e personalizações feitas pelo usuário.
+        const { data: existing } = await supabase
+          .from('fin_items_master')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
+
+        if (existing && existing.length > 0) return;
+
         // Tenta executar a procedure de seed do banco primeiro
         const { error: rpcError } = await supabase.rpc('seed_user_financial_categories' as any, {
           p_user_id: userId,
@@ -84,15 +94,6 @@ export class SupabaseFinancialItemsAdapter {
         if (!rpcError) {
           return;
         }
-
-        // Fallback no client (se RPC falhar temporariamente):
-        const { data: existing } = await supabase
-          .from('fin_items_master')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1);
-
-        if (existing && existing.length > 0) return;
 
         const itemsToInsert = DEFAULT_FINANCIAL_ITEMS.map((item) => ({
           user_id: userId,
@@ -129,9 +130,6 @@ export class SupabaseFinancialItemsAdapter {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
-      
-      // Tentar inicializar itens padrão (não faz nada se já existirem)
-      await this.initializeDefaultItems(user.id);
       
       const { data, error } = await supabase
         .from('fin_items_master')
@@ -333,8 +331,7 @@ export class SupabaseFinancialItemsAdapter {
       if (
         item &&
         (item.is_system ||
-          (item.nome?.trim().toLowerCase() === 'venda avulsa' &&
-            item.grupo_principal === 'Receita Operacional'))
+          item.nome?.trim().toLowerCase() === 'venda avulsa')
       ) {
         throw new Error('A categoria "Venda avulsa" é padrão do sistema e não pode ser excluída.');
       }

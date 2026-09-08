@@ -73,7 +73,7 @@ export default function CategoriaSideSheet({
 
   const isSystemCategory =
     Boolean((item as any)?.is_system) ||
-    (item?.nome?.trim().toLowerCase() === 'venda avulsa' && grupo === 'Receita Operacional');
+    item?.nome?.trim().toLowerCase() === 'venda avulsa';
 
   return (
     <SidePanel
