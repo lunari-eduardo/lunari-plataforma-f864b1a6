@@ -17,8 +17,8 @@ export function usePWAUpdate() {
       return;
     }
 
-    // Não registrar SW em rotas públicas (galerias, propostas, formulário, checkout)
-    const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l)\//.test(window.location.pathname);
+    // Não registrar SW em rotas públicas (galerias, propostas, formulário, checkout, assinar)
+    const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l|assinar)\//.test(window.location.pathname);
     if (isPublicRoute) {
       navigator.serviceWorker.getRegistrations().then(regs =>
         regs.forEach(r => r.unregister())
@@ -53,18 +53,26 @@ export function usePWAUpdate() {
       onRegisteredSW(swUrl, registration) {
         console.log('✅ [PWA] Service Worker registrado:', swUrl);
         
-        // Verificar atualizações a cada 60 segundos
         if (registration) {
+          // 1. Polling periódico a cada 60 segundos enquanto ativo
           const intervalId = setInterval(() => {
-            console.log('🔍 [PWA] Verificando atualizações...');
             registration.update().catch((err) => {
               console.warn('⚠️ [PWA] Erro ao verificar atualizações:', err);
             });
           }, 60 * 1000);
-          
-          // Cleanup não é necessário aqui pois o hook roda uma vez
-          // mas deixamos comentado caso precise no futuro
-          // return () => clearInterval(intervalId);
+
+          // 2. Verificação imediata assim que o app volta de segundo plano (celular desbloqueado)
+          const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+              console.log('📱 [PWA] App voltou ao primeiro plano, verificando atualizações...');
+              registration.update().catch((err) => {
+                console.warn('⚠️ [PWA] Erro ao verificar atualizações pós-resumo:', err);
+              });
+            }
+          };
+
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          window.addEventListener('focus', handleVisibilityChange);
         }
       },
       

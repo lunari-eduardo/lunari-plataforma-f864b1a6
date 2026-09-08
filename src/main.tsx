@@ -16,7 +16,13 @@ const handleChunkError = (reason?: any) => {
     msg.includes('failed to fetch dynamically imported module') ||
     msg.includes('importing a module script failed') ||
     msg.includes('error loading dynamically imported module') ||
-    msg.includes('loading chunk');
+    msg.includes('loading chunk') ||
+    msg.includes('dynamically imported module') ||
+    msg.includes('load failed') ||
+    msg.includes('failed to load resource') ||
+    msg.includes('unable to preload') ||
+    msg.includes("unexpected token '<'") ||
+    msg.includes('mime type');
 
   if (isChunkError) {
     const key = 'chunk-reload-ts';
@@ -42,8 +48,8 @@ if (legacyRedirect) {
   window.history.replaceState({}, '', legacyRedirect);
 }
 
-// Limpar SW e caches em rotas públicas (galerias, propostas, formulário, checkout), preview ou iframe ANTES de montar React
-const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l)\//.test(window.location.pathname);
+// Limpar SW e caches em rotas públicas (galerias, propostas, formulário, checkout, assinar), preview ou iframe ANTES de montar React
+const isPublicRoute = /^\/(g|c|p|formulario|checkout|pay|l|assinar)\//.test(window.location.pathname);
 const isPreviewHost = window.location.hostname.includes('id-preview--');
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }

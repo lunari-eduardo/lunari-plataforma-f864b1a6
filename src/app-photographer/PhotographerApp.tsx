@@ -29,8 +29,7 @@ import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
 import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
 import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 import GalleryHome from '@/pages/gallery/GalleryHome';
-
-const SignaturePage = React.lazy(() => import("@/pages/AssinaturaPublica/SignaturePage"));
+import SignaturePage from "@/pages/AssinaturaPublica/SignaturePage";
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -343,11 +342,7 @@ export default function PhotographerApp() {
               <Route path="/c/:token" element={<ClientGallery />} />
 
               {/* Assinatura Nativa de Contrato */}
-              <Route path="/assinar/:token" element={
-                <React.Suspense fallback={<ContextFallback />}>
-                  <SignaturePage />
-                </React.Suspense>
-              } />
+              <Route path="/assinar/:token" element={<SignaturePage />} />
               
               
               {/* Rota Pública de Proposta por Slug (deve vir após as rotas prefixadas) */}

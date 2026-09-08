@@ -19,7 +19,13 @@ function isChunkLoadError(error: Error | null): boolean {
     msg.includes('importing a module script failed') ||
     msg.includes('error loading dynamically imported module') ||
     msg.includes('loading chunk') ||
-    msg.includes('dynamically imported module')
+    msg.includes('dynamically imported module') ||
+    msg.includes('load failed') || // Padrão clássico do Safari / iOS ao acordar com script 404
+    msg.includes('failed to load resource') ||
+    msg.includes('unable to preload') ||
+    msg.includes("unexpected token '<'") || // Quando chunk 404 retorna o HTML do index
+    msg.includes('mime type') ||
+    msg.includes('network error when attempting to fetch resource')
   );
 }
 

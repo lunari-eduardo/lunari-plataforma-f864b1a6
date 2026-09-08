@@ -121,13 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
 
-      if (expiresAt - now < fiveMinutes && expiresAt > now) {
-        console.log('⏰ Token expirando em breve, forçando refresh...');
+      // Se já expirou enquanto o celular estava minimizado ou se expira em < 5min
+      if (expiresAt - now < fiveMinutes) {
+        console.log('⏰ Token expirado ou próximo de expirar, forçando renovação...');
         const { error } = await forceRefreshSession();
         if (error) {
-          console.error('❌ Erro ao renovar sessão proativamente:', error);
+          console.error('❌ Erro ao renovar sessão:', error);
         } else {
-          console.log('✅ Sessão renovada proativamente');
+          console.log('✅ Sessão renovada com sucesso');
         }
       }
     };
@@ -135,7 +136,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkTokenExpiry();
     const interval = setInterval(checkTokenExpiry, 60000);
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkTokenExpiry();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [session?.expires_at]);
 
   const signInWithGoogle = async (nextPath?: string) => {
