@@ -9,10 +9,19 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import { getFotografoPendente } from '@/utils/contratoSigners';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
   FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy, ChevronDown,
+  ShieldCheck, Check,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,6 +71,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmSendModal, setConfirmSendModal] = useState<'native' | 'autentique' | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isAssinado = contrato.status === 'assinado';
@@ -69,9 +80,25 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [conteudoOpen, setConteudoOpen] = useState(isEditable);
 
   const autentiqueConectado = !!autentiqueStatus?.connected;
-  const jaEnviadoNaAutentique = !!contrato.signature_external_id;
-  const podeEnviarParaAssinatura =
-    contrato.status === 'rascunho' && autentiqueConectado && !jaEnviadoNaAutentique;
+  const jaEnviadoNaAutentique = contrato.signature_provider !== 'native' && !!contrato.signature_external_id;
+  const jaEnviadoNativo = contrato.signature_provider === 'native' && !!contrato.signature_token;
+  const jaEnviado = jaEnviadoNaAutentique || jaEnviadoNativo;
+
+  // Carregar trilha jurídica se o contrato for nativo e assinado
+  const { data: auditLog } = useQuery({
+    queryKey: ['contrato_audit_log', contrato.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('contrato_audit_logs')
+        .select('*')
+        .eq('contrato_id', contrato.id)
+        .maybeSingle();
+      return data as any;
+    },
+    enabled: isAssinado && jaEnviadoNativo,
+  });
+
+  const podeEnviarParaAssinatura = contrato.status === 'rascunho' && !jaEnviado;
   const podeSincronizar = jaEnviadoNaAutentique && contrato.status !== 'cancelado';
   const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
 
@@ -98,6 +125,12 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
 
   const assinadosCount = signers.filter((s: any) => s.status === 'assinado').length;
   const totalSigners = signers.length;
+
+  const getNativeSignatureLink = () => {
+    if (!contrato.signature_token) return '';
+    const origin = window.location.origin;
+    return `${origin}/assinar/${contrato.signature_token}`;
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -167,47 +200,80 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     await setStatus({ id: contrato.id, status });
   };
 
-  const handleEnviarParaAssinatura = async () => {
+  const preFlightCheck = async () => {
     if (!contrato.cliente?.email) {
       toast({
         title: 'Cliente sem e-mail',
         description: 'Adicione um e-mail ao cliente antes de enviar.',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
     if (!conteudo || conteudo.trim().length < 10) {
       toast({ title: 'Contrato vazio', variant: 'destructive' });
-      return;
+      return false;
     }
+    
+    if (conteudo !== contrato.conteudo || titulo !== contrato.titulo) {
+      await update({ id: contrato.id, titulo, conteudo });
+    }
+    return true;
+  };
+
+  const getPdfBlob = async () => {
+    const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
+    return await generateContratoPdf({
+      titulo,
+      conteudoHtml: conteudo,
+      fotografoNome: profile?.nome || snap.nome_fotografo || undefined,
+      fotografoEmail: profile?.email || snap.email_fotografo || undefined,
+      fotografoDocumento: (profile as any)?.cpf_cnpj || snap.documento_fotografo || undefined,
+      clienteNome: contrato.cliente?.nome || snap.nome_cliente || undefined,
+      clienteEmail: contrato.cliente?.email || snap.email_cliente || undefined,
+      clienteDocumento: snap.documento_cliente || snap.cpf_cliente || undefined,
+      cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
+      variaveisSnapshot: snap,
+    });
+  };
+
+  const handleEnviarParaAssinaturaAutentique = async () => {
+    const ok = await preFlightCheck();
+    if (!ok) return;
+
     try {
-      if (conteudo !== contrato.conteudo || titulo !== contrato.titulo) {
-        await update({ id: contrato.id, titulo, conteudo });
-      }
-      const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
-      const blob = await generateContratoPdf({
-        titulo,
-        conteudoHtml: conteudo,
-        fotografoNome: profile?.nome || snap.nome_fotografo || undefined,
-        fotografoEmail: profile?.email || snap.email_fotografo || undefined,
-        fotografoDocumento: (profile as any)?.cpf_cnpj || snap.documento_fotografo || undefined,
-        clienteNome: contrato.cliente?.nome || snap.nome_cliente || undefined,
-        clienteEmail: contrato.cliente?.email || snap.email_cliente || undefined,
-        clienteDocumento: snap.documento_cliente || snap.cpf_cliente || undefined,
-        cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
-        variaveisSnapshot: snap,
-      });
+      const blob = await getPdfBlob();
       await enviarParaAssinatura({
         contratoId: contrato.id,
         pdfBlob: blob,
         includeFotografo: true,
       });
       toast({
-        title: 'Contrato enviado',
+        title: 'Contrato enviado (Autentique)',
         description: `Você e ${contrato.cliente?.email} receberão o link por e-mail.`,
       });
     } catch (err: any) {
       console.error('[Autentique] Falha no envio:', err);
+    }
+  };
+
+  const { enviarParaAssinaturaNativa, isEnviandoParaAssinaturaNativa } = useContratos({ clienteId: contrato.cliente_id });
+
+  const handleEnviarParaAssinaturaNativa = async () => {
+    const ok = await preFlightCheck();
+    if (!ok) return;
+
+    try {
+      const blob = await getPdfBlob();
+      await enviarParaAssinaturaNativa({
+        contratoId: contrato.id,
+        pdfBlob: blob,
+      });
+      toast({
+        title: 'Contrato gerado',
+        description: 'Link de assinatura nativo pronto para compartilhamento!',
+      });
+    } catch (err: any) {
+      console.error('[Nativo] Falha no envio:', err);
     }
   };
 
@@ -233,7 +299,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const handleCopyLink = async (link: string) => {
     try {
       await navigator.clipboard.writeText(link);
-      toast({ title: 'Link copiado' });
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+      toast({ title: 'Link copiado para a área de transferência' });
     } catch {
       toast({ title: 'Não foi possível copiar', variant: 'destructive' });
     }
@@ -432,6 +500,128 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             </div>
           )}
 
+          {jaEnviadoNativo && (
+            <div className={`rounded-xl border p-4 text-sm space-y-3.5 transition-all ${
+              isAssinado 
+                ? 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20' 
+                : 'border-primary/30 bg-primary/5 dark:bg-primary/10'
+            }`}>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 font-semibold">
+                  {isAssinado ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span className="text-emerald-900 dark:text-emerald-300">Contrato Assinado Eletronicamente</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileSignature className="h-4 w-4 text-primary" />
+                      <span className="text-primary">Assinatura Nativa Lunari</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className={isAssinado 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs' 
+                    : 'bg-amber-50 text-amber-700 border-amber-200 text-xs'
+                  }>
+                    {isAssinado ? 'Válido e Autenticado' : 'Aguardando Cliente'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Informações se estiver Assinado */}
+              {isAssinado ? (
+                <div className="space-y-2.5">
+                  <p className="text-xs text-muted-foreground">
+                    O documento foi autenticado com sucesso e a via assinada com a trilha de auditoria já está salva no Lunari.
+                  </p>
+                  
+                  {auditLog && (
+                    <div className="rounded-lg bg-background/80 border p-3 text-xs space-y-1.5 font-mono text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span className="text-foreground font-sans font-medium">Signatário:</span>
+                        <span className="text-foreground">{auditLog.signed_name} (CPF: {auditLog.signed_cpf})</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-foreground font-sans font-medium">Data/Hora (UTC):</span>
+                        <span>{new Date(auditLog.created_at).toLocaleString('pt-BR')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-foreground font-sans font-medium">IP Registrado:</span>
+                        <span>{auditLog.ip_address}</span>
+                      </div>
+                      {auditLog.document_hash && (
+                        <div className="pt-1 border-t text-[11px] break-all">
+                          <span className="text-foreground font-sans font-medium block">Hash SHA-256:</span>
+                          <span className="text-slate-600 dark:text-slate-300">{auditLog.document_hash}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 flex-wrap pt-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.open(getNativeSignatureLink(), '_blank', 'noopener,noreferrer')}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                      Visualizar comprovante público
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleCopyLink(getNativeSignatureLink())}
+                    >
+                      {copiedLink ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                      Copiar link
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Informações se estiver Aguardando Assinatura */
+                <div className="space-y-2.5">
+                  <div className="text-xs text-muted-foreground flex items-center flex-wrap gap-1.5">
+                    <span>Link seguro do cliente:</span>
+                    <code className="font-mono bg-background px-1.5 py-0.5 rounded border text-[11px] break-all">
+                      {getNativeSignatureLink()}
+                    </code>
+                  </div>
+
+                  <div className="rounded-lg border bg-background/80 p-3 flex items-center justify-between gap-3 flex-wrap">
+                    <div className="text-xs text-foreground font-medium">
+                      Compartilhe este link com seu cliente para coleta da assinatura:
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={() => handleCopyLink(getNativeSignatureLink())}>
+                        {copiedLink ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                        Copiar link
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                        onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Olá! Seu contrato está pronto para assinatura digital. Acesse o link seguro para revisar e assinar: ${getNativeSignatureLink()}`)}`, '_blank')}
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                        Enviar WhatsApp
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => window.open(getNativeSignatureLink(), '_blank', 'noopener,noreferrer')}
+                        title="Abrir a tela pública em outra aba"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             <div>
               <Label>Status</Label>
@@ -512,21 +702,51 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                 ? 'Baixar rascunho'
                 : 'Baixar PDF'}
             </Button>
-            {podeEnviarParaAssinatura && (
-              <Button onClick={handleEnviarParaAssinatura} disabled={isEnviandoParaAssinatura}>
-                {isEnviandoParaAssinatura ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            {podeEnviarParaAssinatura && !autentiqueConectado && (
+              <Button 
+                onClick={() => setConfirmSendModal('native')} 
+                disabled={isEnviandoParaAssinaturaNativa}
+                className="bg-primary text-primary-foreground font-semibold shadow-sm"
+              >
+                {isEnviandoParaAssinaturaNativa ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                 ) : (
-                  <FileSignature className="h-4 w-4 mr-1" />
+                  <FileSignature className="h-4 w-4 mr-1.5" />
                 )}
-                {isEnviandoParaAssinatura ? 'Enviando...' : 'Enviar para assinatura'}
+                {isEnviandoParaAssinaturaNativa ? 'Emitindo...' : 'Enviar para Assinatura'}
               </Button>
             )}
-            {contrato.status === 'rascunho' && !autentiqueConectado && (
-              <Button variant="outline" onClick={() => handleStatusChange('enviado')}>
-                <Send className="h-4 w-4 mr-1" />
-                Marcar como enviado
-              </Button>
+
+            {podeEnviarParaAssinatura && autentiqueConectado && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button disabled={isEnviandoParaAssinatura || isEnviandoParaAssinaturaNativa}>
+                    {(isEnviandoParaAssinatura || isEnviandoParaAssinaturaNativa) ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <FileSignature className="h-4 w-4 mr-1" />
+                    )}
+                    {(isEnviandoParaAssinatura || isEnviandoParaAssinaturaNativa) ? 'Enviando...' : 'Enviar para assinatura'}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setConfirmSendModal('native')}>
+                    <FileSignature className="h-4 w-4 mr-2 text-primary" />
+                    <div className="flex flex-col">
+                      <span>Assinatura Lunari (Nativo)</span>
+                      <span className="text-xs text-muted-foreground">Gratuito e Ilimitado</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setConfirmSendModal('autentique')}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span>Via Autentique</span>
+                      <span className="text-xs text-muted-foreground">Usa cota da sua conta</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {isEditable && (
               <Button onClick={handleSave} disabled={saving}>
@@ -571,6 +791,43 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
               <AlertDialogCancel>Voltar</AlertDialogCancel>
               <AlertDialogAction onClick={handleCancelAutentique} disabled={isCancelingAutentique}>
                 {isCancelingAutentique ? 'Cancelando...' : 'Cancelar assinatura'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={!!confirmSendModal} onOpenChange={(open) => !open && setConfirmSendModal(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmSendModal === 'native' 
+                  ? 'Emitir via Assinatura Lunari?' 
+                  : 'Enviar via Autentique?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>
+                  {confirmSendModal === 'native'
+                    ? 'O documento em PDF será gerado e congelado com o conteúdo atual. Um link público seguro e exclusivo será gerado para que seu cliente assine digitalmente no celular ou computador com validade jurídica.'
+                    : 'O documento será gerado e transmitido para a Autentique, consumindo 1 crédito da sua conta.'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Após o envio, o contrato mudará de status para "Enviado" e o conteúdo textual não poderá ser editado.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={async () => {
+                  const mode = confirmSendModal;
+                  setConfirmSendModal(null);
+                  if (mode === 'native') {
+                    await handleEnviarParaAssinaturaNativa();
+                  } else if (mode === 'autentique') {
+                    await handleEnviarParaAssinaturaAutentique();
+                  }
+                }}
+              >
+                Confirmar e Emitir
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

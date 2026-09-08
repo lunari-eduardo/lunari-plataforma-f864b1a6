@@ -39,7 +39,9 @@ export interface Contrato {
 
   signature_provider?: string | null;
   signature_external_id?: string | null;
+  signature_token?: string | null;
   signers?: ContratoSigner[] | null;
+  original_file_path?: string | null;
 
   enviado_em?: string | null;
   assinado_em?: string | null;
@@ -77,3 +79,15 @@ export const CONTRATO_STATUS_LABELS: Record<ContratoStatus, string> = {
   assinado: 'Assinado',
   cancelado: 'Cancelado',
 };
+
+export interface ContratoAuditLog {
+  id: string;
+  contrato_id: string;
+  ip_address?: string;
+  user_agent?: string;
+  geolocation?: Record<string, any>;
+  signed_name?: string;
+  signed_cpf?: string;
+  document_hash?: string;
+  created_at: string;
+}

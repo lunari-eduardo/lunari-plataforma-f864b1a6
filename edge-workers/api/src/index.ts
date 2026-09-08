@@ -8,6 +8,11 @@ import { gestaoR2SignedUrlRoute } from './routes/gestao-r2-signed-url.js';
 import { gestaoR2DeleteRoute } from './routes/gestao-r2-delete.js';
 import { mediaDownloadRoute } from './routes/media-download.js';
 
+import { contractsNativeSendRoute } from './routes/contracts-native-send.js';
+import { contractsNativeGetRoute } from './routes/contracts-native-get.js';
+import { contractsNativeSignRoute } from './routes/contracts-native-sign.js';
+import { contractsNativeDownloadRoute } from './routes/contracts-native-download.js';
+
 export type Bindings = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
@@ -47,5 +52,11 @@ app.post('/api/r2-public-upload', gestaoR2PublicUploadRoute);
 app.post('/api/r2-upload', gestaoR2UploadRoute);
 app.post('/api/r2-signed-url', gestaoR2SignedUrlRoute);
 app.post('/api/r2-delete', gestaoR2DeleteRoute);
+
+// Contratos Nativos
+app.post('/api/contracts/native/send', contractsNativeSendRoute);
+app.get('/api/contracts/native/get/:token', contractsNativeGetRoute);
+app.post('/api/contracts/native/sign', contractsNativeSignRoute);
+app.get('/api/contracts/native/download/:token', contractsNativeDownloadRoute);
 
 export default app;

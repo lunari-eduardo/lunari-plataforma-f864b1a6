@@ -210,6 +210,48 @@ export function useContratos(opts: UseContratosOpts = {}) {
         description: e?.message || 'Tente novamente em alguns instantes.',
         variant: 'destructive',
       }),
+  /**
+   * Envia o contrato para assinatura via Lunari (Motor Nativo).
+   * Faz upload do PDF e gera o token no Edge Worker do Cloudflare.
+   */
+  const enviarParaAssinaturaNativaMutation = useMutation({
+    mutationFn: async ({
+      contratoId,
+      pdfBlob,
+    }: {
+      contratoId: string;
+      pdfBlob: Blob;
+    }) => {
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      
+      const sessionData = await supabase.auth.getSession();
+      const token = sessionData.data.session?.access_token;
+      
+      const API_BASE = import.meta.env.VITE_EDGE_API_URL || 'https://lunari-edge-api.eduardo22diehl.workers.dev';
+      const res = await fetch(`${API_BASE}/api/contracts/native/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          contrato_id: contratoId,
+          pdf_base64: pdfBase64
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro ao emitir contrato nativo');
+      
+      return json as { success: true; signature_token: string; storagePath: string };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: (e: any) =>
+      toast({
+        title: 'Falha na Emissão Nativa',
+        description: e?.message || 'Tente novamente em alguns instantes.',
+        variant: 'destructive',
+      }),
   });
 
   /**
@@ -298,6 +340,8 @@ export function useContratos(opts: UseContratosOpts = {}) {
     uploadAssinado: uploadAssinadoMutation.mutateAsync,
     enviarParaAssinatura: enviarParaAssinaturaMutation.mutateAsync,
     isEnviandoParaAssinatura: enviarParaAssinaturaMutation.isPending,
+    enviarParaAssinaturaNativa: enviarParaAssinaturaNativaMutation.mutateAsync,
+    isEnviandoParaAssinaturaNativa: enviarParaAssinaturaNativaMutation.isPending,
     syncAutentique: syncAutentiqueMutation.mutateAsync,
     isSyncingAutentique: syncAutentiqueMutation.isPending,
     cancelAutentique: cancelAutentiqueMutation.mutateAsync,
