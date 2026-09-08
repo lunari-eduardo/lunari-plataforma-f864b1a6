@@ -210,6 +210,8 @@ export function useContratos(opts: UseContratosOpts = {}) {
         description: e?.message || 'Tente novamente em alguns instantes.',
         variant: 'destructive',
       }),
+  });
+
   /**
    * Envia o contrato para assinatura via Lunari (Motor Nativo).
    * Faz upload do PDF e gera o token no Edge Worker do Cloudflare.
