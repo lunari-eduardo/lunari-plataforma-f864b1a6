@@ -213,7 +213,7 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
         <ContratoViewerModal
           open={!!viewing}
           onClose={() => setViewing(null)}
-          contrato={viewing}
+          contrato={contratos.find(c => c.id === viewing.id) || viewing}
         />
       )}
 

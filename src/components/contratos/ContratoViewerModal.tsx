@@ -46,7 +46,8 @@ const SIGNER_STATUS_META: Record<string, { label: string; icon: any; classes: st
   pendente: { label: 'Aguardando', icon: Clock, classes: 'bg-muted text-muted-foreground border-border' },
 };
 
-export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerModalProps) {
+export function ContratoViewerModal({ open, onClose, contrato: initialContrato }: ContratoViewerModalProps) {
+  const [contrato, setContrato] = useState<Contrato>(initialContrato);
   const { profile } = useUserProfile();
   const { user } = useAuth();
   const {
@@ -57,6 +58,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     getSignedUrl,
     enviarParaAssinatura,
     isEnviandoParaAssinatura,
+    enviarParaAssinaturaNativa,
+    isEnviandoParaAssinaturaNativa,
     syncAutentique,
     isSyncingAutentique,
     cancelAutentique,
@@ -65,8 +68,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     isNotifyingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
-  const [conteudo, setConteudo] = useState(contrato.conteudo);
-  const [titulo, setTitulo] = useState(contrato.titulo);
+  const [conteudo, setConteudo] = useState(initialContrato.conteudo);
+  const [titulo, setTitulo] = useState(initialContrato.titulo);
   const [saving, setSaving] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -74,6 +77,12 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [confirmSendModal, setConfirmSendModal] = useState<'native' | 'autentique' | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setContrato(initialContrato);
+    setConteudo(initialContrato.conteudo);
+    setTitulo(initialContrato.titulo);
+  }, [initialContrato]);
 
   const isAssinado = contrato.status === 'assinado';
   const isEditable = !isAssinado && contrato.status !== 'enviado';
@@ -197,6 +206,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   };
 
   const handleStatusChange = async (status: any) => {
+    setContrato(prev => ({ ...prev, status }));
     await setStatus({ id: contrato.id, status });
   };
 
@@ -242,11 +252,17 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
 
     try {
       const blob = await getPdfBlob();
-      await enviarParaAssinatura({
+      const res = await enviarParaAssinatura({
         contratoId: contrato.id,
         pdfBlob: blob,
         includeFotografo: true,
       });
+      setContrato((prev) => ({
+        ...prev,
+        status: 'enviado',
+        signature_external_id: (res as any)?.document_id,
+        enviado_em: new Date().toISOString(),
+      }));
       toast({
         title: 'Contrato enviado (Autentique)',
         description: `Você e ${contrato.cliente?.email} receberão o link por e-mail.`,
@@ -256,22 +272,43 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     }
   };
 
-  const { enviarParaAssinaturaNativa, isEnviandoParaAssinaturaNativa } = useContratos({ clienteId: contrato.cliente_id });
-
   const handleEnviarParaAssinaturaNativa = async () => {
     const ok = await preFlightCheck();
     if (!ok) return;
 
     try {
       const blob = await getPdfBlob();
-      await enviarParaAssinaturaNativa({
+      const res = await enviarParaAssinaturaNativa({
         contratoId: contrato.id,
         pdfBlob: blob,
       });
-      toast({
-        title: 'Contrato gerado',
-        description: 'Link de assinatura nativo pronto para compartilhamento!',
-      });
+
+      const token = res?.signature_token;
+      if (token) {
+        // 1. Atualizar o estado reativo do contrato na tela instantaneamente
+        setContrato((prev) => ({
+          ...prev,
+          status: 'enviado',
+          signature_provider: 'native',
+          signature_token: token,
+          enviado_em: new Date().toISOString(),
+        }));
+
+        // 2. Copiar automaticamente o link de assinatura para a área de transferência
+        const link = `${window.location.origin}/assinar/${token}`;
+        try {
+          await navigator.clipboard.writeText(link);
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 3000);
+        } catch (clipErr) {
+          console.warn('Falha ao escrever no clipboard automaticamente:', clipErr);
+        }
+
+        toast({
+          title: 'Link copiado para a área de transferência!',
+          description: 'O contrato foi emitido e o link está pronto para envio via WhatsApp ou e-mail.',
+        });
+      }
     } catch (err: any) {
       console.error('[Nativo] Falha no envio:', err);
     }

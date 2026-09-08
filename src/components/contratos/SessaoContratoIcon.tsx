@@ -142,7 +142,7 @@ export function SessaoContratoIcon({ sessionId, clienteId, clienteNome, classNam
         <ContratoViewerModal
           open={!!viewing}
           onClose={() => setViewing(null)}
-          contrato={viewing}
+          contrato={contratos.find((c: any) => c.id === viewing.id) || viewing}
         />
       )}
     </>
